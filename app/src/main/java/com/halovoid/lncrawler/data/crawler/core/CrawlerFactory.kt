@@ -1,6 +1,6 @@
 package com.halovoid.lncrawler.data.crawler.core
 
-import com.halovoid.lncrawler.data.crawler.sources.NovelBinCrawler
+import com.halovoid.lncrawler.data.crawler.sources.NovelBinsCrawler
 
 /**
  * Factory and registry for all available [Crawler] implementations.
@@ -9,7 +9,7 @@ import com.halovoid.lncrawler.data.crawler.sources.NovelBinCrawler
 object CrawlerFactory {
     /** List of all supported crawler implementations. */
     private val crawlers = listOf(
-        NovelBinCrawler()
+        NovelBinsCrawler()
     )
 
     /**

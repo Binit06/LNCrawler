@@ -27,8 +27,13 @@ abstract class Crawler {
     /** Language of the novels on this site (e.g., "en") */
     open val language: String = "en"
     
-    /** Request rate limit in seconds between requests */
+    /** Request rate limit in seconds between requests
+     * Ignored on batches */
     open val requestRateLimit: Double = 1.0
+
+    /** Batch size limit for how many chapters to fetch in one go
+     */
+    open val chapterBatchSize: Int = 1
 
     /** Internal HTTP client with session (cookie) support */
     protected val client = OkHttpClient.Builder()
@@ -144,5 +149,21 @@ abstract class Crawler {
         content.select("div:not(:has(p))").remove()
         
         return content.html().trim()
+    }
+
+    /**
+     * Downloads an image and returns its bytes.
+     */
+    suspend fun downloadImage(url: String): ByteArray? = withContext(Dispatchers.IO) {
+        if (url.isEmpty()) return@withContext null
+        val request = Request.Builder().url(url).build()
+        try {
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) response.body?.bytes() else null
+            }
+        } catch (e: Exception) {
+            Log.e("Crawler", "Error downloading image: $url", e)
+            null
+        }
     }
 }

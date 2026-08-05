@@ -13,9 +13,15 @@ import java.io.IOException
  * This class handles the specific HTML structure and AJAX endpoints of the site
  * using Jsoup for static parsing and custom logic for paginated chapter lists.
  */
-class NovelBinCrawler : Crawler() {
+class NovelBinsCrawler : Crawler() {
     override val name: String = "NovelBin"
     override val baseUrl: String = "https://novelbins.com"
+
+    override val requestRateLimit: Double
+        get() = 1.0
+
+    override val chapterBatchSize: Int
+        get() = 2
 
     override fun canHandle(url: String): Boolean {
         return url.contains("novelbins.com") || url.contains("novelbin.com")
@@ -28,7 +34,7 @@ class NovelBinCrawler : Crawler() {
         val title = doc.select(".novel-short-info h1").first()?.text()?.split("\n")?.first() ?: ""
         val author = doc.select(".novel-short-info p:contains(Author:)").text().replace("Author: ", "").trim()
         val coverUrl = doc.select("img.novel-photo").attr("abs:src")
-        val description = doc.select(".novel-short-info p").last()?.text() ?: ""
+        val description = doc.select(".novel-short-info p")[7]?.text() ?: ""
         
         // Novel ID extraction for AJAX chapter list
         // Try getting it from the URL slug first (e.g., solo-leveling-2750127 -> 2750127)

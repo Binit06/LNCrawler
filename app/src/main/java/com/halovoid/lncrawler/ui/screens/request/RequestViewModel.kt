@@ -4,34 +4,43 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.halovoid.lncrawler.data.crawler.core.CrawlerFactory
-import com.halovoid.lncrawler.data.export.EpubExporter
+import com.halovoid.lncrawler.data.export.ExportProgress
+import com.halovoid.lncrawler.data.export.ExportProgressManager
+import com.halovoid.lncrawler.data.export.ExportWorker
 import com.halovoid.lncrawler.data.repository.NovelRepository
 import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.domain.usecases.DeleteNovelUseCase
+import com.halovoid.lncrawler.domain.usecases.GetNovelDetailsUseCase
 import com.halovoid.lncrawler.domain.usecases.GetSavedNovelsUseCase
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 /**
  * ViewModel for the [RequestScreen] in the UI layer.
- * Handles validation of source URLs and provides a stream of recently saved novels.
+ * Manages URL validation, saved novels list, and background export tasks.
  */
 class RequestViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = NovelRepository(application)
     private val getSavedNovelsUseCase = GetSavedNovelsUseCase(repository)
-    private val epubExporter = EpubExporter()
+    private val getNovelDetailsUseCase = GetNovelDetailsUseCase(repository)
+    private val deleteNovelUseCase = DeleteNovelUseCase(repository)
+    private val workManager = WorkManager.getInstance(application)
 
     /** Tracks validation errors for the URL input field. */
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    /** The URL of the novel currently being exported, if any. */
-    private val _isExporting = MutableStateFlow<String?>(null) 
-    val isExporting: StateFlow<String?> = _isExporting
+    /** Map of ongoing export progress. */
+    val exportProgressMap: StateFlow<Map<String, ExportProgress>> = ExportProgressManager.progressMap
 
-    /** Tracks progress description during the export process. */
-    private val _exportProgress = MutableStateFlow<String?>(null)
-    val exportProgress: StateFlow<String?> = _exportProgress
+    /** Set of URLs currently being fetched from the network (metadata/chapters). */
+    private val _activeFetches = MutableStateFlow<Set<String>>(emptySet())
+    val activeFetches: StateFlow<Set<String>> = _activeFetches
 
     /** Flow of novels saved in the local database. */
     val savedNovels: StateFlow<List<Novel>> = getSavedNovelsUseCase()
@@ -39,9 +48,6 @@ class RequestViewModel(application: Application) : AndroidViewModel(application)
 
     /**
      * Validates if the given URL can be handled by any registered crawler.
-     * 
-     * @param url The URL to validate.
-     * @return The name of the matching crawler, or null if invalid.
      */
     fun validateUrl(url: String): String? {
         val crawler = CrawlerFactory.getCrawlerByUrl(url)
@@ -55,35 +61,66 @@ class RequestViewModel(application: Application) : AndroidViewModel(application)
     }
 
     /**
-     * Initiates an export of a [Novel] to a specified URI using SAF.
-     * 
-     * @param novel The novel data to export.
-     * @param uri The destination file URI.
-     * @param onComplete Success callback.
+     * Starts fetching a novel from the network and saves it to the DB.
      */
-    fun exportNovelToUri(novel: Novel, uri: Uri, onComplete: () -> Unit) {
+    fun fetchNovel(crawlerName: String, url: String, onSuccess: (String, String) -> Unit) {
+        if (_activeFetches.value.contains(url)) return
+        
         viewModelScope.launch {
-            _isExporting.value = novel.url
-            val crawler = CrawlerFactory.getCrawlerByUrl(novel.url) ?: return@launch
-            
-            val chaptersToExport = mutableListOf<Pair<String, String>>()
-            novel.chapters.forEachIndexed { index, chapter ->
-                _exportProgress.value = "Fetching ${index + 1}/${novel.chapters.size}"
-                var content = crawler.getChapterContent(chapter.url)
-                if (content.isEmpty()) {
-                    content = "<p><i>[Error: Failed to fetch chapter content]</i></p>"
+            _activeFetches.update { it + url }
+            try {
+                val novel = getNovelDetailsUseCase(crawlerName, url)
+                if (novel != null) {
+                    onSuccess(crawlerName, url)
+                } else {
+                    _error.value = "Failed to fetch novel data"
                 }
-                chaptersToExport.add(chapter.title to content)
+            } catch (e: Exception) {
+                _error.value = e.message ?: "An error occurred"
+            } finally {
+                _activeFetches.update { it - url }
             }
+        }
+    }
+
+    /**
+     * Starts a background worker to fetch content and generate EPUB.
+     * @param novel The novel to export.
+     * @param destinationUri The destination URI picked by the user.
+     */
+    fun startExport(novel: Novel, destinationUri: Uri) {
+        val inputData = Data.Builder()
+            .putString("novelUrl", novel.url)
+            .putString("crawlerName", novel.crawlerName ?: "NovelBins")
+            .putString("destinationUri", destinationUri.toString())
+            .build()
             
-            _exportProgress.value = "Finalizing..."
-            getApplication<Application>().contentResolver.openOutputStream(uri)?.use { outputStream ->
-                epubExporter.export(novel, chaptersToExport, outputStream)
-            }
+        val request = OneTimeWorkRequestBuilder<ExportWorker>()
+            .setInputData(inputData)
+            .build()
             
-            _isExporting.value = null
-            _exportProgress.value = null
-            onComplete()
+        // Use unique work based on URL to avoid duplicate exports for the same novel
+        workManager.enqueueUniqueWork(
+            novel.url,
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
+    }
+
+    /**
+     * Cancels an ongoing export for the given novel.
+     */
+    fun cancelExport(novelUrl: String) {
+        workManager.cancelUniqueWork(novelUrl)
+        ExportProgressManager.updateProgress(novelUrl, null)
+    }
+
+    /**
+     * Removes a novel from the local history.
+     */
+    fun removeNovel(novel: Novel) {
+        viewModelScope.launch {
+            deleteNovelUseCase(novel)
         }
     }
 }

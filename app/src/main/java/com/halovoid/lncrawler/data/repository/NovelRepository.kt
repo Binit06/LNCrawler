@@ -76,6 +76,15 @@ class NovelRepository(context: Context) {
         return crawler?.getChapterContent(chapterUrl) ?: ""
     }
 
+    /**
+     * Deletes a novel and its chapters from the local database.
+     * @param novel The novel to delete.
+     */
+    suspend fun deleteNovel(novel: Novel) {
+        val entity = novel.toEntity(novel.crawlerName ?: "NovelBin")
+        novelDao.deleteNovel(entity)
+    }
+
     /** Mapping extension: Converts [NovelEntity] to [Novel] domain model. */
     private fun NovelEntity.toDomain(chapters: List<Chapter> = emptyList()) = Novel(
         url = url,

@@ -1,122 +1,192 @@
 package com.halovoid.lncrawler.data.export
 
+import com.halovoid.lncrawler.data.crawler.core.Crawler
 import com.halovoid.lncrawler.domain.models.Novel
+import kotlinx.coroutines.*
 import java.io.OutputStream
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.time.Duration.Companion.seconds
 
 /**
- * Exporter class responsible for generating EPUB files in the Data layer.
- * Uses [ZipOutputStream] to package HTML and XML content according to the EPUB 2.0 specification.
+ * Enhanced EPUB exporter logic in the Data layer.
+ * 
+ * This class handles the entire process of generating an EPUB:
+ * 1. Fetching chapter content from the source using the provided [Crawler].
+ * 2. Respecting the crawler's rate-limiting and batching settings.
+ * 3. Packaging everything into a standard EPUB structure.
  */
 class EpubExporter {
+
+    private val STYLE_FILE_NAME = "style.css"
+    private val COVER_IMAGE_NAME = "cover.jpg"
+    private val PROJECT_URL = "https://github.com/halovoid/LNCrawler"
+
     /**
-     * Exports a novel to an EPUB format.
-     * 
-     * @param novel The [Novel] metadata to include.
-     * @param chapters List of chapter titles and their sanitized HTML content.
-     * @param outputStream The stream to write the generated EPUB data to (typically SAF-based).
+     * Executes the full export process: fetches chapters via [crawler] and writes the EPUB to [outputStream].
      */
-    fun export(novel: Novel, chapters: List<Pair<String, String>>, outputStream: OutputStream) {
-        ZipOutputStream(outputStream).use { zip ->
-            // 1. Mimetype - MUST be first and uncompressed
-            val mimeBytes = "application/epub+zip".toByteArray(Charsets.UTF_8)
-            val mimeEntry = ZipEntry("mimetype").apply {
-                method = ZipEntry.STORED
-                size = mimeBytes.size.toLong()
-                compressedSize = mimeBytes.size.toLong()
-                crc = CRC32().apply { update(mimeBytes) }.value
-            }
-            zip.putNextEntry(mimeEntry)
-            zip.write(mimeBytes)
-            zip.closeEntry()
+    suspend fun export(
+        novel: Novel,
+        crawler: Crawler,
+        outputStream: OutputStream,
+        onProgress: (Int, Int, String) -> Unit
+    ) = coroutineScope {
+        val chaptersWithContent = mutableListOf<Pair<String, String>>()
+        val rateLimit = crawler.requestRateLimit
+        val batchSize = crawler.chapterBatchSize ?: 1
 
-            // 2. Container.xml
-            writeZipEntry(zip, "META-INF/container.xml", """
-                <?xml version="1.0" encoding="UTF-8"?>
-                <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-                    <rootfiles>
-                        <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-                    </rootfiles>
-                </container>
-            """.trimIndent())
+        val totalChapters = novel.chapters.size
+        val chapterChunks = novel.chapters.chunked(batchSize)
 
-            // 3. Intro page (Synopsis)
-            addIntroPage(zip, novel)
-
-            // 4. Chapters
-            chapters.forEachIndexed { index, (title, content) ->
-                addChapterPage(zip, index + 1, title, content)
+        chapterChunks.forEachIndexed { chunkIndex, chunk ->
+            val deferreds = chunk.map { chapter ->
+                async(Dispatchers.IO) {
+                    var content = crawler.getChapterContent(chapter.url)
+                    if (content.isEmpty()) {
+                        content = "<p><i>[Error: Failed to fetch chapter content]</i></p>"
+                    }
+                    chapter.title to content
+                }
             }
 
-            // 5. TOC.ncx
-            addTocNcx(zip, novel, chapters)
+            chaptersWithContent.addAll(deferreds.awaitAll())
+            onProgress(chaptersWithContent.size, totalChapters, "Fetching chapters...")
 
-            // 6. Styles
-            writeZipEntry(zip, "OEBPS/style.css", """
-                body { font-family: serif; line-height: 1.5; margin: 5%; }
-                h1, h2 { text-align: center; }
-                .synopsis { font-style: italic; margin-top: 2em; }
-                p { margin-bottom: 1em; text-indent: 0; }
-            """.trimIndent())
+            if (chunkIndex != chapterChunks.lastIndex) {
+                delay(rateLimit.seconds)
+            }
+        }
 
-            // 7. Content.opf
-            addContentOpf(zip, novel, chapters)
+        onProgress(totalChapters, totalChapters, "Generating EPUB structure...")
+
+        withContext(Dispatchers.IO) {
+            ZipOutputStream(outputStream).use { zip ->
+                writeMimetype(zip)
+                writeContainerXml(zip)
+                writeStyles(zip)
+
+                val coverBytes = novel.coverUrl?.let { crawler.downloadImage(it) }
+                if (coverBytes != null) {
+                    writeZipEntry(zip, "OEBPS/$COVER_IMAGE_NAME", coverBytes)
+                    writeFrontPage(zip)
+                }
+
+                writeIntroPage(zip, novel)
+
+                chaptersWithContent.forEachIndexed { index, (title, content) ->
+                    writeChapterPage(zip, index + 1, title, content)
+                }
+
+                writeTocNcx(zip, novel, chaptersWithContent)
+                writeContentOpf(zip, novel, chaptersWithContent, hasCover = coverBytes != null)
+            }
         }
     }
 
-    /** Helper to write a string content to a new zip entry. */
-    private fun writeZipEntry(zip: ZipOutputStream, path: String, content: String) {
-        zip.putNextEntry(ZipEntry(path))
-        zip.write(content.toByteArray(Charsets.UTF_8))
+    private fun writeMimetype(zip: ZipOutputStream) {
+        val mimeBytes = "application/epub+zip".toByteArray(Charsets.UTF_8)
+        val entry = ZipEntry("mimetype").apply {
+            method = ZipEntry.STORED
+            size = mimeBytes.size.toLong()
+            compressedSize = mimeBytes.size.toLong()
+            crc = CRC32().apply { update(mimeBytes) }.value
+        }
+        zip.putNextEntry(entry)
+        zip.write(mimeBytes)
         zip.closeEntry()
     }
 
-    /** Adds the intro/synopsis page to the EPUB. */
-    private fun addIntroPage(zip: ZipOutputStream, novel: Novel) {
+    private fun writeContainerXml(zip: ZipOutputStream) {
         val content = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+            <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+                <rootfiles>
+                    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+                </rootfiles>
+            </container>
+        """.trimIndent()
+        writeZipEntry(zip, "META-INF/container.xml", content.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun writeStyles(zip: ZipOutputStream) {
+        val content = """
+            body { font-family: serif; line-height: 1.5; margin: 5%; }
+            h1, h2, h3 { text-align: center; }
+            .synopsis { font-style: italic; margin-top: 2em; border-top: 1px dotted #ccc; padding-top: 1em; }
+            .footer { margin-top: 2em; font-size: 0.8em; color: #666; text-align: center; border-top: 1px solid #eee; padding-top: 1em; }
+            #cover img { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+            p { margin-bottom: 1em; text-indent: 0; }
+        """.trimIndent()
+        writeZipEntry(zip, "OEBPS/$STYLE_FILE_NAME", content.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun writeFrontPage(zip: ZipOutputStream) {
+        val content = """
+            <?xml version="1.0" encoding="UTF-8"?>
             <html xmlns="http://www.w3.org/1999/xhtml">
             <head>
-                <title>${escapeXml(novel.title)}</title>
-                <link rel="stylesheet" type="text/css" href="style.css"/>
+                <title>Front Page</title>
+                <link rel="stylesheet" type="text/css" href="$STYLE_FILE_NAME"/>
             </head>
             <body>
-                <h1>${escapeXml(novel.title)}</h1>
-                <p><b>Author:</b> ${escapeXml(novel.author ?: "Unknown")}</p>
-                <div class="synopsis">
-                    <h2>Synopsis</h2>
-                    <p>${escapeXml(novel.description ?: "No description available.")}</p>
+                <div id="cover">
+                    <img src="$COVER_IMAGE_NAME" alt="cover" />
                 </div>
             </body>
             </html>
         """.trimIndent()
-        writeZipEntry(zip, "OEBPS/intro.xhtml", content)
+        writeZipEntry(zip, "OEBPS/front.xhtml", content.toByteArray(Charsets.UTF_8))
     }
 
-    /** Adds a single chapter's HTML page to the EPUB. */
-    private fun addChapterPage(zip: ZipOutputStream, index: Int, title: String, content: String) {
-        val xhtml = """
+    private fun writeIntroPage(zip: ZipOutputStream, novel: Novel) {
+        val content = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
             <html xmlns="http://www.w3.org/1999/xhtml">
             <head>
-                <title>${escapeXml(title)}</title>
-                <link rel="stylesheet" type="text/css" href="style.css"/>
+                <title>Intro Page</title>
+                <link rel="stylesheet" type="text/css" href="$STYLE_FILE_NAME"/>
             </head>
             <body>
-                <h2>${escapeXml(title)}</h2>
-                $content
+                <div id="intro">
+                    <h1>${escapeXml(novel.title)}</h1>
+                    <h3>${escapeXml(novel.author ?: "Unknown Author")}</h3>
+                    <div class="synopsis">
+                        ${novel.description ?: "No synopsis available."}
+                    </div>
+                    <div class="footer">
+                        <b>Source:</b> <a href="${novel.url}">${novel.url}</a>
+                        <br/>
+                        <i>Generated by <b><a href="$PROJECT_URL">LNCrawler</a></b></i>
+                    </div>
+                </div>
             </body>
             </html>
         """.trimIndent()
-        writeZipEntry(zip, "OEBPS/chapter_$index.xhtml", xhtml)
+        writeZipEntry(zip, "OEBPS/intro.xhtml", content.toByteArray(Charsets.UTF_8))
     }
 
-    /** Generates the Table of Contents (ncx) file. */
-    private fun addTocNcx(zip: ZipOutputStream, novel: Novel, chapters: List<Pair<String, String>>) {
+    private fun writeChapterPage(zip: ZipOutputStream, index: Int, title: String, content: String) {
+        val xhtml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <html xmlns="http://www.w3.org/1999/xhtml">
+            <head>
+                <title>${escapeXml(title)}</title>
+                <link rel="stylesheet" type="text/css" href="$STYLE_FILE_NAME"/>
+            </head>
+            <body>
+                <div id="chapter">
+                    <h4 style="opacity: 0.5">#$index</h4>
+                    <h1>${escapeXml(title)}</h1>
+                    $content
+                </div>
+            </body>
+            </html>
+        """.trimIndent()
+        writeZipEntry(zip, "OEBPS/chapter_$index.xhtml", xhtml.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun writeTocNcx(zip: ZipOutputStream, novel: Novel, chapters: List<Pair<String, String>>) {
         val navPoints = StringBuilder()
         navPoints.append("""
             <navPoint id="intro" playOrder="1">
@@ -140,8 +210,6 @@ class EpubExporter {
                 <head>
                     <meta name="dtb:uid" content="${escapeXml(novel.url)}"/>
                     <meta name="dtb:depth" content="1"/>
-                    <meta name="dtb:totalPageCount" content="0"/>
-                    <meta name="dtb:maxPageNumber" content="0"/>
                 </head>
                 <docTitle><text>${escapeXml(novel.title)}</text></docTitle>
                 <navMap>
@@ -149,15 +217,19 @@ class EpubExporter {
                 </navMap>
             </ncx>
         """.trimIndent()
-        writeZipEntry(zip, "OEBPS/toc.ncx", content)
+        writeZipEntry(zip, "OEBPS/toc.ncx", content.toByteArray(Charsets.UTF_8))
     }
 
-    /** Generates the content.opf manifest file. */
-    private fun addContentOpf(zip: ZipOutputStream, novel: Novel, chapters: List<Pair<String, String>>) {
+    private fun writeContentOpf(zip: ZipOutputStream, novel: Novel, chapters: List<Pair<String, String>>, hasCover: Boolean) {
         val manifest = StringBuilder()
         val spine = StringBuilder()
 
-        manifest.append("""<item id="style" href="style.css" media-type="text/css"/>""").append("\n")
+        manifest.append("""<item id="style" href="$STYLE_FILE_NAME" media-type="text/css"/>""").append("\n")
+        if (hasCover) {
+            manifest.append("""<item id="cover-image" href="$COVER_IMAGE_NAME" media-type="image/jpeg"/>""").append("\n")
+            manifest.append("""<item id="front" href="front.xhtml" media-type="application/xhtml+xml"/>""").append("\n")
+            spine.append("""<itemref idref="front"/>""").append("\n")
+        }
         manifest.append("""<item id="intro" href="intro.xhtml" media-type="application/xhtml+xml"/>""").append("\n")
         spine.append("""<itemref idref="intro"/>""").append("\n")
 
@@ -171,10 +243,11 @@ class EpubExporter {
             <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="2.0">
                 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
                     <dc:title>${escapeXml(novel.title)}</dc:title>
-                    <dc:creator opf:role="aut">${escapeXml(novel.author ?: "Unknown")}</dc:creator>
+                    <dc:creator opf:role="aut">${escapeXml(novel.author ?: "Unknown Author")}</dc:creator>
                     <dc:language>en</dc:language>
                     <dc:identifier id="BookID" opf:scheme="URI">${escapeXml(novel.url)}</dc:identifier>
                     <dc:description>${escapeXml(novel.description ?: "")}</dc:description>
+                    ${if (hasCover) "<meta name=\"cover\" content=\"cover-image\"/>" else ""}
                 </metadata>
                 <manifest>
                     <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
@@ -185,10 +258,15 @@ class EpubExporter {
                 </spine>
             </package>
         """.trimIndent()
-        writeZipEntry(zip, "OEBPS/content.opf", content)
+        writeZipEntry(zip, "OEBPS/content.opf", content.toByteArray(Charsets.UTF_8))
     }
 
-    /** Escapes special characters for XML compliance. */
+    private fun writeZipEntry(zip: ZipOutputStream, path: String, content: ByteArray) {
+        zip.putNextEntry(ZipEntry(path))
+        zip.write(content)
+        zip.closeEntry()
+    }
+
     private fun escapeXml(input: String): String {
         return input.replace("&", "&amp;")
             .replace("<", "&lt;")

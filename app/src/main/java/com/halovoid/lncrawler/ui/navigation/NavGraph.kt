@@ -5,8 +5,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.halovoid.lncrawler.ui.screens.request.RequestScreen
-import com.halovoid.lncrawler.ui.screens.library.LibraryScreen
-import com.halovoid.lncrawler.ui.screens.settings.SettingsScreen
 
 /**
  * Defines the available navigation destinations in the application.
@@ -15,10 +13,6 @@ import com.halovoid.lncrawler.ui.screens.settings.SettingsScreen
 sealed class Screen(val route: String) {
     /** The main screen for inputting URLs and viewing recent requests. */
     object Request : Screen("request")
-    /** The library screen showing all saved/downloaded novels. */
-    object Library : Screen("library")
-    /** Application settings and configurations. */
-    object Settings : Screen("settings")
     /** Detailed view of a specific novel, allowing for chapter browsing and export. */
     object NovelDetail : Screen("novel_detail/{crawlerName}/{novelUrl}") {
         /** Creates a route string for the novel detail screen with encoded parameters. */
@@ -39,12 +33,6 @@ fun NavGraph(navController: NavHostController) {
                     navController.navigate(Screen.NovelDetail.createRoute(crawlerName, novelUrl))
                 }
             )
-        }
-        composable(Screen.Library.route) {
-            LibraryScreen()
-        }
-        composable(Screen.Settings.route) {
-            SettingsScreen()
         }
         composable(Screen.NovelDetail.route) { backStackEntry ->
             val crawlerName = backStackEntry.arguments?.getString("crawlerName") ?: ""
