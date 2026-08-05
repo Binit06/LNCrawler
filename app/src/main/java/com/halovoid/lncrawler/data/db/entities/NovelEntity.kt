@@ -20,5 +20,7 @@ data class NovelEntity(
     /** Summary of the novel. */
     val description: String?,
     /** The name of the crawler used to fetch this novel. */
-    val crawlerName: String
+    val crawlerName: String,
+    /** Alternative names or titles for the novel. */
+    val alternativeNames: String? = null
 )

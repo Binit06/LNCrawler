@@ -12,7 +12,7 @@ import com.halovoid.lncrawler.data.db.entities.NovelEntity
  * Main Room database for the application.
  * Part of the Data layer, responsible for local persistence.
  */
-@Database(entities = [NovelEntity::class, ChapterEntity::class], version = 1)
+@Database(entities = [NovelEntity::class, ChapterEntity::class], version = 2)
 abstract class AppDatabase : RoomDatabase() {
     /** Provides access to [NovelDao]. */
     abstract fun novelDao(): NovelDao
@@ -32,7 +32,9 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "lncrawler_database"
-                ).build()
+                )
+                    .fallbackToDestructiveMigration(true)
+                    .build()
                 INSTANCE = instance
                 instance
             }

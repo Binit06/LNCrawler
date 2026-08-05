@@ -31,7 +31,10 @@ class NovelBinsCrawler : Crawler() {
         val doc = getDocument(novelUrl) ?: throw IOException("Failed to fetch novel details from $novelUrl")
         Log.i(name, "Scraping novel: $novelUrl")
         
-        val title = doc.select(".novel-short-info h1").first()?.text()?.split("\n")?.first() ?: ""
+        val titleElement = doc.select(".novel-short-info h1").first()
+        val title = titleElement?.ownText() ?: ""
+        val alternativeNames = titleElement?.select("small")?.text()?.replace("<br>", "")?.trim()
+        
         val author = doc.select(".novel-short-info p:contains(Author:)").text().replace("Author: ", "").trim()
         val coverUrl = doc.select("img.novel-photo").attr("abs:src")
         val description = doc.select(".novel-short-info p")[7]?.text() ?: ""
@@ -83,7 +86,8 @@ class NovelBinsCrawler : Crawler() {
             coverUrl = coverUrl,
             description = description,
             chapters = finalChapters,
-            crawlerName = name
+            crawlerName = name,
+            alternativeNames = alternativeNames
         )
     }
 

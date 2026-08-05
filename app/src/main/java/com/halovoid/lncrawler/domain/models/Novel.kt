@@ -20,5 +20,7 @@ data class Novel(
     /** Unique identifier, typically used for database operations. */
     val id: String? = null,
     /** The name of the [com.halovoid.lncrawler.data.crawler.core.Crawler] that handled this novel. */
-    val crawlerName: String? = null
+    val crawlerName: String? = null,
+    /** Alternative names or titles for the novel. */
+    val alternativeNames: String? = null
 )

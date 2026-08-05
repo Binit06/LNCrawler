@@ -93,7 +93,8 @@ class NovelRepository(context: Context) {
         coverUrl = coverUrl,
         description = description,
         chapters = chapters,
-        crawlerName = crawlerName
+        crawlerName = crawlerName,
+        alternativeNames = alternativeNames
     )
 
     /** Mapping extension: Converts [ChapterEntity] to [Chapter] domain model. */
@@ -110,7 +111,8 @@ class NovelRepository(context: Context) {
         author = author,
         coverUrl = coverUrl,
         description = description,
-        crawlerName = crawlerName
+        crawlerName = crawlerName,
+        alternativeNames = alternativeNames
     )
 
     /** Mapping extension: Converts [Chapter] domain model to [ChapterEntity]. */
