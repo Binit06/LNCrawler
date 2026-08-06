@@ -49,6 +49,7 @@ fun RequestDetailScreen(
     val record by viewModel.getRecord(recordId).collectAsState(initial = null)
     val novel by viewModel.novel.collectAsState()
     val progressMap by viewModel.exportProgressMap.collectAsState()
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/epub+zip")
@@ -207,10 +208,7 @@ fun RequestDetailScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     OutlinedIconButton(
-                                        onClick = {
-                                            viewModel.deleteHistoryRecord(currentRecord.id, currentRecord.novelUrl)
-                                            onBackClick()
-                                        },
+                                        onClick = { showDeleteConfirmation = true },
                                         border = BorderStroke(1.dp, BorderColor),
                                         colors = IconButtonDefaults.outlinedIconButtonColors(
                                             containerColor = DarkSurface,
@@ -317,6 +315,20 @@ fun RequestDetailScreen(
                 }
                 
                 Spacer(modifier = Modifier.height(24.dp))
+            }
+
+            if (showDeleteConfirmation) {
+                val displayName = currentRecord.novelTitle.ifBlank { currentRecord.novelUrl }
+                ConfirmDeleteDialog(
+                    title = "Delete request?",
+                    message = "This will permanently remove \"$displayName\" from your request history. This action cannot be undone.",
+                    onConfirm = {
+                        showDeleteConfirmation = false
+                        viewModel.deleteHistoryRecord(currentRecord.id, currentRecord.novelUrl)
+                        onBackClick()
+                    },
+                    onDismiss = { showDeleteConfirmation = false }
+                )
             }
         }
     }
