@@ -76,6 +76,7 @@ class ExportWorker(
                     exportRecordDao.update(record.copy(status = "CANCELLED"))
                 }
             }
+            applicationContext.contentResolver.delete(destinationUri, null, null) // fix: remove the file that has been created
             Result.failure()
         } catch (e: Exception) {
             Log.e("ExportWorker", "Export failed for $novelUrl", e)
@@ -89,6 +90,7 @@ class ExportWorker(
                     )
                 }
             }
+            applicationContext.contentResolver.delete(destinationUri, null, null) // fix: remove the file that has been created
             Result.failure()
         } finally {
             ExportProgressManager.updateProgress(recordId, novelUrl, null)

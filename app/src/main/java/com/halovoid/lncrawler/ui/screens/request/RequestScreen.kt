@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.domain.models.ExportRecord
 import com.halovoid.lncrawler.domain.models.ExportStatus
 import com.halovoid.lncrawler.ui.theme.*
@@ -46,7 +47,7 @@ fun RequestScreen(
     var urlInput by remember { mutableStateOf("") }
     val error by viewModel.error.collectAsState()
     val activeFetches by viewModel.activeFetches.collectAsState()
-    val history by viewModel.exportHistory.collectAsState()
+    val history by viewModel.exportHistory.collectAsStateWithLifecycle() // fix: always refetches the history
     val progressMap by viewModel.exportProgressMap.collectAsState()
     val context = LocalContext.current
     val isFetching = !activeFetches.isEmpty()
@@ -175,6 +176,7 @@ fun RequestScreen(
 
             item { HorizontalDivider(color = BorderColor) }
 
+            // Request History Section
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -204,7 +206,7 @@ fun RequestScreen(
                     }
 
                     OutlinedIconButton(
-                        onClick = { /* Refresh */ },
+                        onClick = {  },
                         border = BorderStroke(1.dp, BorderColor),
                         colors = IconButtonDefaults.outlinedIconButtonColors(
                             containerColor = DarkSurface,
