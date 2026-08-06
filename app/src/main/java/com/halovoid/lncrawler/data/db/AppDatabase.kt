@@ -4,18 +4,27 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.halovoid.lncrawler.data.db.dao.ExportRecordDao
 import com.halovoid.lncrawler.data.db.dao.NovelDao
 import com.halovoid.lncrawler.data.db.entities.ChapterEntity
 import com.halovoid.lncrawler.data.db.entities.NovelEntity
+import com.halovoid.lncrawler.data.db.entities.ExportRecordEntity
+
 
 /**
  * Main Room database for the application.
  * Part of the Data layer, responsible for local persistence.
  */
-@Database(entities = [NovelEntity::class, ChapterEntity::class], version = 2)
+@Database(
+    entities = [NovelEntity::class, ChapterEntity::class, ExportRecordEntity::class],
+    version = 4,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     /** Provides access to [NovelDao]. */
     abstract fun novelDao(): NovelDao
+
+    abstract fun exportRecordDao(): ExportRecordDao
 
     companion object {
         @Volatile

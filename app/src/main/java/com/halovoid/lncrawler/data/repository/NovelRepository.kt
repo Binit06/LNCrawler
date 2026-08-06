@@ -33,15 +33,22 @@ class NovelRepository(context: Context) {
 
     /**
      * Retrieves full details for a novel.
-     * Attempts to fetch from the network using a crawler and saves it to the database.
-     * If network fails, falls back to the cached version in the database.
      * 
      * @param crawlerName Name of the crawler to use for network fetch.
      * @param novelUrl The URL of the novel.
+     * @param refresh If true, always attempts to fetch the latest data from the network.
+     *                If false, returns cached data if available.
      * @return The populated [Novel] or null if not found.
      */
-    suspend fun getNovelDetails(crawlerName: String, novelUrl: String): Novel? {
-        // Fetch from network first to ensure we have all chapters
+    suspend fun getNovelDetails(crawlerName: String, novelUrl: String, refresh: Boolean = true): Novel? {
+        if (!refresh) {
+            val cached = novelDao.getNovelWithChapters(novelUrl)
+            if (cached != null) {
+                return cached.novel.toDomain(cached.chapters.map { it.toDomain() })
+            }
+        }
+
+        // Fetch from network
         val crawler = CrawlerFactory.getCrawler(crawlerName)
         val novel = crawler?.getNovelDetails(novelUrl)
         
@@ -50,7 +57,7 @@ class NovelRepository(context: Context) {
             return novel
         }
 
-        // Fallback to DB if network fails
+        // Fallback to DB if network fails or crawler not found
         val cached = novelDao.getNovelWithChapters(novelUrl)
         return cached?.novel?.toDomain(cached.chapters.map { it.toDomain() })
     }

@@ -40,6 +40,7 @@ class EpubExporter {
         val chapterChunks = novel.chapters.chunked(batchSize)
 
         chapterChunks.forEachIndexed { chunkIndex, chunk ->
+            ensureActive()
             val deferreds = chunk.map { chapter ->
                 async(Dispatchers.IO) {
                     var content = crawler.getChapterContent(chapter.url)

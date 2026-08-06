@@ -9,11 +9,14 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.halovoid.lncrawler.data.crawler.core.CrawlerFactory
+import com.halovoid.lncrawler.data.db.dao.ExportRecordDao
 import com.halovoid.lncrawler.data.export.ExportProgress
 import com.halovoid.lncrawler.data.export.ExportProgressManager
 import com.halovoid.lncrawler.data.export.ExportWorker
 import com.halovoid.lncrawler.data.repository.NovelRepository
+import com.halovoid.lncrawler.domain.models.ExportRecord
 import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.domain.usecases.DeleteNovelUseCase
 import com.halovoid.lncrawler.domain.usecases.GetNovelDetailsUseCase
 import com.halovoid.lncrawler.domain.usecases.GetSavedNovelsUseCase
@@ -24,7 +27,10 @@ import kotlinx.coroutines.launch
  * ViewModel for the [RequestScreen] in the UI layer.
  * Manages URL validation, saved novels list, and background export tasks.
  */
-class RequestViewModel(application: Application) : AndroidViewModel(application) {
+class RequestViewModel(
+    application: Application,
+    private val exportRecordDao: ExportRecordDao
+) : AndroidViewModel(application) {
     private val repository = NovelRepository(application)
     private val getSavedNovelsUseCase = GetSavedNovelsUseCase(repository)
     private val getNovelDetailsUseCase = GetNovelDetailsUseCase(repository)
@@ -105,6 +111,26 @@ class RequestViewModel(application: Application) : AndroidViewModel(application)
             ExistingWorkPolicy.REPLACE,
             request
         )
+    }
+
+    val exportHistory: StateFlow<List<ExportRecord>> = exportRecordDao.getAllHistory()
+        .map { entities -> entities.map { it.toDomain() } }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    fun clearHistory() {
+        viewModelScope.launch {
+            exportRecordDao.clearHistory()
+        }
+    }
+
+    fun deleteHistoryRecord(id: Int) {
+        viewModelScope.launch {
+            exportRecordDao.deleteById(id)
+        }
     }
 
     /**
