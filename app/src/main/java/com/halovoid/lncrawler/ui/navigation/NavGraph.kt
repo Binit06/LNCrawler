@@ -2,6 +2,7 @@ package com.halovoid.lncrawler.ui.navigation
 
 import android.app.Application
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -33,11 +34,12 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(navController: NavHostController) {
     val application = LocalContext.current.applicationContext as Application
-    val factory = ViewModelFactory(application)
     
-    // Sharing the same RequestViewModel instance for Library and Request screens
-    // so they see the same data without re-fetching.
-    val requestViewModel: RequestViewModel = viewModel(factory = factory)
+    // Using remember to ensure the factory is stable and the shared ViewModel
+    // is correctly scoped to the navigation lifecycle.
+    val requestViewModel: RequestViewModel = viewModel(
+        factory = remember { ViewModelFactory(application) }
+    )
 
     NavHost(navController = navController, startDestination = Screen.Request.route) {
         composable(Screen.Request.route) {
@@ -61,7 +63,9 @@ fun NavGraph(navController: NavHostController) {
                     navController.navigate(Screen.NovelDetail.createRoute(crawlerName, novelUrl))
                 },
                 onBackClick = {
-                    navController.popBackStack()
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
                 }
             )
         }
@@ -69,9 +73,12 @@ fun NavGraph(navController: NavHostController) {
             val recordId = backStackEntry.arguments?.getString("recordId")?.toInt() ?: -1
             RequestDetailScreen(
                 recordId = recordId,
-                onBackClick = { navController.popBackStack() },
+                onBackClick = {
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    }
+                },
                 onOpenUrl = { url ->
-                    // Logic to open URL in browser
                     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
                     application.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
                 }

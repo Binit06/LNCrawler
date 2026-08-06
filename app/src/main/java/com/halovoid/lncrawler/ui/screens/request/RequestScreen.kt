@@ -1,8 +1,6 @@
 package com.halovoid.lncrawler.ui.screens.request
 
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -55,15 +53,30 @@ fun RequestScreen(
 
     Scaffold(
         containerColor = DarkBackground,
+        contentWindowInsets = WindowInsets.systemBars,
         topBar = {
             TopAppBar(
-                title = { Text("LNCrawler", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Text(
+                        "LNCrawler", 
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryText
+                    ) 
+                },
                 actions = {
                     IconButton(onClick = onLibraryClick) {
-                        Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Library", tint = PrimaryAccent)
+                        Icon(
+                            Icons.AutoMirrored.Filled.LibraryBooks, 
+                            contentDescription = "Library", 
+                            tint = PrimaryAccent
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DarkBackground,
+                    titleContentColor = PrimaryText,
+                    actionIconContentColor = PrimaryAccent
+                )
             )
         }
     ) { innerPadding ->
@@ -208,7 +221,7 @@ fun RequestScreen(
             }
 
             items(history, key = { it.id }) { record ->
-                val progress = progressMap[record.novelUrl]
+                val progress = progressMap[record.id.toLong()]
                 RequestHistoryCard(
                     title = record.novelTitle,
                     status = record.status,
@@ -223,7 +236,7 @@ fun RequestScreen(
                         }
                     },
                     onRemove = { 
-                        viewModel.deleteHistoryRecord(record.id)
+                        viewModel.deleteHistoryRecord(record.id, record.novelUrl)
                     }
                 )
             }
@@ -279,8 +292,15 @@ fun RequestHistoryCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.AccessTime, contentDescription = null, modifier = Modifier.size(12.dp), tint = SecondaryText)
-                Spacer(modifier = Modifier.width(4.dp))
+                Icon(
+                    Icons.Default.AccessTime,
+                    contentDescription = null,
+                    modifier = Modifier.size(12.dp),
+                    tint = SecondaryText
+                )
+
+                Spacer(Modifier.width(4.dp))
+
                 Text(
                     text = dateFormatter.format(Date(timestamp)),
                     style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
@@ -300,40 +320,16 @@ fun RequestHistoryCard(
                     color = PrimaryAccent,
                     trackColor = BorderColor
                 )
+                Spacer(modifier = Modifier.width(10.dp))
+
+                Text (
+                    text = "${(progress * 100).toInt()}%",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SecondaryText
+                )
                 if (status == ExportStatus.SUCCESS) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(16.dp))
-                }
-            }
-
-            if (onReplay != null || onRemove != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onRemove != null) {
-                        TextButton(onClick = onRemove) {
-                            Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Red.copy(alpha = 0.7f))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Remove", color = Color.Red.copy(alpha = 0.7f), fontSize = 14.sp)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    
-                    if (onReplay != null) {
-                        OutlinedButton(
-                            onClick = onReplay,
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = DarkSurface)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = PrimaryText)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Replay", color = PrimaryText, fontSize = 14.sp)
-                        }
-                    }
                 }
             }
         }

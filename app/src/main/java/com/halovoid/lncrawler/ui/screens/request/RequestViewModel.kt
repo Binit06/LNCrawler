@@ -41,8 +41,8 @@ class RequestViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    /** Map of ongoing export progress. */
-    val exportProgressMap: StateFlow<Map<String, ExportProgress>> = ExportProgressManager.progressMap
+    /** Map of ongoing export progress keyed by Record ID. */
+    val exportProgressMap: StateFlow<Map<Long, ExportProgress>> = ExportProgressManager.recordProgressMap
 
     /** Set of URLs currently being fetched from the network (metadata/chapters). */
     private val _activeFetches = MutableStateFlow<Set<String>>(emptySet())
@@ -103,9 +103,14 @@ class RequestViewModel(
             
         val request = OneTimeWorkRequestBuilder<ExportWorker>()
             .setInputData(inputData)
+            .addTag(novel.url) // Allow cancelling by URL
             .build()
             
-        // Use unique work based on URL to avoid duplicate exports for the same novel
+        // Use unique work based on URL if we only want one active export per novel
+        // or just enqueue if multiple are allowed.
+        // Given the requirement to track them differently, we can use UniqueWork 
+        // with REPLACE policy to keep only the latest one active per novel, 
+        // but now they will have different record IDs.
         workManager.enqueueUniqueWork(
             novel.url,
             ExistingWorkPolicy.REPLACE,
@@ -127,18 +132,19 @@ class RequestViewModel(
         }
     }
 
-    fun deleteHistoryRecord(id: Int) {
+    fun deleteHistoryRecord(id: Int, novelUrl: String) {
         viewModelScope.launch {
             exportRecordDao.deleteById(id)
+            ExportProgressManager.updateProgress(id.toLong(), novelUrl, null)
         }
     }
 
     /**
      * Cancels an ongoing export for the given novel.
      */
-    fun cancelExport(novelUrl: String) {
+    fun cancelExport(novelUrl: String, recordId: Long) {
         workManager.cancelUniqueWork(novelUrl)
-        ExportProgressManager.updateProgress(novelUrl, null)
+        ExportProgressManager.updateProgress(recordId, novelUrl, null)
     }
 
     /**

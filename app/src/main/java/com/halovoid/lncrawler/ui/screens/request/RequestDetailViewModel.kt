@@ -35,8 +35,8 @@ class RequestDetailViewModel(
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel.asStateFlow()
 
-    /** Observes the global export progress map. */
-    val exportProgressMap: StateFlow<Map<String, ExportProgress>> = ExportProgressManager.progressMap
+    /** Observes the global export progress map keyed by Record ID. */
+    val exportProgressMap: StateFlow<Map<Long, ExportProgress>> = ExportProgressManager.recordProgressMap
 
     fun loadRecord(recordId: Int) {
         viewModelScope.launch {
@@ -50,6 +50,13 @@ class RequestDetailViewModel(
             }
         }
     }
+
+    fun deleteHistoryRecord(id: Int, novelUrl: String) {
+        viewModelScope.launch {
+            exportRecordDao.deleteById(id)
+            ExportProgressManager.updateProgress(id.toLong(), novelUrl, null)
+        }
+    }
     
     fun rerequestExport(destinationUri: android.net.Uri) {
         val currentRecord = _record.value ?: return
@@ -61,6 +68,7 @@ class RequestDetailViewModel(
             
         val request = OneTimeWorkRequestBuilder<ExportWorker>()
             .setInputData(inputData)
+            .addTag(currentRecord.novelUrl)
             .build()
             
         workManager.enqueueUniqueWork(
@@ -73,7 +81,7 @@ class RequestDetailViewModel(
     fun cancelExport() {
         _record.value?.let {
             workManager.cancelUniqueWork(it.novelUrl)
-            ExportProgressManager.updateProgress(it.novelUrl, null)
+            ExportProgressManager.updateProgress(it.id.toLong(), it.novelUrl, null)
         }
     }
 }

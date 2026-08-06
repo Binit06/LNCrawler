@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,6 +33,7 @@ import com.halovoid.lncrawler.ui.ViewModelFactory
 import com.halovoid.lncrawler.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.core.net.toUri
 
 /**
  * Detailed view for a specific export request record.
@@ -59,6 +61,16 @@ fun RequestDetailScreen(
             viewModel.rerequestExport(it)
             Toast.makeText(context, "Re-request started", Toast.LENGTH_SHORT).show()
         }
+    }
+
+    fun remove() {
+        if (record?.id === null || novel?.url === null) {
+            Toast.makeText(context, "Failed to Remove Request", Toast.LENGTH_SHORT).show()
+            return
+        }
+        viewModel.deleteHistoryRecord(record!!.id, novel!!.url)
+        Toast.makeText(context, "Removed request", Toast.LENGTH_SHORT).show()
+        onBackClick()
     }
 
     LaunchedEffect(recordId) {
@@ -94,7 +106,7 @@ fun RequestDetailScreen(
             }
         } else {
             val currentRecord = record!!
-            val progress = progressMap[currentRecord.novelUrl]
+            val progress = progressMap[currentRecord.id.toLong()]
             
             Column(
                 modifier = Modifier
@@ -161,6 +173,16 @@ fun RequestDetailScreen(
                                 color = PrimaryAccent,
                                 trackColor = BorderColor
                             )
+
+                            Spacer(modifier = Modifier.width(10.dp))
+
+                            if (progress?.progress !== null) {
+                                Text (
+                                    text = "${(progress.progress * 100).toInt()}%",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = SecondaryText
+                                )
+                            }
                             if (currentRecord.status == ExportStatus.SUCCESS) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(20.dp))
@@ -190,18 +212,47 @@ fun RequestDetailScreen(
                                     Text("Cancel", color = Color.Red)
                                 }
                             } else {
-                                OutlinedButton(
-                                    onClick = { 
-                                        val fileName = "${currentRecord.novelTitle.filter { it.isLetterOrDigit() }}.epub"
-                                        exportLauncher.launch(fileName)
-                                    },
-                                    shape = RoundedCornerShape(8.dp),
-                                    border = BorderStroke(1.dp, BorderColor),
-                                    colors = ButtonDefaults.outlinedButtonColors(containerColor = DarkSurface)
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp), tint = PrimaryText)
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text("Replay", color = PrimaryText)
+                                    OutlinedIconButton(
+                                        onClick = {
+                                            remove()
+                                        },
+                                        border = BorderStroke(1.dp, BorderColor),
+                                        colors = IconButtonDefaults.outlinedIconButtonColors(
+                                            containerColor = DarkSurface,
+                                            contentColor = Color.Red.copy(alpha = 0.8f)
+                                        )
+                                    ) {
+                                        Icon(
+                                            Icons.Default.DeleteOutline,
+                                            contentDescription = "Delete"
+                                        )
+                                    }
+
+                                    OutlinedButton(
+                                        onClick = {
+                                            val fileName =
+                                                "${currentRecord.novelTitle.filter { it.isLetterOrDigit() }}.epub"
+                                            exportLauncher.launch(fileName)
+                                        },
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = BorderStroke(1.dp, BorderColor),
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = DarkSurface
+                                        )
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(18.dp),
+                                            tint = PrimaryText
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Replay", color = PrimaryText)
+                                    }
                                 }
                             }
                         }
@@ -221,28 +272,25 @@ fun RequestDetailScreen(
                             Icon(Icons.Default.Language, contentDescription = null, tint = SecondaryText, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = android.net.Uri.parse(currentRecord.novelUrl).host ?: "Unknown Source",
+                                text = currentRecord.novelUrl.toUri().host ?: "Unknown Source",
                                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
                                 color = SecondaryText
                             )
                         }
                         
-                        Text(
-                            text = novel?.title ?: currentRecord.novelTitle,
-                            style = MaterialTheme.typography.headlineSmall.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 24.sp
-                            ),
-                            color = PrimaryAccent,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
-
-                        IconButton(
-                            onClick = { onOpenUrl(currentRecord.novelUrl) },
-                            modifier = Modifier.align(Alignment.CenterHorizontally).padding(vertical = 8.dp)
+                        TextButton(
+                            onClick = { onOpenUrl(currentRecord.novelUrl) }
                         ) {
-                            Icon(Icons.Default.OpenInNew, contentDescription = "Open Source", tint = PrimaryAccent)
+                            Text(
+                                text = novel?.title ?: currentRecord.novelTitle,
+                                style = MaterialTheme.typography.headlineSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 24.sp
+                                ),
+                                color = PrimaryAccent,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
 
                         HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 12.dp))

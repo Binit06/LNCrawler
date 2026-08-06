@@ -55,7 +55,8 @@ class ExportWorker(
                     outputStream = outputStream,
                     onProgress = { current, total, status ->
                         ExportProgressManager.updateProgress(
-                            novelUrl, 
+                            recordId, 
+                            novelUrl,
                             ExportProgress(current, total, status)
                         )
                     }
@@ -90,7 +91,7 @@ class ExportWorker(
             }
             Result.failure()
         } finally {
-            ExportProgressManager.updateProgress(novelUrl, null)
+            ExportProgressManager.updateProgress(recordId, novelUrl, null)
         }
     }
 }

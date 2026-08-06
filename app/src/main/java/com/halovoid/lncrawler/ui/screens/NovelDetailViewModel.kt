@@ -30,8 +30,8 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel
 
-    /** Observes the global export progress map. */
-    val exportProgressMap: StateFlow<Map<String, ExportProgress>> = ExportProgressManager.progressMap
+    /** Observes the global export progress map keyed by Novel URL. */
+    val exportProgressMap: StateFlow<Map<String, ExportProgress>> = ExportProgressManager.urlProgressMap
 
     fun loadNovel(crawlerName: String, novelUrl: String) {
         viewModelScope.launch {
@@ -67,6 +67,6 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
      */
     fun cancelExport(novelUrl: String) {
         workManager.cancelUniqueWork(novelUrl)
-        ExportProgressManager.updateProgress(novelUrl, null)
+        // Note: urlProgressMap will be cleared by the worker's finally block
     }
 }
