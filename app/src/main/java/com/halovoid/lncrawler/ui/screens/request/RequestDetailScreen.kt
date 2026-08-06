@@ -147,13 +147,12 @@ fun RequestDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         val isFinished = currentRecord.status == ExportStatus.SUCCESS
-                        val displayProgress = if (progress != null) {
-                            progress.progress
-                        } else if (isFinished) {
-                            1f
-                        } else {
-                            0f
-                        }
+                        val displayProgress = progress?.progress
+                            ?: if (isFinished) {
+                                1f
+                            } else {
+                                0f
+                            }
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             LinearProgressIndicator(

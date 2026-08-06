@@ -239,13 +239,7 @@ fun RequestScreen(
                     timestamp = record.timestamp,
                     progress = displayProgress,
                     errorLog = record.errorLog,
-                    onClick = { onHistoryClick(record.id) },
-                    onReplay = { 
-                        viewModel.fetchNovel(record.crawlerName, record.novelUrl) { _, _ ->
-                            Toast.makeText(context, "Refresh started", Toast.LENGTH_SHORT).show()
-                        }
-                    },
-                    onRemove = { pendingDelete = record }
+                    onClick = { onHistoryClick(record.id) }
                 )
             }
         }
@@ -272,9 +266,7 @@ fun RequestHistoryCard(
     timestamp: Long,
     progress: Float = 0f,
     errorLog: String? = null,
-    onClick: () -> Unit = {},
-    onReplay: (() -> Unit)? = null,
-    onRemove: (() -> Unit)? = null
+    onClick: () -> Unit = {}
 ) {
     val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
 
@@ -351,37 +343,6 @@ fun RequestHistoryCard(
                 if (status == ExportStatus.SUCCESS) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(16.dp))
-                }
-            }
-
-            if (onReplay != null || onRemove != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (onRemove != null) {
-                        TextButton(onClick = onRemove) {
-                            Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Red.copy(alpha = 0.7f))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Remove", color = Color.Red.copy(alpha = 0.7f), fontSize = 14.sp)
-                        }
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    
-                    if (onReplay != null) {
-                        OutlinedButton(
-                            onClick = onReplay,
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            border = BorderStroke(1.dp, BorderColor),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = DarkSurface)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = PrimaryText)
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Replay", color = PrimaryText, fontSize = 14.sp)
-                        }
-                    }
                 }
             }
         }
