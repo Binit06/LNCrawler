@@ -3,10 +3,12 @@
 **LNCrawler** is a Kotlin-based Android application for crawling and exporting light novels. It combines the powerful scraping logic inspired by [lightnovel-crawler](https://github.com/lncrawl/lightnovel-crawler) with a UI inspired by [Tachiyomi](https://github.com/tachiyomi).
 
 ## LNCrawler Overview
-![LNCrawler Novel Page Fetching](assets/lncrawler_novel_page_fetching.png)
-![LNCrawler Novel Page](assets/ln_crawler_novel_page.png)
-![LNCrawler Request Page](assets/lncrawler_request_page.png)
-![Exported EPUB](assets/exported_epub.png)
+<p align="center">
+  <img src="assets/lncrawler_novel_page_fetching.png" alt="LNCrawler Novel Page Fetching" width="220"/>
+  <img src="assets/ln_crawler_novel_page.png" alt="LNCrawler Novel Page" width="220"/>
+  <img src="assets/lncrawler_request_page.png" alt="LNCrawler Request Page" width="220"/>
+  <img src="assets/exported_epub.png" alt="Exported EPUB" width="220"/>
+</p>
 
 ## Getting Started
 
@@ -21,8 +23,8 @@
 3. Sync Gradle and run the `app` module.
 
 ## Supported Sources
-~ more sources will be added as the project grows
-- [NovelBin](https://novelbins.com)
+- [NovelBins](https://novelbins.com)
+- 📢 more sources will be added soon
 
 ## 🤝 Contributing
 
