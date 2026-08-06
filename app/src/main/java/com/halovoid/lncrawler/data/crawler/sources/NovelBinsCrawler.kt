@@ -21,7 +21,7 @@ class NovelBinsCrawler : Crawler() {
         get() = 1.0
 
     override val chapterBatchSize: Int
-        get() = 2
+        get() = 3
 
     override fun canHandle(url: String): Boolean {
         return url.contains("novelbins.com") || url.contains("novelbin.com")
