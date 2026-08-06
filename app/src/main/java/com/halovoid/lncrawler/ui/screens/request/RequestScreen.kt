@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.halovoid.lncrawler.domain.models.ExportRecord
 import com.halovoid.lncrawler.domain.models.ExportStatus
 import com.halovoid.lncrawler.ui.theme.*
 import java.text.SimpleDateFormat
@@ -49,6 +50,7 @@ fun RequestScreen(
     val progressMap by viewModel.exportProgressMap.collectAsState()
     val context = LocalContext.current
     val isFetching = !activeFetches.isEmpty()
+    var pendingDelete by remember { mutableStateOf<ExportRecord?>(null) }
 
     Scaffold(
         containerColor = DarkBackground,
@@ -243,11 +245,22 @@ fun RequestScreen(
                             Toast.makeText(context, "Refresh started", Toast.LENGTH_SHORT).show()
                         }
                     },
-                    onRemove = { 
-                        viewModel.deleteHistoryRecord(record.id, record.novelUrl)
-                    }
+                    onRemove = { pendingDelete = record }
                 )
             }
+        }
+
+        pendingDelete?.let { record ->
+            val displayName = record.novelTitle.ifBlank { record.novelUrl }
+            ConfirmDeleteDialog(
+                title = "Delete request?",
+                message = "This will permanently remove \"$displayName\" from your request history. This action cannot be undone.",
+                onConfirm = {
+                    viewModel.deleteHistoryRecord(record.id, record.novelUrl)
+                    pendingDelete = null
+                },
+                onDismiss = { pendingDelete = null }
+            )
         }
     }
 }
