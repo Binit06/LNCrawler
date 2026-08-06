@@ -5,7 +5,7 @@
 ## LNCrawler Overview
 <p align="center">
   <img src="assets/lncrawler_novel_page_fetching.png" alt="LNCrawler Novel Page Fetching" width="220"/>
-  <img src="assets/ln_crawler_novel_page.png" alt="LNCrawler Novel Page" width="220"/>
+  <img src="assets/lncrawler_novel_page.png" alt="LNCrawler Novel Page" width="220"/>
   <img src="assets/lncrawler_request_page.png" alt="LNCrawler Request Page" width="220"/>
   <img src="assets/exported_epub.png" alt="Exported EPUB" width="220"/>
 </p>
