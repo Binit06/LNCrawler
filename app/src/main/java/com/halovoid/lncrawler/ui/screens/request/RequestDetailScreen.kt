@@ -9,26 +9,22 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.ExportStatus
-import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.ViewModelFactory
 import com.halovoid.lncrawler.ui.theme.*
 import java.text.SimpleDateFormat
@@ -37,9 +33,8 @@ import androidx.core.net.toUri
 
 /**
  * Detailed view for a specific export request record.
- * Displays request status and novel metadata in an inspection-style layout.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RequestDetailScreen(
     recordId: Int,
@@ -50,7 +45,8 @@ fun RequestDetailScreen(
     val factory = remember { ViewModelFactory(context.applicationContext as android.app.Application) }
     val viewModel: RequestDetailViewModel = viewModel(factory = factory)
 
-    val record by viewModel.record.collectAsState()
+    // Using collectAsState directly from the Flow to ensure we get DB updates.
+    val record by viewModel.getRecord(recordId).collectAsState(initial = null)
     val novel by viewModel.novel.collectAsState()
     val progressMap by viewModel.exportProgressMap.collectAsState()
 
@@ -58,23 +54,11 @@ fun RequestDetailScreen(
         contract = ActivityResultContracts.CreateDocument("application/epub+zip")
     ) { uri ->
         uri?.let {
-            viewModel.rerequestExport(it)
-            Toast.makeText(context, "Re-request started", Toast.LENGTH_SHORT).show()
+            record?.let { r ->
+                viewModel.rerequestExport(it, r)
+                Toast.makeText(context, "Re-request started", Toast.LENGTH_SHORT).show()
+            }
         }
-    }
-
-    fun remove() {
-        if (record?.id === null || novel?.url === null) {
-            Toast.makeText(context, "Failed to Remove Request", Toast.LENGTH_SHORT).show()
-            return
-        }
-        viewModel.deleteHistoryRecord(record!!.id, novel!!.url)
-        Toast.makeText(context, "Removed request", Toast.LENGTH_SHORT).show()
-        onBackClick()
-    }
-
-    LaunchedEffect(recordId) {
-        viewModel.loadRecord(recordId)
     }
 
     Scaffold(
@@ -137,7 +121,7 @@ fun RequestDetailScreen(
 
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        FlowRow(
+                        androidx.compose.foundation.layout.FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
@@ -161,7 +145,14 @@ fun RequestDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        val displayProgress = progress?.progress ?: if (currentRecord.status == ExportStatus.SUCCESS) 1f else 0f
+                        val isFinished = currentRecord.status == ExportStatus.SUCCESS
+                        val displayProgress = if (progress != null) {
+                            progress.progress
+                        } else if (isFinished) {
+                            1f
+                        } else {
+                            0f
+                        }
                         
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             LinearProgressIndicator(
@@ -176,14 +167,13 @@ fun RequestDetailScreen(
 
                             Spacer(modifier = Modifier.width(10.dp))
 
-                            if (progress?.progress !== null) {
-                                Text (
-                                    text = "${(progress.progress * 100).toInt()}%",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = SecondaryText
-                                )
-                            }
-                            if (currentRecord.status == ExportStatus.SUCCESS) {
+                            Text (
+                                text = "${(displayProgress * 100).toInt()}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SecondaryText
+                            )
+                            
+                            if (isFinished) {
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(20.dp))
                             }
@@ -191,16 +181,17 @@ fun RequestDetailScreen(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        // Timeline / Events (Simplified as Chips)
-                        FlowRow(
+                        androidx.compose.foundation.layout.FlowRow(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             EventChip(Icons.Default.PlayArrow, "Started", currentRecord.timestamp)
-                            if (currentRecord.status == ExportStatus.SUCCESS) {
-                                EventChip(Icons.Default.Check, "Completed", currentRecord.timestamp + 5000)
+                            if (isFinished) {
+                                EventChip(Icons.Default.Check, "Completed", currentRecord.timestamp + 1000)
                             } else if (currentRecord.status == ExportStatus.FAILED) {
-                                EventChip(Icons.Default.Error, "Failed", currentRecord.timestamp + 2000)
+                                EventChip(Icons.Default.Error, "Failed", currentRecord.timestamp + 1000)
+                            } else if (currentRecord.status == ExportStatus.CANCELLED) {
+                                EventChip(Icons.Default.Block, "Cancelled", currentRecord.timestamp + 1000)
                             }
                         }
 
@@ -208,7 +199,7 @@ fun RequestDetailScreen(
 
                         Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
                             if (progress != null) {
-                                TextButton(onClick = { viewModel.cancelExport() }) {
+                                TextButton(onClick = { viewModel.cancelExport(currentRecord) }) {
                                     Text("Cancel", color = Color.Red)
                                 }
                             } else {
@@ -218,7 +209,8 @@ fun RequestDetailScreen(
                                 ) {
                                     OutlinedIconButton(
                                         onClick = {
-                                            remove()
+                                            viewModel.deleteHistoryRecord(currentRecord.id, currentRecord.novelUrl)
+                                            onBackClick()
                                         },
                                         border = BorderStroke(1.dp, BorderColor),
                                         colors = IconButtonDefaults.outlinedIconButtonColors(
@@ -226,30 +218,19 @@ fun RequestDetailScreen(
                                             contentColor = Color.Red.copy(alpha = 0.8f)
                                         )
                                     ) {
-                                        Icon(
-                                            Icons.Default.DeleteOutline,
-                                            contentDescription = "Delete"
-                                        )
+                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete")
                                     }
 
                                     OutlinedButton(
                                         onClick = {
-                                            val fileName =
-                                                "${currentRecord.novelTitle.filter { it.isLetterOrDigit() }}.epub"
+                                            val fileName = "${currentRecord.novelTitle.filter { it.isLetterOrDigit() }}.epub"
                                             exportLauncher.launch(fileName)
                                         },
                                         shape = RoundedCornerShape(8.dp),
                                         border = BorderStroke(1.dp, BorderColor),
-                                        colors = ButtonDefaults.outlinedButtonColors(
-                                            containerColor = DarkSurface
-                                        )
+                                        colors = ButtonDefaults.outlinedButtonColors(containerColor = DarkSurface)
                                     ) {
-                                        Icon(
-                                            Icons.Default.Refresh,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(18.dp),
-                                            tint = PrimaryText
-                                        )
+                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp), tint = PrimaryText)
                                         Spacer(modifier = Modifier.width(8.dp))
                                         Text("Replay", color = PrimaryText)
                                     }
@@ -267,7 +248,6 @@ fun RequestDetailScreen(
                     border = BorderStroke(1.dp, BorderColor)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        // Source Header
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Language, contentDescription = null, tint = SecondaryText, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(8.dp))
@@ -279,7 +259,8 @@ fun RequestDetailScreen(
                         }
                         
                         TextButton(
-                            onClick = { onOpenUrl(currentRecord.novelUrl) }
+                            onClick = { onOpenUrl(currentRecord.novelUrl) },
+                            modifier = Modifier.padding(vertical = 4.dp)
                         ) {
                             Text(
                                 text = novel?.title ?: currentRecord.novelTitle,
@@ -295,7 +276,6 @@ fun RequestDetailScreen(
 
                         HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 12.dp))
 
-                        // Cover Image
                         AsyncImage(
                             model = novel?.coverUrl,
                             contentDescription = null,
@@ -309,7 +289,6 @@ fun RequestDetailScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Metadata Table
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -317,30 +296,22 @@ fun RequestDetailScreen(
                                 .clip(RoundedCornerShape(8.dp))
                         ) {
                             MetadataRow("Authors", novel?.author ?: "Unknown")
-                            MetadataRow("Genres", "Unknown") // We could add genres to the model
                             MetadataRow("Chapters", novel?.chapters?.size?.toString() ?: "Unknown")
-                            MetadataRow("Status", "Unknown")
-                            MetadataRow("Created", SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(currentRecord.timestamp)))
+                            MetadataRow("Status", "Available")
+                            MetadataRow("History Date", SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(currentRecord.timestamp)))
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Synopsis
                         Text(
                             text = "Synopsis",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 18.sp
-                            ),
+                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
                             color = PrimaryText
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             text = novel?.description ?: "No synopsis available.",
-                            style = MaterialTheme.typography.bodyMedium.copy(
-                                fontSize = 15.sp,
-                                lineHeight = 22.sp
-                            ),
+                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp),
                             color = PrimaryText
                         )
                     }
@@ -442,18 +413,4 @@ fun MetadataChipDetail(text: String) {
             color = SecondaryText
         )
     }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun FlowRow(
-    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
-    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
-    content: @Composable () -> Unit
-) {
-    androidx.compose.foundation.layout.FlowRow(
-        horizontalArrangement = horizontalArrangement,
-        verticalArrangement = verticalArrangement,
-        content = { content() }
-    )
 }

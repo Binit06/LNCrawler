@@ -16,7 +16,10 @@ interface ExportRecordDao {
     fun getAllHistory(): Flow<List<ExportRecordEntity>>
 
     @Query("SELECT * FROM export_history WHERE id = :id LIMIT 1")
-    suspend fun getRecordById(id: Long): ExportRecordEntity?
+    fun getRecordById(id: Long): Flow<ExportRecordEntity?>
+
+    @Query("SELECT * FROM export_history WHERE id = :id LIMIT 1")
+    suspend fun getRecordByIdOnce(id: Long): ExportRecordEntity?
 
     @Query("DELETE FROM export_history")
     suspend fun clearHistory()

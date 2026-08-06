@@ -12,6 +12,7 @@ import com.halovoid.lncrawler.data.db.entities.ExportRecordEntity
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Background worker for fetching novel chapters and generating an EPUB file.
@@ -64,15 +65,15 @@ class ExportWorker(
             }
 
             withContext(NonCancellable) {
-                exportRecordDao.getRecordById(recordId)?.let { record ->
+                exportRecordDao.getRecordByIdOnce(recordId)?.let { record ->
                     exportRecordDao.update(record.copy(status = "SUCCESS"))
                 }
             }
             Result.success()
         } catch (e: CancellationException) {
-            Log.i("ExportWorker", "Export cancelled for $novelUrl")
+            Log.i("ExportWorker", "Export cancelled for $novelUrl : $e")
             withContext(NonCancellable) {
-                exportRecordDao.getRecordById(recordId)?.let { record ->
+                exportRecordDao.getRecordByIdOnce(recordId)?.let { record ->
                     exportRecordDao.update(record.copy(status = "CANCELLED"))
                 }
             }
@@ -81,7 +82,7 @@ class ExportWorker(
         } catch (e: Exception) {
             Log.e("ExportWorker", "Export failed for $novelUrl", e)
             withContext(NonCancellable) {
-                exportRecordDao.getRecordById(recordId)?.let { record ->
+                exportRecordDao.getRecordByIdOnce(recordId)?.let { record ->
                     exportRecordDao.update(
                         record.copy(
                             status = "FAILED",
@@ -93,6 +94,8 @@ class ExportWorker(
             applicationContext.contentResolver.delete(destinationUri, null, null) // fix: remove the file that has been created
             Result.failure()
         } finally {
+            // Small delay to ensure DB status updates propagate to UI before clearing progress
+            kotlinx.coroutines.delay(500L.milliseconds)
             ExportProgressManager.updateProgress(recordId, novelUrl, null)
         }
     }

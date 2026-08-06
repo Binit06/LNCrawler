@@ -20,7 +20,6 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel for the Request Detail screen.
- * Fetches specific export record details and associated novel metadata.
  */
 class RequestDetailViewModel(
     application: Application,
@@ -29,27 +28,26 @@ class RequestDetailViewModel(
     private val repository = NovelRepository(application)
     private val workManager = WorkManager.getInstance(application)
 
-    private val _record = MutableStateFlow<ExportRecord?>(null)
-    val record: StateFlow<ExportRecord?> = _record.asStateFlow()
-
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel.asStateFlow()
 
+    /** Observes the specific record from the database as a hot flow. */
+    fun getRecord(recordId: Int): Flow<ExportRecord?> {
+        return exportRecordDao.getRecordById(recordId.toLong())
+            .map { it?.toDomain() }
+            .onEach { domainRecord ->
+                if (domainRecord != null && _novel.value == null) {
+                    _novel.value = repository.getNovelDetails(
+                        domainRecord.crawlerName, 
+                        domainRecord.novelUrl, 
+                        refresh = false
+                    )
+                }
+            }
+    }
+
     /** Observes the global export progress map keyed by Record ID. */
     val exportProgressMap: StateFlow<Map<Long, ExportProgress>> = ExportProgressManager.recordProgressMap
-
-    fun loadRecord(recordId: Int) {
-        viewModelScope.launch {
-            val recordEntity = exportRecordDao.getRecordById(recordId.toLong())
-            val domainRecord = recordEntity?.toDomain()
-            _record.value = domainRecord
-            
-            domainRecord?.let {
-                // LOAD FROM CACHE ONLY during initial screen transition to avoid UI lag
-                _novel.value = repository.getNovelDetails(it.crawlerName, it.novelUrl, refresh = false)
-            }
-        }
-    }
 
     fun deleteHistoryRecord(id: Int, novelUrl: String) {
         viewModelScope.launch {
@@ -58,30 +56,27 @@ class RequestDetailViewModel(
         }
     }
     
-    fun rerequestExport(destinationUri: android.net.Uri) {
-        val currentRecord = _record.value ?: return
+    fun rerequestExport(destinationUri: android.net.Uri, record: ExportRecord) {
         val inputData = Data.Builder()
-            .putString("novelUrl", currentRecord.novelUrl)
-            .putString("crawlerName", currentRecord.crawlerName)
+            .putString("novelUrl", record.novelUrl)
+            .putString("crawlerName", record.crawlerName)
             .putString("destinationUri", destinationUri.toString())
             .build()
             
         val request = OneTimeWorkRequestBuilder<ExportWorker>()
             .setInputData(inputData)
-            .addTag(currentRecord.novelUrl)
+            .addTag(record.novelUrl)
             .build()
             
         workManager.enqueueUniqueWork(
-            currentRecord.novelUrl,
+            record.novelUrl,
             ExistingWorkPolicy.REPLACE,
             request
         )
     }
 
-    fun cancelExport() {
-        _record.value?.let {
-            workManager.cancelUniqueWork(it.novelUrl)
-            ExportProgressManager.updateProgress(it.id.toLong(), it.novelUrl, null)
-        }
+    fun cancelExport(record: ExportRecord) {
+        workManager.cancelUniqueWork(record.novelUrl)
+        ExportProgressManager.updateProgress(record.id.toLong(), record.novelUrl, null)
     }
 }

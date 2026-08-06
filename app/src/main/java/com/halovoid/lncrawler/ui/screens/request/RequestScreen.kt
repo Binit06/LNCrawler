@@ -1,7 +1,6 @@
 package com.halovoid.lncrawler.ui.screens.request
 
 import android.widget.Toast
-import androidx.compose.animation.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.halovoid.lncrawler.domain.models.ExportRecord
 import com.halovoid.lncrawler.domain.models.ExportStatus
 import com.halovoid.lncrawler.ui.theme.*
 import java.text.SimpleDateFormat
@@ -47,7 +45,7 @@ fun RequestScreen(
     var urlInput by remember { mutableStateOf("") }
     val error by viewModel.error.collectAsState()
     val activeFetches by viewModel.activeFetches.collectAsState()
-    val history by viewModel.exportHistory.collectAsStateWithLifecycle() // fix: always refetches the history
+    val history by viewModel.exportHistory.collectAsStateWithLifecycle()
     val progressMap by viewModel.exportProgressMap.collectAsState()
     val context = LocalContext.current
     val isFetching = !activeFetches.isEmpty()
@@ -224,12 +222,20 @@ fun RequestScreen(
 
             items(history, key = { it.id }) { record ->
                 val progress = progressMap[record.id.toLong()]
+                val isFinished = record.status == ExportStatus.SUCCESS
+                val displayProgress = if (progress != null) {
+                    progress.progress
+                } else if (isFinished) {
+                    1f
+                } else {
+                    0f
+                }
+
                 RequestHistoryCard(
                     title = record.novelTitle,
                     status = record.status,
                     timestamp = record.timestamp,
-                    progress = progress?.progress ?: if (record.status == ExportStatus.SUCCESS) 1f else 0f,
-                    statusText = progress?.status ?: record.status.name,
+                    progress = displayProgress,
                     errorLog = record.errorLog,
                     onClick = { onHistoryClick(record.id) },
                     onReplay = { 
@@ -252,8 +258,6 @@ fun RequestHistoryCard(
     status: ExportStatus,
     timestamp: Long,
     progress: Float = 0f,
-    statusText: String? = null,
-    isFetching: Boolean = false,
     errorLog: String? = null,
     onClick: () -> Unit = {},
     onReplay: (() -> Unit)? = null,
@@ -267,7 +271,7 @@ fun RequestHistoryCard(
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        border = BorderStroke(1.dp, BorderColor)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
@@ -322,6 +326,7 @@ fun RequestHistoryCard(
                     color = PrimaryAccent,
                     trackColor = BorderColor
                 )
+                
                 Spacer(modifier = Modifier.width(10.dp))
 
                 Text (
@@ -329,9 +334,41 @@ fun RequestHistoryCard(
                     style = MaterialTheme.typography.labelSmall,
                     color = SecondaryText
                 )
+
                 if (status == ExportStatus.SUCCESS) {
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(16.dp))
+                }
+            }
+
+            if (onReplay != null || onRemove != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (onRemove != null) {
+                        TextButton(onClick = onRemove) {
+                            Icon(Icons.Default.DeleteOutline, contentDescription = null, modifier = Modifier.size(18.dp), tint = Color.Red.copy(alpha = 0.7f))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Remove", color = Color.Red.copy(alpha = 0.7f), fontSize = 14.sp)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    
+                    if (onReplay != null) {
+                        OutlinedButton(
+                            onClick = onReplay,
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            border = BorderStroke(1.dp, BorderColor),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = DarkSurface)
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp), tint = PrimaryText)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Replay", color = PrimaryText, fontSize = 14.sp)
+                        }
+                    }
                 }
             }
         }
@@ -371,7 +408,7 @@ fun MetadataChip(text: String, color: Color = DarkBackground) {
     Surface(
         color = color,
         shape = CircleShape,
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        border = BorderStroke(1.dp, BorderColor)
     ) {
         Text(
             text = text,
