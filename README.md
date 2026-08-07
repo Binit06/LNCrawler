@@ -1,3 +1,11 @@
+```
+🚧 🛑 WORK IN PROGRESS: MAJOR ARCHITECTURAL REFACTOR 🛑 🚧
+
+Please note: This project is currently undergoing a massive structural rewrite. To prevent merge conflicts and wasted effort, I am temporarily pausing all outside contributions and feature requests.
+
+Please do not open new issues or submit Pull Requests at this time. I will remove this notice once the new architecture is stable. Thank you!
+```
+
 # LNCrawler
 
 **LNCrawler** is a Kotlin-based Android application for crawling and exporting light novels. It combines the powerful scraping logic inspired by [lightnovel-crawler](https://github.com/lncrawl/lightnovel-crawler) with a UI inspired by [Tachiyomi](https://github.com/tachiyomi).
