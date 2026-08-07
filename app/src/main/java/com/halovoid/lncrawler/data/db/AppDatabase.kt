@@ -6,11 +6,16 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.halovoid.lncrawler.data.db.dao.ExportRecordDao
+import com.halovoid.lncrawler.data.db.dao.ArtifactRequestDao
+import com.halovoid.lncrawler.data.db.dao.ChapterDao
 import com.halovoid.lncrawler.data.db.dao.NovelDao
+import com.halovoid.lncrawler.data.db.dao.RequestDao
+import com.halovoid.lncrawler.data.db.dao.VolumeDao
 import com.halovoid.lncrawler.data.db.entities.ChapterEntity
 import com.halovoid.lncrawler.data.db.entities.NovelEntity
-import com.halovoid.lncrawler.data.db.entities.ExportRecordEntity
+import com.halovoid.lncrawler.data.db.entities.ArtifactRequestEntity
+import com.halovoid.lncrawler.data.db.entities.RequestEntity
+import com.halovoid.lncrawler.data.db.entities.VolumeEntity
 
 
 /**
@@ -18,15 +23,17 @@ import com.halovoid.lncrawler.data.db.entities.ExportRecordEntity
  * Part of the Data layer, responsible for local persistence.
  */
 @Database(
-    entities = [NovelEntity::class, ChapterEntity::class, ExportRecordEntity::class],
+    entities = [NovelEntity::class, ChapterEntity::class, ArtifactRequestEntity::class, VolumeEntity::class, RequestEntity::class],
     version = 5,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     /** Provides access to [NovelDao]. */
     abstract fun novelDao(): NovelDao
-
-    abstract fun exportRecordDao(): ExportRecordDao
+    abstract fun chapterDao(): ChapterDao
+    abstract fun volumeDao(): VolumeDao
+    abstract fun requestDao(): RequestDao
+    abstract fun artifactRequestDao(): ArtifactRequestDao
 
     companion object {
         @Volatile

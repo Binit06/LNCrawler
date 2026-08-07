@@ -1,5 +1,7 @@
 package com.halovoid.lncrawler.domain.models
 
+import com.halovoid.lncrawler.data.db.entities.NovelEntity
+
 /**
  * Domain model representing a novel with its metadata and chapters.
  * This class is used throughout the application to pass novel information between layers.
@@ -17,10 +19,32 @@ data class Novel(
     val description: String? = null,
     /** List of [Chapter]s associated with this novel. */
     val chapters: List<Chapter> = emptyList(),
-    /** Unique identifier, typically used for database operations. */
-    val id: String? = null,
-    /** The name of the [com.halovoid.lncrawler.data.crawler.core.Crawler] that handled this novel. */
-    val crawlerName: String? = null,
+    /** List of [Volume]s associated with this novel.*/
+    val volumes: List<Volume> = emptyList(),
+    /** The name of the [com.halovoid.lncrawler.data.crawler.core.crawler.Crawler] that handled this novel. */
+    val crawlerName: String,
     /** Alternative names or titles for the novel. */
     val alternativeNames: String? = null
+)
+
+fun NovelEntity.toDomain(): Novel = Novel(
+    url = url,
+    title = title,
+    author = author,
+    coverUrl = coverUrl,
+    description = description,
+    crawlerName = crawlerName,
+    alternativeNames = alternativeNames,
+    chapters = emptyList(),
+    volumes = emptyList()
+)
+
+fun Novel.toEntity() = NovelEntity(
+    url = url,
+    title = title,
+    author = author,
+    coverUrl = coverUrl,
+    description = description,
+    crawlerName = crawlerName,
+    alternativeNames = alternativeNames
 )

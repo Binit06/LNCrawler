@@ -13,10 +13,10 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
         val db = AppDatabase.getDatabase(application)
         return when {
             modelClass.isAssignableFrom(RequestViewModel::class.java) -> {
-                RequestViewModel(application, db.exportRecordDao()) as T
+                RequestViewModel(application, db.requestDao()) as T
             }
             modelClass.isAssignableFrom(RequestDetailViewModel::class.java) -> {
-                RequestDetailViewModel(application, db.exportRecordDao()) as T
+                RequestDetailViewModel(application, db.requestDao()) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }

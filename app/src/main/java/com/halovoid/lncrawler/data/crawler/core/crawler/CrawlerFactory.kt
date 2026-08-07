@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.crawler.core
+package com.halovoid.lncrawler.data.crawler.core.crawler
 
 import com.halovoid.lncrawler.data.crawler.sources.NovelBinsCrawler
 

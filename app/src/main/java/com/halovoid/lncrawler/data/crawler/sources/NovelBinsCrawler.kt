@@ -1,12 +1,13 @@
 package com.halovoid.lncrawler.data.crawler.sources
 
 import android.util.Log
-import com.halovoid.lncrawler.data.crawler.core.Crawler
+import com.halovoid.lncrawler.data.crawler.core.crawler.Crawler
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
 import okhttp3.FormBody
 import org.jsoup.Jsoup
 import java.io.IOException
+import kotlin.collections.emptyList
 
 /**
  * Crawler implementation for NovelBin (novelbins.com) in the Data layer.
@@ -17,11 +18,7 @@ class NovelBinsCrawler : Crawler() {
     override val name: String = "NovelBin"
     override val baseUrl: String = "https://novelbins.com"
 
-    override val requestRateLimit: Double
-        get() = 1.0
-
-    override val chapterBatchSize: Int
-        get() = 3
+    override val chapterPerVolume: Int = 50
 
     override fun canHandle(url: String): Boolean {
         return url.contains("novelbins.com") || url.contains("novelbin.com")
@@ -63,7 +60,14 @@ class NovelBinsCrawler : Crawler() {
         if (tabLinks.isEmpty()) {
             // Fallback for simple pages
             doc.select(".chapters .mt-card-item h3.mt-card-name a").forEachIndexed { index, element ->
-                chapters.add(Chapter(url = element.attr("abs:href"), title = element.text(), index = index))
+                chapters.add(Chapter(
+                    url = element.attr("abs:href"),
+                    novelUrl = element.attr("abs:href"),
+                    title = element.text(),
+                    index = index,
+                    volumeId = 0,
+                    fileLocation = null
+                ))
             }
         } else {
             // Paginated chapter lists via AJAX
@@ -76,10 +80,13 @@ class NovelBinsCrawler : Crawler() {
 
         // Clean up duplicate entries and set final indices
         val finalChapters = chapters.distinctBy { it.url }.mapIndexed { index, chapter ->
-            chapter.copy(index = index)
+            chapter.copy(
+                index = index + 1,
+                volumeId = (index / chapterPerVolume) + 1
+            )
         }
 
-        return Novel(
+        return prepareNovel(Novel(
             url = novelUrl,
             title = title,
             author = author,
@@ -88,7 +95,7 @@ class NovelBinsCrawler : Crawler() {
             chapters = finalChapters,
             crawlerName = name,
             alternativeNames = alternativeNames
-        )
+        ))
     }
 
     override suspend fun getChapterContent(chapterUrl: String): String {
@@ -145,8 +152,11 @@ class NovelBinsCrawler : Crawler() {
                 val title = obj.getString("title")
                 chapters.add(Chapter(
                     url = "$baseUrl/novel/$permalink/chapter/$chapterNum/",
+                    novelUrl = "$baseUrl/novel/$permalink/chapter/$chapterNum/",
                     title = title,
-                    index = 0 
+                    index = 0,
+                    volumeId = 0,
+                    fileLocation = null
                 ))
             }
         } catch (e: Exception) {

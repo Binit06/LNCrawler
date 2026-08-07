@@ -43,8 +43,6 @@ fun NovelDetailScreen(
     viewModel: NovelDetailViewModel = viewModel()
 ) {
     val novel by viewModel.novel.collectAsState()
-    val progressMap by viewModel.exportProgressMap.collectAsState()
-    val progress = progressMap[novelUrl]
     val context = LocalContext.current
 
     var descriptionExpanded by remember { mutableStateOf(false) }
@@ -146,61 +144,7 @@ fun NovelDetailScreen(
 
                 // Primary Action Button
                 item {
-                    if (progress != null) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(DarkSurface)
-                                .padding(16.dp)
-                        ) {
-                            LinearProgressIndicator(
-                                progress = { progress.progress },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(12.dp)
-                                    .clip(RoundedCornerShape(6.dp)),
-                                color = PrimaryAccent,
-                                trackColor = BorderColor
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${progress.status} (${progress.currentChapter}/${progress.totalChapters})",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = SecondaryText
-                                )
-                                TextButton(onClick = { viewModel.cancelExport(novelUrl) }) {
-                                    Text("Cancel", color = Color.Red)
-                                }
-                            }
-                        }
-                    } else {
-                        Button(
-                            onClick = {
-                                val fileName = "${currentNovel.title.filter { it.isLetterOrDigit() }}.epub"
-                                exportLauncher.launch(fileName)
-                            },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
-                        ) {
-                            Icon(
-                                Icons.Default.Book,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export to EPUB", color = Color.Black, fontWeight = FontWeight.Bold)
-                        }
-                    }
+                    TODO("Progress Bar for UI Not Created Yet")
                 }
 
                 // Description Section
@@ -224,7 +168,7 @@ fun NovelDetailScreen(
                     }
                 }
 
-                // Chapter List
+                // ChapterDao List
                 items(currentNovel.chapters) { chapter ->
                     Card(
                         modifier = Modifier

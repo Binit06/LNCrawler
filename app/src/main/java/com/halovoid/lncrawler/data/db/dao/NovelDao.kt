@@ -3,6 +3,7 @@ package com.halovoid.lncrawler.data.db.dao
 import androidx.room.*
 import com.halovoid.lncrawler.data.db.entities.ChapterEntity
 import com.halovoid.lncrawler.data.db.entities.NovelEntity
+import com.halovoid.lncrawler.domain.models.Novel
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -15,35 +16,14 @@ interface NovelDao {
     @Query("SELECT * FROM novels")
     fun getAllNovels(): Flow<List<NovelEntity>>
 
+    @Query("SELECT * FROM novels WHERE url = :url")
+    fun getNovelByUrl(url: String): NovelEntity?
+
     /** Inserts or replaces a novel in the database. */
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertNovel(novel: NovelEntity)
-
-    /** Inserts or replaces a list of chapters. */
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertChapters(chapters: List<ChapterEntity>)
-
-    /** Retrieves a novel and all its associated chapters using a transaction. */
-    @Transaction
-    @Query("SELECT * FROM novels WHERE url = :url")
-    suspend fun getNovelWithChapters(url: String): NovelWithChapters?
+    fun insertNovel(novel: NovelEntity)
 
     /** Deletes a novel from the database. */
     @Delete
-    suspend fun deleteNovel(novel: NovelEntity)
+    fun deleteNovel(novel: NovelEntity)
 }
-
-/**
- * Data class representing a [NovelEntity] along with its related [ChapterEntity]s.
- * Used for Room [Relation] queries.
- */
-data class NovelWithChapters(
-    /** The parent novel entity. */
-    @Embedded val novel: NovelEntity,
-    /** The list of related chapter entities. */
-    @Relation(
-        parentColumn = "url",
-        entityColumn = "novelUrl"
-    )
-    val chapters: List<ChapterEntity>
-)

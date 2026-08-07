@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.components.NovelCard
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.theme.DarkBackground
@@ -26,7 +27,7 @@ fun LibraryScreen(
     onBackClick: () -> Unit,
     viewModel: RequestViewModel // Sharing the same ViewModel for saved novels list
 ) {
-    val savedNovels by viewModel.savedNovels.collectAsState()
+    val savedNovels = emptyList<Novel>()
 
     Scaffold(
         containerColor = DarkBackground,
