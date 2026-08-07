@@ -1,3 +1,10 @@
+```
+🚧 🛑 WORK IN PROGRESS: MAJOR ARCHITECTURAL REFACTOR 🛑 🚧
+
+Please note: This project is currently undergoing a massive structural rewrite. To prevent merge conflicts and wasted effort, I am temporarily pausing all outside contributions and feature requests.
+
+Please do not open new issues or submit Pull Requests at this time. I will remove this notice once the new architecture is stable. Thank you!
+```
 # Contributing to LNCrawler
 
 Welcome! We're excited that you're interested in contributing to **LNCrawler**. This project aims to bring the powerful scraping logic of `lightnovel-crawler` to a modern, Tachiyomi-inspired Android experience.
