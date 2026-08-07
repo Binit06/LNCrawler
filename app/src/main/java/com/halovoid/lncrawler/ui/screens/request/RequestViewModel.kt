@@ -93,16 +93,18 @@ class RequestViewModel(
      * Starts a background worker to fetch content and generate EPUB.
      * @param novel The novel to export.
      * @param destinationUri The destination URI picked by the user.
+     * @param parentId Optional parent request ID.
      */
-    fun startExport(novel: Novel, destinationUri: Uri) {
+    fun startExport(novel: Novel, destinationUri: Uri, parentId: Int? = null) {
         val inputData = Data.Builder()
             .putString("novelUrl", novel.url)
             .putString("crawlerName", novel.crawlerName ?: "NovelBins")
             .putString("destinationUri", destinationUri.toString())
-            .build()
             
+        parentId?.let { inputData.putInt("parentId", it) }
+
         val request = OneTimeWorkRequestBuilder<ExportWorker>()
-            .setInputData(inputData)
+            .setInputData(inputData.build())
             .addTag(novel.url) // Allow cancelling by URL
             .build()
             

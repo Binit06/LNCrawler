@@ -9,9 +9,12 @@ enum class ExportStatus {
 
 /**
  * Domain model for an export history record.
+ * Supports parent-child linking to track related requests.
  */
 data class ExportRecord(
     val id: Int,
+    /** Optional reference to a parent request ID. */
+    val parentId: Int? = null,
     val novelUrl: String,
     val novelTitle: String,
     val status: ExportStatus,
@@ -26,6 +29,7 @@ data class ExportRecord(
  */
 fun com.halovoid.lncrawler.data.db.entities.ExportRecordEntity.toDomain() = ExportRecord(
     id = id,
+    parentId = parentId,
     novelUrl = novelUrl,
     novelTitle = novelTitle,
     status = try { ExportStatus.valueOf(status) } catch (e: Exception) { ExportStatus.FAILED },

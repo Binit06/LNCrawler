@@ -61,10 +61,11 @@ class RequestDetailViewModel(
             .putString("novelUrl", record.novelUrl)
             .putString("crawlerName", record.crawlerName)
             .putString("destinationUri", destinationUri.toString())
-            .build()
             
+        record.parentId?.let { inputData.putInt("parentId", it) }
+
         val request = OneTimeWorkRequestBuilder<ExportWorker>()
-            .setInputData(inputData)
+            .setInputData(inputData.build())
             .addTag(record.novelUrl)
             .build()
             

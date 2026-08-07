@@ -37,7 +37,11 @@ class ExportWorker(
         
         val novel = repository.getNovelDetails(crawlerName, novelUrl) ?: return Result.failure()
         
+        val parentIdRaw = inputData.getInt("parentId", -1)
+        val parentId = if (parentIdRaw == -1) null else parentIdRaw
+
         val initialRecord = ExportRecordEntity(
+            parentId = parentId,
             novelUrl = novelUrl,
             novelTitle = novel.title,
             status = "PENDING",
