@@ -42,8 +42,6 @@ class ChapterHandler(
             fileLocation = fileLocation.toString()
         ))
 
-        // 3. Propagate the success of the request to all linked parents
-        requestDao.propagateProgress(request.id)
         return JobResult.Success
     }
 

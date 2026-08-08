@@ -7,8 +7,9 @@ import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.data.handlers.utility.parsedMetadata
 import com.halovoid.lncrawler.data.scheduler.jobs.JobHandler
 import com.halovoid.lncrawler.data.scheduler.jobs.JobResult
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import org.json.JSONObject
-import java.util.UUID
 
 class VolumeHandler(
     private val chapterDao: ChapterDao,
@@ -22,11 +23,12 @@ class VolumeHandler(
         val chapters = chapterDao.getChapterFromNovelAndVolume(request.novelUrl, metadata.volumeId)
 
         val chapterRequests = chapters.map { chapter ->
+            currentCoroutineContext().ensureActive()
             val chapterMetadata = JSONObject(request.metadata ?: "{}").apply {
                 put("chapterId", chapter.id)
             }.toString()
             RequestEntity(
-                id = UUID.randomUUID().toString(),
+                id = "${request.novelUrl}_ch_${chapter.index}",
                 type = RequestType.CHAPTER,
                 parentNovel = request.parentNovel,
                 dependsOn = request.id,
@@ -37,7 +39,7 @@ class VolumeHandler(
                 url = chapter.url,
                 novelUrl = chapter.novelUrl,
                 progressTotal = 1,
-                progressCurrent = 0,
+                progressSuccess = 0,
             )
         }
 

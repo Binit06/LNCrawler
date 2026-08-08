@@ -7,6 +7,7 @@ import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
+import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -26,11 +27,36 @@ interface RequestDao {
     @Query("DELETE FROM requests WHERE id = :id")
     suspend fun deleteById(id: String)
 
-    @Query("UPDATE requests SET progressCurrent = progressCurrent + 1 WHERE id = :id")
-    suspend fun incrementProgress(id: String)
+    @Query("""
+        UPDATE requests
+        SET
+            progressSuccess = (SELECT COUNT(*) FROM requests WHERE dependsOn = :parentId AND status = 'SUCCESS'),
+            progressFailed = (SELECT COUNT(*) FROM requests WHERE dependsOn = :parentId AND status = 'FAILED'),
+            progressCancelled = (SELECT COUNT(*) FROM requests WHERE dependsOn = :parentId AND status = 'CANCELLED')
+        WHERE id = :parentId
+    """)
+    suspend fun syncProgress(parentId: String)
 
     @Query("UPDATE requests SET progressTotal = :total WHERE id = :id")
     suspend fun updateProgressTotal(id: String, total: Int)
+
+    @Transaction
+    suspend fun cancelRequest(requestId: String) {
+        val request = getRequestById(requestId) ?: return
+
+        if (request.status == RequestStatus.PENDING || request.status == RequestStatus.RUNNING) {
+            updateRequest(request.copy(
+                status = RequestStatus.CANCELLED,
+                updatedAt = System.currentTimeMillis()
+            ))
+            propagateProgress(request.id)
+        }
+
+        val dependents = getRequestsByDependence(requestId)
+        for (child in dependents) {
+            cancelRequest(child.id)
+        }
+    }
 
     /**
      * Propagates the progress down the tree so that each data node has its own correct progress bar
@@ -40,9 +66,30 @@ interface RequestDao {
         val child = getRequestById(childRequestId) ?: return
         val parentId = child.dependsOn ?: return
 
-        incrementProgress(parentId)
+        syncProgress(parentId)
 
         propagateProgress(parentId)
+    }
+
+    @Transaction
+    suspend fun replayRequest(requestId: String) {
+        // 1. Reset the request
+        val request = getRequestById(requestId) ?: return
+        updateRequest(request.copy(
+            status = RequestStatus.PENDING,
+            progressSuccess = 0,
+            progressFailed = 0,
+            progressCancelled = 0,
+            error = null,
+            completedAt = null,
+            updatedAt = System.currentTimeMillis()
+        ))
+
+        // 2. Reset all children that depend on this request
+        val dependents = getRequestsByDependence(requestId)
+        for(dep in dependents) {
+            replayRequest(dep.id)
+        }
     }
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

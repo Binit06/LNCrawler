@@ -13,6 +13,8 @@ import com.halovoid.lncrawler.data.repository.StorageRepository
 import com.halovoid.lncrawler.data.repository.VolumeRepository
 import com.halovoid.lncrawler.data.scheduler.jobs.JobHandler
 import com.halovoid.lncrawler.data.scheduler.jobs.JobResult
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import org.json.JSONObject
 import java.util.UUID
 
@@ -51,12 +53,13 @@ class NovelHandler(
 
         // 3. Create Follow Up Requests
         val volumeRequests = updatedNovel.volumes.map { volume ->
+            currentCoroutineContext().ensureActive()
             val volumeMetadata = JSONObject(request.metadata ?: "{}").apply {
                 put("volumeId", volume.id)
             }.toString()
 
             RequestEntity(
-                id = UUID.randomUUID().toString(),
+                id = "${novel.url}_vol_${volume.volumeIndex}",
                 type = RequestType.VOLUME,
                 parentNovel = novel.url,
                 novelUrl = volume.novelUrl,
@@ -67,7 +70,7 @@ class NovelHandler(
                 metadata = volumeMetadata,
                 url = null,
                 progressTotal = novel.chapters.filter { it.volumeId == volume.id }.size, // total count of leaf requests from this point in the tree
-                progressCurrent = 0
+                progressSuccess = 0
             )
         }
         requestDao.insertRequests(volumeRequests)

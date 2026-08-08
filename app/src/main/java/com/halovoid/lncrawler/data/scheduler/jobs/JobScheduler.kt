@@ -59,6 +59,11 @@ class JobScheduler(
         pollingJob = null
     }
 
+    fun cancelActiveJob(requestId: String) {
+        activeJobs[requestId]?.cancel()
+        activeJobs.remove(requestId)
+    }
+
     /**
      * Main scheduling cycle: recovers abandoned jobs and launches new ones.
      */

@@ -8,6 +8,7 @@ import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Volume
 import android.net.Uri
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileOutputStream
@@ -240,6 +241,7 @@ class EpubGenerator(
             chapters.filter { it.volumeId == volume.id }
                 .sortedBy { it.index }
                 .forEach { chapter ->
+                    ensureActive() // Checks if the user has canceled the operation or not
                     val content = chapter.fileLocation?.let { loc ->
                         storageRepository.readText(Uri.parse(loc))
                     } ?: "<p><em>Content not available</em></p>"

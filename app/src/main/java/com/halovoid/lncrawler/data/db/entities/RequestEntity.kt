@@ -58,7 +58,9 @@ data class RequestEntity(
     val updatedAt: Long = System.currentTimeMillis(),
     val completedAt: Long?,
     val progressTotal: Int = 1,
-    val progressCurrent: Int = 0,
+    val progressSuccess: Int = 0,
+    val progressFailed: Int = 0,
+    val progressCancelled: Int = 0,
     val status: RequestStatus = RequestStatus.PENDING,
     val metadata: String? = null, //JSON String for containing extra data
     val error: String? = null

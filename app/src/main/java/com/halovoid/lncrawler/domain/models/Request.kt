@@ -21,7 +21,9 @@ data class Request(
     val updatedAt: Long = System.currentTimeMillis(),
     val completedAt: Long?,
     val progressTotal: Int,
-    val progressCurrent: Int,
+    val progressSuccess: Int = 0,
+    val progressFailed: Int = 0,
+    val progressCancelled: Int = 0,
     val status: RequestStatus = RequestStatus.PENDING,
     val metadata: String? = null,
     val error: String? = null
@@ -40,7 +42,9 @@ fun RequestEntity.toDomain(): Request = Request(
     updatedAt = updatedAt,
     completedAt = completedAt,
     progressTotal = progressTotal,
-    progressCurrent = progressCurrent,
+    progressSuccess = progressSuccess,
+    progressFailed = progressFailed,
+    progressCancelled = progressCancelled,
     status = status,
     metadata = metadata,
     error = error
@@ -58,7 +62,9 @@ fun Request.toEntity(): RequestEntity = RequestEntity(
     updatedAt = updatedAt,
     completedAt = completedAt,
     progressTotal = progressTotal,
-    progressCurrent = progressCurrent,
+    progressSuccess = progressSuccess,
+    progressFailed = progressFailed,
+    progressCancelled = progressCancelled,
     status = status,
     metadata = metadata,
     error = error

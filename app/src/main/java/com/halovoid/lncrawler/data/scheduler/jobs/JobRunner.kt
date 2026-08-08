@@ -4,7 +4,9 @@ import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -49,6 +51,7 @@ class JobRunner(
             var success = false
 
             while (retryCount <= config.maxRetries && !success) {
+                currentCoroutineContext().ensureActive()
                 when (val result = handler.handle(currentRequest)) {
                     is JobResult.Success -> {
                         markSuccess(currentRequest)
@@ -93,6 +96,8 @@ class JobRunner(
             updatedAt = System.currentTimeMillis(),
             error = null
         ))
+        // Request Progress Update Propagation - SUCCESS
+        requestDao.propagateProgress(request.id)
     }
 
     private suspend fun fail(request: RequestEntity, errorMessage: String) {
@@ -101,6 +106,8 @@ class JobRunner(
             updatedAt = System.currentTimeMillis(),
             error = errorMessage
         ))
+        // Request Progress Update Propagation - FAILED
+        requestDao.propagateProgress(request.id)
     }
 
     private suspend fun markCancelled(request: RequestEntity) {
@@ -108,5 +115,7 @@ class JobRunner(
             status = RequestStatus.CANCELLED,
             updatedAt = System.currentTimeMillis()
         ))
+        // Request Progress Update Propagation - CANCELLED
+        requestDao.propagateProgress(request.id)
     }
 }
