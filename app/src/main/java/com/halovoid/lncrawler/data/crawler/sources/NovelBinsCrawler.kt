@@ -61,11 +61,12 @@ class NovelBinsCrawler : Crawler() {
             // Fallback for simple pages
             doc.select(".chapters .mt-card-item h3.mt-card-name a").forEachIndexed { index, element ->
                 chapters.add(Chapter(
+                    id = 0,
                     url = element.attr("abs:href"),
-                    novelUrl = element.attr("abs:href"),
+                    novelUrl = novelUrl,
                     title = element.text(),
                     index = index,
-                    volumeId = 0,
+                    volumeId = "${novelUrl}_vol_${(index / chapterPerVolume) + 1}",
                     fileLocation = null
                 ))
             }
@@ -82,7 +83,7 @@ class NovelBinsCrawler : Crawler() {
         val finalChapters = chapters.distinctBy { it.url }.mapIndexed { index, chapter ->
             chapter.copy(
                 index = index + 1,
-                volumeId = (index / chapterPerVolume) + 1
+                volumeId = "${novelUrl}_vol_${(index / chapterPerVolume) + 1}"
             )
         }
 
@@ -151,11 +152,12 @@ class NovelBinsCrawler : Crawler() {
                 val chapterNum = obj.getString("chapter")
                 val title = obj.getString("title")
                 chapters.add(Chapter(
+                    id = 0,
                     url = "$baseUrl/novel/$permalink/chapter/$chapterNum/",
-                    novelUrl = "$baseUrl/novel/$permalink/chapter/$chapterNum/",
+                    novelUrl = refererUrl,
                     title = title,
-                    index = 0,
-                    volumeId = 0,
+                    index = 0,      //Placeholder - recalculated in prepareNovel
+                    volumeId = "",  //Placeholder - recalculated in prepareNovel
                     fileLocation = null
                 ))
             }

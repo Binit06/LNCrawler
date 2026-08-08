@@ -4,10 +4,6 @@ import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 
-enum class RequestStatus {
-    PENDING, SUCCESS, FAILED, CANCELLED
-}
-
 data class Request(
     val id: String,
     val name: String,

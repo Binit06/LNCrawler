@@ -35,7 +35,7 @@ data class ChapterEntity(
     /** The URL of the parent novel, used as a foreign key. */
     val novelUrl: String,
     /** The Volume ID of the Volume it will be part of*/
-    val volumeId: Int,
+    val volumeId: String,
     /** The unique source URL of the chapter. */
     val url: String,
     /** The title of the chapter. */

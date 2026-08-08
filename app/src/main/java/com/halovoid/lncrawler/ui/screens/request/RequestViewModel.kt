@@ -5,34 +5,25 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.data.crawler.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.data.db.dao.RequestDao
-import com.halovoid.lncrawler.data.repository.NovelRepository
-import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.data.db.entities.RequestEntity
+import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
+import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.toDomain
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 
-/**
- * ViewModel for the [RequestScreen] in the UI layer.
- * Manages URL validation, saved novels list, and background export tasks.
- */
 class RequestViewModel(
     application: Application,
     private val requestDao: RequestDao
 ) : AndroidViewModel(application) {
-    private val repository = NovelRepository(application)
 
     /** Tracks validation errors for the URL input field. */
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
-    /** Set of URLs currently being fetched from the network (metadata/chapters). */
-    private val _activeFetches = MutableStateFlow<Set<String>>(emptySet())
-    val activeFetches: StateFlow<Set<String>> = _activeFetches
-
-    /**
-     * Validates if the given URL can be handled by any registered crawler.
-     */
     fun validateUrl(url: String): String? {
         val crawler = CrawlerFactory.getCrawlerByUrl(url)
         return if (crawler != null) {
@@ -44,13 +35,49 @@ class RequestViewModel(
         }
     }
 
-    /**
-     * Starts fetching a novel from the network and saves it to the DB.
-     */
-    fun fetchMetadata(crawlerName: String, url: String) {
-        // TODO: Implement Crawler fetching the novel
+    fun startNovelCrawl(crawlerName: String, url: String) {
+        viewModelScope.launch {
+            val metadata = JSONObject().apply {
+                put("crawlerName", crawlerName)
+            }.toString()
+
+            val request = RequestEntity(
+                id = "${url}_crawl",
+                type = RequestType.FULL_NOVEL,
+                novelUrl = url,
+                name = "Crawl: $url",
+                metadata = metadata,
+                status = RequestStatus.PENDING,
+                dependsOn = null,
+                url = url,
+                priority = 0,
+                completedAt = null,
+                parentNovel = null
+            )
+
+            requestDao.insertRequests(listOf(request))
+
+            SchedulerService.startService(getApplication())
+        }
     }
 
+    fun cancelRequest(requestId: String) {
+        viewModelScope.launch {
+            requestDao.cancelRequest(requestId)
+
+            SchedulerService.cancelJob(getApplication(), requestId)
+        }
+    }
+
+    fun replayRequest(requestId: String) {
+        viewModelScope.launch {
+            requestDao.replayRequest(requestId)
+
+            SchedulerService.startService(getApplication())
+        }
+    }
+
+    // Since use of FLOW Progress Data for all request is emitted as the records are updated
     val requestHistory: StateFlow<List<Request>> = requestDao.getRootRequests()
         .map { entities -> entities.map { it.toDomain() } }
         .stateIn(

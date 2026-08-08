@@ -6,6 +6,7 @@ import com.halovoid.lncrawler.data.db.entities.ChapterEntity
  * Domain model representing a single chapter of a novel.
  */
 data class Chapter(
+    val id: Int,
     /** The source URL of the chapter page. */
     val url: String,
     /** The title of the chapter (e.g., "ChapterDao 1: The Beginning"). */
@@ -15,12 +16,13 @@ data class Chapter(
 
     val novelUrl: String,
 
-    val volumeId: Int,
+    val volumeId: String,
 
     val fileLocation: String?
 )
 
 fun ChapterEntity.toDomain(): Chapter = Chapter(
+    id = id,
     url = url,
     title = title,
     index = index,
@@ -30,6 +32,7 @@ fun ChapterEntity.toDomain(): Chapter = Chapter(
 )
 
 fun Chapter.toEntity(): ChapterEntity = ChapterEntity(
+    id = id,
     url = url,
     title = title,
     index = index,

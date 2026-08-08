@@ -11,7 +11,10 @@ val RequestEntity.parsedMetadata: RequestMetadata
             val json = JSONObject(this.metadata)
             RequestMetadata(
                 crawlerName = json.optString("crawlerName", null),
-                artifactFormat = json.optString("artifactFormat", null)
+                artifactFormat = json.optString("artifactFormat", null),
+                volumeId = json.optString("volumeId", null),
+                chapterId = json.optInt("chapterId", -1),
+                format = json.optString("format", null)
             )
         } catch (e: Exception) {
             RequestMetadata()

@@ -4,7 +4,7 @@ import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.VolumeEntity
 
 data class Volume (
-    val id: Int,
+    val id: String,
     val volumeIndex: Int,
     val novelUrl: String
 )

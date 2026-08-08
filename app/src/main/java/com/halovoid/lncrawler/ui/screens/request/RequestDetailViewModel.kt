@@ -1,13 +1,19 @@
 package com.halovoid.lncrawler.ui.screens.request
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.data.db.dao.RequestDao
+import com.halovoid.lncrawler.data.repository.ChapterRepository
 import com.halovoid.lncrawler.data.repository.NovelRepository
+import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
+import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.toDomain
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
@@ -18,21 +24,66 @@ class RequestDetailViewModel(
     application: Application,
     private val requestDao: RequestDao
 ) : AndroidViewModel(application) {
-    private val repository = NovelRepository(application)
+    private val chapterRepository = ChapterRepository(application)
+
+    private val _requestId = MutableStateFlow<String?>(null)
+    fun setRequestId(id: String) {
+        _requestId.value = id
+    }
 
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel.asStateFlow()
 
-    /** Observes the specific record from the database as a hot flow. */
-    fun getRequest(requestId: Int): Flow<Request?> {
-        TODO()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val linkedRequests: StateFlow<List<Request>> = _requestId
+        .filterNotNull()
+        .flatMapLatest { id ->
+            requestDao.getRequestsByDependenceFlow(id)
+                .map { entities -> entities.map { it.toDomain() } }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val chapterMetadata: StateFlow<Chapter?> = _requestId
+        .filterNotNull()
+        .flatMapLatest { id ->
+            requestDao.getRequestByIdFlow(id)
+        }
+        .filterNotNull()
+        .map { request ->
+            // Move this to the IO Thread from the Main Thread
+            val chapters = chapterRepository.getChaptersByNovelUrl(request.novelUrl)
+            chapters.find { it.url == request.url }
+        }
+        .flowOn(Dispatchers.IO)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    fun getRequest(requestId: String): Flow<Request?> {
+        return requestDao.getRequestByIdFlow(requestId)
+            .map { it?.toDomain() }
     }
 
-    fun deleteHistoryRecord(id: Int, novelUrl: String) {
-        TODO()
+    fun replayRequest(requestId: String) {
+        viewModelScope.launch {
+            requestDao.replayRequest(requestId)
+
+            SchedulerService.startService(getApplication())
+        }
     }
-    
-    fun replayRequest(destinationUri: android.net.Uri, request: Request) {
-        // TODO: Implement Replay Request Feature
+
+    fun cancelRequest(requestId: String) {
+        viewModelScope.launch {
+            requestDao.cancelRequest(requestId)
+
+            SchedulerService.startService(getApplication())
+        }
     }
 }

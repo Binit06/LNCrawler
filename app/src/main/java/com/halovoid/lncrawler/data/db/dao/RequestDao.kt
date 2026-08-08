@@ -15,11 +15,17 @@ interface RequestDao {
     @Query("SELECT * FROM requests")
     fun getAllRequests(): Flow<List<RequestEntity>>
 
-    @Query("SELECT * FROM requests WHERE dependsOn = -1")
+    @Query("SELECT * FROM requests WHERE dependsOn IS NULL")
     fun getRootRequests(): Flow<List<RequestEntity>>
 
     @Query("SELECT * FROM requests WHERE id = :id")
-    suspend fun getRequestById(id: String) : RequestEntity
+    suspend fun getRequestById(id: String) : RequestEntity?
+
+    @Query("SELECT * FROM requests WHERE id = :id")
+    fun getRequestByIdFlow(id: String): Flow<RequestEntity?>
+
+    @Query("SELECT * FROM requests WHERE dependsOn = :id")
+    fun getRequestsByDependenceFlow(id: String): Flow<List<RequestEntity>>
 
     @Query("SELECT * FROM requests WHERE dependsOn = :id")
     suspend fun getRequestsByDependence(id: String) : List<RequestEntity>
@@ -30,9 +36,9 @@ interface RequestDao {
     @Query("""
         UPDATE requests
         SET
-            progressSuccess = (SELECT COUNT(*) FROM requests WHERE dependsOn = :parentId AND status = 'SUCCESS'),
-            progressFailed = (SELECT COUNT(*) FROM requests WHERE dependsOn = :parentId AND status = 'FAILED'),
-            progressCancelled = (SELECT COUNT(*) FROM requests WHERE dependsOn = :parentId AND status = 'CANCELLED')
+            progressSuccess = (SELECT COALESCE(SUM(progressSuccess), 0) FROM requests WHERE dependsOn = :parentId),
+            progressFailed = (SELECT COALESCE(SUM(progressFailed), 0) FROM requests WHERE dependsOn = :parentId),
+            progressCancelled = (SELECT COALESCE(SUM(progressCancelled), 0) FROM requests WHERE dependsOn = :parentId)
         WHERE id = :parentId
     """)
     suspend fun syncProgress(parentId: String)
@@ -47,7 +53,8 @@ interface RequestDao {
         if (request.status == RequestStatus.PENDING || request.status == RequestStatus.RUNNING) {
             updateRequest(request.copy(
                 status = RequestStatus.CANCELLED,
-                updatedAt = System.currentTimeMillis()
+                updatedAt = System.currentTimeMillis(),
+                progressCancelled = request.progressTotal
             ))
             propagateProgress(request.id)
         }
@@ -91,6 +98,15 @@ interface RequestDao {
             replayRequest(dep.id)
         }
     }
+
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM requests
+            WHERE dependsOn = :requestId
+            LIMIT 1
+        )
+    """)
+    suspend fun hasChildren(requestId: String): Boolean
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRequests(request: List<RequestEntity>)

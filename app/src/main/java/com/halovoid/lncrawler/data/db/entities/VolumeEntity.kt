@@ -20,8 +20,8 @@ import androidx.room.PrimaryKey
     ]
 )
 data class VolumeEntity (
-    @PrimaryKey(autoGenerate = true)
-    val id: Int = 0,
+    @PrimaryKey
+    val id: String,
 
     val volumeIndex: Int,
     val novelUrl: String

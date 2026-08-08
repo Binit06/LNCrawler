@@ -13,14 +13,14 @@ interface ChapterDao {
     fun getChapterFromNovel(url: String): List<ChapterEntity>
 
     @Query("SELECT * FROM chapters WHERE novelUrl = :url AND volumeId = :id")
-    fun getChapterFromNovelAndVolume(url: String, id: Int): List<ChapterEntity>
+    fun getChapterFromNovelAndVolume(url: String, id: String): List<ChapterEntity>
 
     @Query("SELECT * FROM chapters WHERE id = :id")
     fun getChapterById(id: Int): ChapterEntity
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertChapters(chapters: List<ChapterEntity>)
+    suspend fun insertChapters(chapters: List<ChapterEntity>)
 
     @Update
-    fun updateChapter(chapter: ChapterEntity)
+    suspend fun updateChapter(chapter: ChapterEntity)
 }

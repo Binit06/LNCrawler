@@ -4,6 +4,7 @@ import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -51,14 +52,15 @@ class JobRunner(
             var success = false
 
             while (retryCount <= config.maxRetries && !success) {
-                currentCoroutineContext().ensureActive()
-                when (val result = handler.handle(currentRequest)) {
+                var result = handler.handle(currentRequest)
+                val latestRequest = requestDao.getRequestById(currentRequest.id) ?: currentRequest
+                when (result) {
                     is JobResult.Success -> {
-                        markSuccess(currentRequest)
+                        markSuccess(latestRequest)
                         success = true
                     }
                     is JobResult.Cancelled -> {
-                        markCancelled(currentRequest)
+                        markCancelled(latestRequest)
                         return
                     }
                     is JobResult.Failure -> {
@@ -90,9 +92,11 @@ class JobRunner(
     }
 
     private suspend fun markSuccess(request: RequestEntity) {
+        val hasChildren = requestDao.hasChildren(request.id)
         requestDao.updateRequest(request.copy(
             status = RequestStatus.SUCCESS,
             completedAt = System.currentTimeMillis(),
+            progressSuccess = if (hasChildren) request.progressSuccess else request.progressTotal,
             updatedAt = System.currentTimeMillis(),
             error = null
         ))
@@ -101,9 +105,11 @@ class JobRunner(
     }
 
     private suspend fun fail(request: RequestEntity, errorMessage: String) {
+        val hasChildren = requestDao.hasChildren(request.id)
         requestDao.updateRequest(request.copy(
             status = RequestStatus.FAILED,
             updatedAt = System.currentTimeMillis(),
+            progressFailed = if (hasChildren) request.progressFailed else request.progressTotal,
             error = errorMessage
         ))
         // Request Progress Update Propagation - FAILED
@@ -111,9 +117,11 @@ class JobRunner(
     }
 
     private suspend fun markCancelled(request: RequestEntity) {
+        val hasChildren = requestDao.hasChildren(request.id)
         requestDao.updateRequest(request.copy(
             status = RequestStatus.CANCELLED,
-            updatedAt = System.currentTimeMillis()
+            updatedAt = System.currentTimeMillis(),
+            progressCancelled = if (hasChildren) request.progressCancelled else request.progressTotal,
         ))
         // Request Progress Update Propagation - CANCELLED
         requestDao.propagateProgress(request.id)

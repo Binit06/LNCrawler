@@ -16,6 +16,7 @@ import com.halovoid.lncrawler.data.db.entities.NovelEntity
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.VolumeEntity
 import com.halovoid.lncrawler.data.db.entities.ArtifactEntity
+import com.halovoid.lncrawler.data.db.migrations.DatabaseMigrations
 
 
 /**
@@ -24,8 +25,8 @@ import com.halovoid.lncrawler.data.db.entities.ArtifactEntity
  */
 @Database(
     entities = [NovelEntity::class, ChapterEntity::class, VolumeEntity::class, RequestEntity::class, ArtifactEntity::class],
-    version = 5,
-    exportSchema = false
+    version = 7,
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun novelDao(): NovelDao
@@ -60,9 +61,9 @@ abstract class AppDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,
-                    "lncrawler_database"
+                    "lncrawler.db"
                 )
-                    .addMigrations(MIGRATION_4_5)
+                    .addMigrations(DatabaseMigrations.MIGRATION_5_6)
                     .fallbackToDestructiveMigration(true)
                     .build()
                 INSTANCE = instance

@@ -27,7 +27,7 @@ class NovelRepository(context: Context) {
      * Retrieves all novels saved in the local database.
      * @return A [Flow] emitting the latest list of [Novel]s.
      */
-    fun getSavedNovels(): Flow<List<Novel>> {
+    fun getAllNovels(): Flow<List<Novel>> {
         return novelDao.getAllNovels().map { entities ->
             entities.map { it.toDomain() }
         }

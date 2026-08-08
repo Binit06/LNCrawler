@@ -21,6 +21,7 @@ import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.data.handlers.ArtifactHandler
 import com.halovoid.lncrawler.data.handlers.ChapterHandler
 import com.halovoid.lncrawler.data.handlers.NovelHandler
+import com.halovoid.lncrawler.data.handlers.NovelMetadataHandler
 import com.halovoid.lncrawler.data.handlers.VolumeHandler
 import com.halovoid.lncrawler.data.repository.*
 import com.halovoid.lncrawler.data.scheduler.jobs.JobHandlerRegistry
@@ -50,7 +51,7 @@ private fun RequestEntity.toNotificationConfig(): NotificationConfig {
         title = title,
         content = this.name,
         icon = icon,
-        progressCurrent = this.progressCurrent,
+        progressCurrent = this.progressSuccess,
         progressTotal = this.progressTotal,
         isIndeterminate = this.progressTotal <= 0
     )
@@ -67,6 +68,10 @@ class SchedulerService : Service() {
         private const val ACTION_START = "ACTION_START"
         private const val ACTION_STOP = "ACTION_STOP"
 
+        private const val ACTION_CANCEL_JOB = "ACTION_CANCEL_JOB"
+
+        private const val EXTRA_REQUEST_ID = "EXTRA_REQUEST_ID"
+
         fun startService(context: Context) {
             val intent = Intent(context, SchedulerService::class.java).apply {
                 action = ACTION_START
@@ -81,6 +86,14 @@ class SchedulerService : Service() {
         fun stopService(context: Context) {
             val intent = Intent(context, SchedulerService::class.java).apply {
                 action = ACTION_STOP
+            }
+            context.startService(intent)
+        }
+
+        fun cancelJob(context: Context, requestId: String) {
+            val intent = Intent(context, SchedulerService::class.java).apply {
+                action = ACTION_CANCEL_JOB
+                putExtra(EXTRA_REQUEST_ID, requestId)
             }
             context.startService(intent)
         }
@@ -120,6 +133,9 @@ class SchedulerService : Service() {
         registry.register(RequestType.CHAPTER, ChapterHandler(
             requestDao, scrapper, chapterRepository, storageRepository, crawlerFactory
         ))
+        registry.register(RequestType.NOVEL_METADATA, NovelMetadataHandler(
+            crawlerFactory, novelRepository, volumeRepository, chapterRepository, storageRepository, requestDao
+        ))
         registry.register(RequestType.ARTIFACT, ArtifactHandler(
             novelRepository, chapterRepository, volumeRepository,
             crawlerFactory, storageRepository, generatorFactory, artifactRepository,
@@ -146,6 +162,12 @@ class SchedulerService : Service() {
             ACTION_STOP -> {
                 scheduler.stop()
                 stopSelf()
+            }
+            ACTION_CANCEL_JOB -> {
+                val requestId = intent.getStringExtra(EXTRA_REQUEST_ID)
+                if (requestId != null) {
+                    scheduler.cancelActiveJob(requestId)
+                }
             }
         }
         return START_STICKY
@@ -200,7 +222,7 @@ class SchedulerService : Service() {
         requestDao.getRootRequests()
             .onEach { requests ->
 
-                val activeRequests = requests.filter { it.progressCurrent < it.progressTotal }
+                val activeRequests = requests.filter { it.progressSuccess + it.progressFailed + it.progressCancelled < it.progressTotal }
                     .sortedWith (
                         compareByDescending<RequestEntity> {
                             it.status == RequestStatus.RUNNING

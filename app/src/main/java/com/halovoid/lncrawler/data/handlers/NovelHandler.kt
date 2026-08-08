@@ -46,11 +46,12 @@ class NovelHandler(
             coverUrl = coverFilePath.toString()
         )
 
-        // 2. Persist Novel Metadata
+        // 2. Persist Novel Metadata (Order Maters over here since they have foreign keys linked to each other)
         novelRepository.saveNovelMetadata(updatedNovel)
-        chapterRepository.insertChapters(updatedNovel.chapters)
         volumeRepository.insertVolumes(updatedNovel.volumes)
+        chapterRepository.insertChapters(updatedNovel.chapters)
 
+        // TODO: Update the Progress Total in here after chapter size is known
         // 3. Create Follow Up Requests
         val volumeRequests = updatedNovel.volumes.map { volume ->
             currentCoroutineContext().ensureActive()
@@ -59,7 +60,7 @@ class NovelHandler(
             }.toString()
 
             RequestEntity(
-                id = "${novel.url}_vol_${volume.volumeIndex}",
+                id = "${novel.url}_vol_${volume.id}",
                 type = RequestType.VOLUME,
                 parentNovel = novel.url,
                 novelUrl = volume.novelUrl,

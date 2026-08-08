@@ -30,7 +30,7 @@ class VolumeHandler(
             RequestEntity(
                 id = "${request.novelUrl}_ch_${chapter.index}",
                 type = RequestType.CHAPTER,
-                parentNovel = request.parentNovel,
+                parentNovel = request.novelUrl, //parentUrl passed down from parent might be null
                 dependsOn = request.id,
                 priority = request.priority,
                 name = "Chapter ${chapter.title} Download",
