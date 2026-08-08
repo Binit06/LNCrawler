@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.scheduler
+package com.halovoid.lncrawler.data.scheduler.jobs
 
 import kotlin.math.pow
 

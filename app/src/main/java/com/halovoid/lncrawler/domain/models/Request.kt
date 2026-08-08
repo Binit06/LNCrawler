@@ -13,15 +13,17 @@ data class Request(
     val name: String,
     val parentNovel: String?,
     val dependsOn: String? = null,
-    val url: String,
+    val url: String?,
     val novelUrl: String,
     val priority: Int = 0,
     val type: RequestType,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val completedAt: Long?,
+    val progressTotal: Int,
+    val progressCurrent: Int,
     val status: RequestStatus = RequestStatus.PENDING,
-    val crawlerName: String?,
+    val metadata: String? = null,
     val error: String? = null
 )
 
@@ -37,8 +39,10 @@ fun RequestEntity.toDomain(): Request = Request(
     createdAt = createdAt,
     updatedAt = updatedAt,
     completedAt = completedAt,
+    progressTotal = progressTotal,
+    progressCurrent = progressCurrent,
     status = status,
-    crawlerName = crawlerName,
+    metadata = metadata,
     error = error
 )
 fun Request.toEntity(): RequestEntity = RequestEntity(
@@ -53,7 +57,9 @@ fun Request.toEntity(): RequestEntity = RequestEntity(
     createdAt = createdAt,
     updatedAt = updatedAt,
     completedAt = completedAt,
+    progressTotal = progressTotal,
+    progressCurrent = progressCurrent,
     status = status,
-    crawlerName = crawlerName,
+    metadata = metadata,
     error = error
 )

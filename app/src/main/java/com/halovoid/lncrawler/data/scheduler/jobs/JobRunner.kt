@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.scheduler
+package com.halovoid.lncrawler.data.scheduler.jobs
 
 import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
@@ -41,7 +41,7 @@ class JobRunner(
             // Using crawlerName as the handler key since RequestType is not a field in RequestEntity
             val handler = handlerRegistry.getHandler(currentRequest.type)
             if (handler == null) {
-                fail(currentRequest, "No handler found for: ${currentRequest.crawlerName}")
+                fail(currentRequest, "No handler found for: ${currentRequest.type}")
                 return
             }
 

@@ -79,7 +79,7 @@ abstract class Crawler {
      * @param chapterUrl The URL of the chapter page.
      * @return The HTML content of the chapter body.
      */
-    abstract suspend fun getChapterContent(chapterUrl: String): String
+    abstract suspend fun getChapterContent(chapterUrl: String): String?
 
     /**
      * Fetches HTML from a URL with a standard User-Agent.
@@ -99,25 +99,22 @@ abstract class Crawler {
 
     open fun downloadImage(url: String, outputFile: Uri) {}
 
-    open fun downloadCover(url: String, outputFile: Uri) {}
+    open suspend fun downloadCover(url: String) : ByteArray? {
+        if (url.isBlank()) {
+            throw Exception("No Download URL provided for Cover")
+        }
 
-    /**
-     * Converts a domain Novel to a NovelEntity.
-     */
-    protected fun Novel.toEntity(crawlerName: String) = NovelEntity(
-        url = url,
-        title = title,
-        author = author,
-        coverUrl = coverUrl,
-        description = description,
-        crawlerName = crawlerName,
-        alternativeNames = alternativeNames
-    )
+        return scrapper.download(url)
+    }
 
     open fun formatTitle(title: String): String {
         return title.trim().replace(Regex("\\s+"), " ")
     }
 
+    open fun getNovelKey(url: String): String {
+        val slug = url.trimEnd('/').split('/').last()
+        return "${name.lowercase()}_$slug".filter { it.isLetterOrDigit() || it == '_' || it == '-' }
+    }
     /**
      * Prepares a novel by formatting its title and author names,
      * and organizing chapters into volumes.
@@ -151,31 +148,6 @@ abstract class Crawler {
         )
     }
 
-    /**
-     * Downloads and saves the cover image to the local datastore.
-     * @param novel The novel whose cover to download.
-     * @return The local file path if successful, or null.
-     */
-    protected suspend fun downloadAndSaveCover(novel: Novel): String? {
-        val url = novel.coverUrl ?: return null
-        val bytes = downloadImage(url) ?: return null
-        
-        return try {
-            val folder = java.io.File(config.userFolderLocation, "cover_image")
-            if (!folder.exists()) folder.mkdirs()
-            
-            // Generate a safe filename from the novel title
-            val safeTitle = novel.title.replace(Regex("[^a-zA-Z0-9]"), "_").take(50)
-            val extension = if (url.endsWith(".png")) "png" else "jpg"
-            val file = java.io.File(folder, "${safeTitle}_${System.currentTimeMillis()}.$extension")
-            
-            file.writeBytes(bytes)
-            file.absolutePath
-        } catch (e: Exception) {
-            null
-        }
-    }
-
     fun createVolumes(novel: Novel): List<Volume> {
         val totalChapters = novel.chapters.size
 
@@ -191,29 +163,6 @@ abstract class Crawler {
                 id = volumeIndex,
                 volumeIndex = volumeIndex,
                 novelUrl = novel.url
-            )
-        }
-    }
-
-    fun createChapters(
-        novel: Novel,
-        volumes: List<Volume>
-    ): List<ChapterEntity> {
-
-        return novel.chapters.mapIndexed { index, chapter ->
-
-            val volumeIndex = index / chapterPerVolume
-
-            val volume = volumes[volumeIndex]
-
-            ChapterEntity(
-                novelUrl = novel.url,
-                volumeId = volume.id,
-                url = chapter.url,
-                title = formatTitle(chapter.title)
-                    .ifBlank { "Chapter ${index + 1}" },
-                index = index + 1,
-                fileLocation = chapter.fileLocation
             )
         }
     }

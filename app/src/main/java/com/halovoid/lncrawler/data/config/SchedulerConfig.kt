@@ -1,7 +1,7 @@
 package com.halovoid.lncrawler.data.config
 
 /**
- * Configuration for the [com.halovoid.lncrawler.data.scheduler.JobScheduler].
+ * Configuration for the [com.halovoid.lncrawler.data.scheduler.jobs.JobScheduler].
  */
 data class SchedulerConfig(
     /** Maximum number of jobs to run concurrently. */

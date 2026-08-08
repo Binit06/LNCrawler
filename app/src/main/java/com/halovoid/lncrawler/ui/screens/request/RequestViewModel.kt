@@ -59,7 +59,7 @@ class RequestViewModel(
             initialValue = emptyList()
         )
 
-    fun deleteRequestRecord(id: Int, requestId: Int) {
+    fun deleteRequestRecord(id: String, requestId: Int) {
         viewModelScope.launch {
             requestDao.deleteById(id)
         }

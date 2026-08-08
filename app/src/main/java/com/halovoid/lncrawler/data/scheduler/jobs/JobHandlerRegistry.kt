@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.scheduler
+package com.halovoid.lncrawler.data.scheduler.jobs
 
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import java.util.concurrent.ConcurrentHashMap

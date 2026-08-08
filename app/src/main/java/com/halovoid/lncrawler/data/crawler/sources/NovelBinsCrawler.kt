@@ -15,7 +15,7 @@ import kotlin.collections.emptyList
  * using Jsoup for static parsing and custom logic for paginated chapter lists.
  */
 class NovelBinsCrawler : Crawler() {
-    override val name: String = "NovelBin"
+    override val name: String = "NovelBins"
     override val baseUrl: String = "https://novelbins.com"
 
     override val chapterPerVolume: Int = 50
@@ -98,8 +98,8 @@ class NovelBinsCrawler : Crawler() {
         ))
     }
 
-    override suspend fun getChapterContent(chapterUrl: String): String {
-        val doc = getDocument(chapterUrl) ?: return ""
+    override suspend fun getChapterContent(chapterUrl: String): String? {
+        val doc = getDocument(chapterUrl) ?: return null
         Log.i(name, "Scraping chapter: $chapterUrl")
         
         // Use base class cleaning with site-specific selectors

@@ -17,4 +17,12 @@ class ChapterRepository(context: Context) {
     fun insertChapters(chapters : List<Chapter>) {
         chapterDao.insertChapters(chapters.map { it -> it.toEntity() })
     }
+
+    fun getChapterById(id: Int) : Chapter {
+        return chapterDao.getChapterById(id).toDomain()
+    }
+
+    fun updateChapter(chapter: Chapter) {
+        chapterDao.updateChapter(chapter = chapter.toEntity())
+    }
 }

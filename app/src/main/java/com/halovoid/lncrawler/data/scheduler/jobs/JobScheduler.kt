@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.scheduler
+package com.halovoid.lncrawler.data.scheduler.jobs
 
 import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
@@ -22,6 +22,14 @@ class JobScheduler(
 ) {
     private var pollingJob: Job? = null
     private val activeJobs = ConcurrentHashMap<String, Job>()
+    private var onEmptyListener: (() -> Unit)? = null
+
+    /**
+     * Sets a listener to be called when the scheduler has no more active or runnable jobs.
+     */
+    fun setOnEmptyListener(listener: () -> Unit) {
+        this.onEmptyListener = listener
+    }
 
     /**
      * Starts the scheduler's polling loop.
@@ -66,7 +74,13 @@ class JobScheduler(
         val runnableRequests = allRequests.filter { it.isRunnable(allRequests) }
             .sortedWith(compareByDescending<RequestEntity> { it.priority }.thenBy { it.createdAt })
 
-        // 4. Launch new runners for eligible requests
+        // 4. If no jobs are active and no jobs are runnable, notify listener
+        if (activeJobs.isEmpty() && runnableRequests.isEmpty()) {
+            onEmptyListener?.invoke()
+            return
+        }
+
+        // 5. Launch new runners for eligible requests
         for (request in runnableRequests) {
             if (activeJobs.size >= config.maxConcurrentJobs) break
             if (activeJobs.containsKey(request.id)) continue

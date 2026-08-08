@@ -31,7 +31,7 @@ import androidx.room.PrimaryKey
 )
 data class ChapterEntity(
     /** Primary key for the chapter entity, auto-generated. */
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     /** The URL of the parent novel, used as a foreign key. */
     val novelUrl: String,
     /** The Volume ID of the Volume it will be part of*/

@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.scheduler
+package com.halovoid.lncrawler.data.scheduler.jobs
 
 /**
  * Represents the result of a job execution.
