@@ -1,88 +1,112 @@
 package com.halovoid.lncrawler.ui.screens.request
 
-import android.widget.Toast
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil.compose.AsyncImage
-import com.halovoid.lncrawler.domain.models.ExportStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.ViewModelFactory
+import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
+import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.theme.*
-import java.text.SimpleDateFormat
-import java.util.*
-import androidx.core.net.toUri
+import kotlinx.coroutines.launch
 
-/**
- * Detailed view for a specific export request record.
- */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestDetailScreen(
-    recordId: Int,
+    requestId: String?,
     onBackClick: () -> Unit,
-    onOpenUrl: (String) -> Unit
+    onRequestClick: (String) -> Unit
 ) {
+    if (requestId == null) {
+        onBackClick()
+        return
+    }
+
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val factory = remember { ViewModelFactory(context.applicationContext as android.app.Application) }
     val viewModel: RequestDetailViewModel = viewModel(factory = factory)
 
-    // Using collectAsState directly from the Flow to ensure we get DB updates.
-    val record by viewModel.getRecord(recordId).collectAsState(initial = null)
-    val novel by viewModel.novel.collectAsState()
-    val progressMap by viewModel.exportProgressMap.collectAsState()
-    var showDeleteConfirmation by remember { mutableStateOf(false) }
+    val record by viewModel.getRequest(requestId).collectAsState(initial = null)
+    val linkedRequests by viewModel.linkedRequests.collectAsStateWithLifecycle()
+    val chapterMetadata by viewModel.chapterMetadata.collectAsState()
+    val artifactMetadata by viewModel.artifactMetadata.collectAsState()
 
-    val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/epub+zip")
+    val saveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(
+            "application/epub+zip"
+        )
     ) { uri ->
-        uri?.let {
-            record?.let { r ->
-                viewModel.rerequestExport(it, r)
-                Toast.makeText(context, "Re-request started", Toast.LENGTH_SHORT).show()
-            }
+        if (uri != null && artifactMetadata != null) {
+            viewModel.copyArtifactToUri(
+                artifact = artifactMetadata!!,
+                destinationUri = uri,
+                onComplete = { resultUri ->
+                    if (resultUri != null) {
+                        scope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = "Exported: ${artifactMetadata!!.artifactName}",
+                                actionLabel = "OPEN",
+                                duration = SnackbarDuration.Long
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(resultUri, "application/epub+zip")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Open with"))
+                            }
+                        }
+                    }
+                },
+                onFileMissing = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Original file not found. It may have been removed or deleted.",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                }
+            )
         }
+    }
+
+    LaunchedEffect(requestId) {
+        viewModel.setRequestId(requestId)
     }
 
     Scaffold(
         containerColor = DarkBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBackClick, modifier = Modifier.size(24.dp)) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = PrimaryAccent
-                    )
-                }
-                TextButton(onClick = onBackClick) {
-                    Text("All Requests", color = PrimaryAccent, fontSize = 16.sp)
-                }
-            }
+            TopAppBar(
+                title = { Text("Request Details", fontWeight = FontWeight.Bold, color = PrimaryText) },
+                navigationIcon = {
+                    IconButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryAccent)
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+            )
         }
     ) { innerPadding ->
         if (record == null) {
@@ -91,337 +115,105 @@ fun RequestDetailScreen(
             }
         } else {
             val currentRecord = record!!
-            val progress = progressMap[currentRecord.id.toLong()]
-            
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(horizontal = 16.dp)
-                    .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // 1. Request Status Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                    border = BorderStroke(1.dp, BorderColor)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                // Main Request Card
+                item {
+                    RequestCard(
+                        request = currentRecord,
+                        onClick = { /* Already here */ },
+                        onReplay = { viewModel.replayRequest(currentRecord.id) },
+                        onCancel = { viewModel.cancelRequest(currentRecord.id) }
+                    )
+                }
+
+                // Metadata Table (CHAPTER type only)
+                if (currentRecord.type == RequestType.CHAPTER && chapterMetadata != null) {
+                    item {
+                        Column {
+                            Text(
+                                "Chapter Metadata",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = PrimaryText,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            MetadataTable(
+                                mapOf(
+                                    "Title" to chapterMetadata!!.title,
+                                    "Serial" to chapterMetadata!!.index.toString(),
+                                    "URL" to chapterMetadata!!.url,
+                                    "Novel URL" to chapterMetadata!!.novelUrl
+                                )
+                            )
+                        }
+                    }
+                }
+
+                // Download Columns - if artifact metadata is not null that means the file has been saved in the folder
+                // The user shall be able to download the file from the saved places
+                // By download it means to just copy and paste to his desired place
+                if (currentRecord.type == RequestType.ARTIFACT && artifactMetadata != null) {
+                    item {
+                        ArtifactCard(
+                            artifact = artifactMetadata!!,
+                            onDownload = {
+                                saveLauncher.launch(it.artifactName)
+                            }
+                        )
+                    }
+                }
+
+                // Linked Requests Section
+                if (linkedRequests.isNotEmpty()) {
+                    item {
                         Text(
-                            text = currentRecord.novelUrl,
-                            style = MaterialTheme.typography.headlineMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 26.sp
-                            ),
+                            "Linked Requests",
+                            style = MaterialTheme.typography.titleMedium,
                             color = PrimaryText,
-                            maxLines = 3,
-                            overflow = TextOverflow.Clip
+                            modifier = Modifier.padding(bottom = 8.dp)
                         )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        androidx.compose.foundation.layout.FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            StatusChipDetail(currentRecord.status)
-                            MetadataChipDetail("Novel")
-                            MetadataChipDetail("Normal")
-                            MetadataChipDetail("EPUB")
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.AccessTime, contentDescription = null, modifier = Modifier.size(16.dp), tint = SecondaryText)
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Requested: ${SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()).format(Date(currentRecord.timestamp))}",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp),
-                                color = SecondaryText
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        val isFinished = currentRecord.status == ExportStatus.SUCCESS
-                        val displayProgress = progress?.progress
-                            ?: if (isFinished) {
-                                1f
-                            } else {
-                                0f
-                            }
-                        
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            LinearProgressIndicator(
-                                progress = { displayProgress },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(8.dp)
-                                    .clip(CircleShape),
-                                color = PrimaryAccent,
-                                trackColor = BorderColor
-                            )
-
-                            Spacer(modifier = Modifier.width(10.dp))
-
-                            Text (
-                                text = "${(displayProgress * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = SecondaryText
-                            )
-                            
-                            if (isFinished) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(20.dp))
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        androidx.compose.foundation.layout.FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            EventChip(Icons.Default.PlayArrow, "Started", currentRecord.timestamp)
-                            if (isFinished) {
-                                EventChip(Icons.Default.Check, "Completed", currentRecord.timestamp + 1000)
-                            } else if (currentRecord.status == ExportStatus.FAILED) {
-                                EventChip(Icons.Default.Error, "Failed", currentRecord.timestamp + 1000)
-                            } else if (currentRecord.status == ExportStatus.CANCELLED) {
-                                EventChip(Icons.Default.Block, "Cancelled", currentRecord.timestamp + 1000)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-                            if (progress != null) {
-                                TextButton(onClick = { viewModel.cancelExport(currentRecord) }) {
-                                    Text("Cancel", color = Color.Red)
-                                }
-                            } else {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    OutlinedIconButton(
-                                        onClick = { showDeleteConfirmation = true },
-                                        border = BorderStroke(1.dp, BorderColor),
-                                        colors = IconButtonDefaults.outlinedIconButtonColors(
-                                            containerColor = DarkSurface,
-                                            contentColor = Color.Red.copy(alpha = 0.8f)
-                                        )
-                                    ) {
-                                        Icon(Icons.Default.DeleteOutline, contentDescription = "Delete")
-                                    }
-
-                                    OutlinedButton(
-                                        onClick = {
-                                            val fileName = "${currentRecord.novelTitle.filter { it.isLetterOrDigit() }}.epub"
-                                            exportLauncher.launch(fileName)
-                                        },
-                                        shape = RoundedCornerShape(8.dp),
-                                        border = BorderStroke(1.dp, BorderColor),
-                                        colors = ButtonDefaults.outlinedButtonColors(containerColor = DarkSurface)
-                                    ) {
-                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp), tint = PrimaryText)
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Replay", color = PrimaryText)
-                                    }
-                                }
-                            }
-                        }
                     }
-                }
-
-                // 2. Novel Information Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkSurface),
-                    border = BorderStroke(1.dp, BorderColor)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Language, contentDescription = null, tint = SecondaryText, modifier = Modifier.size(16.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = currentRecord.novelUrl.toUri().host ?: "Unknown Source",
-                                style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
-                                color = SecondaryText
-                            )
-                        }
-                        
-                        TextButton(
-                            onClick = { onOpenUrl(currentRecord.novelUrl) },
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = novel?.title ?: currentRecord.novelTitle,
-                                style = MaterialTheme.typography.headlineSmall.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 24.sp
-                                ),
-                                color = PrimaryAccent,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-
-                        HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 12.dp))
-
-                        AsyncImage(
-                            model = novel?.coverUrl,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .fillMaxWidth(0.7f)
-                                .aspectRatio(2f / 3f)
-                                .align(Alignment.CenterHorizontally)
-                                .clip(RoundedCornerShape(8.dp)),
-                            contentScale = ContentScale.Fit
-                        )
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .border(1.dp, BorderColor, RoundedCornerShape(8.dp))
-                                .clip(RoundedCornerShape(8.dp))
-                        ) {
-                            MetadataRow("Authors", novel?.author ?: "Unknown")
-                            MetadataRow("Chapters", novel?.chapters?.size?.toString() ?: "Unknown")
-                            MetadataRow("Status", "Available")
-                            MetadataRow("History Date", SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()).format(Date(currentRecord.timestamp)))
-                        }
-
-                        Spacer(modifier = Modifier.height(20.dp))
-
-                        Text(
-                            text = "Synopsis",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 18.sp),
-                            color = PrimaryText
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = novel?.description ?: "No synopsis available.",
-                            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp, lineHeight = 22.sp),
-                            color = PrimaryText
+                    items(linkedRequests) { linked ->
+                        RequestCard(
+                            request = linked,
+                            onClick = { onRequestClick(linked.id) },
+                            onReplay = { viewModel.replayRequest(linked.id) },
+                            onCancel = { viewModel.cancelRequest(linked.id) }
                         )
                     }
                 }
-                
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-
-            if (showDeleteConfirmation) {
-                val displayName = currentRecord.novelTitle.ifBlank { currentRecord.novelUrl }
-                ConfirmDeleteDialog(
-                    title = "Delete request?",
-                    message = "This will permanently remove \"$displayName\" from your request history. This action cannot be undone.",
-                    onConfirm = {
-                        showDeleteConfirmation = false
-                        viewModel.deleteHistoryRecord(currentRecord.id, currentRecord.novelUrl)
-                        onBackClick()
-                    },
-                    onDismiss = { showDeleteConfirmation = false }
-                )
             }
         }
     }
 }
 
 @Composable
-fun MetadataRow(label: String, value: String) {
-    Row(
+fun MetadataTable(data: Map<String, String>) {
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(12.dp),
-        verticalAlignment = Alignment.Top
+            .clip(RoundedCornerShape(8.dp))
+            .background(DarkSurface)
+            .padding(8.dp)
     ) {
-        Text(
-            text = label,
-            modifier = Modifier.fillMaxWidth(0.4f),
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
-            color = SecondaryText
-        )
-        Text(
-            text = value,
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 15.sp),
-            color = PrimaryText
-        )
-    }
-    HorizontalDivider(color = BorderColor.copy(alpha = 0.5f))
-}
-
-@Composable
-fun EventChip(icon: androidx.compose.ui.graphics.vector.ImageVector, name: String, timestamp: Long) {
-    Surface(
-        color = BorderColor.copy(alpha = 0.3f),
-        shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, BorderColor)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(12.dp), tint = SecondaryText)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(name, fontSize = 10.sp, color = SecondaryText, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(timestamp)),
-                fontSize = 10.sp,
-                color = SecondaryText
-            )
+        data.forEach { (key, value) ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = key, color = SecondaryText, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text(text = value, color = PrimaryText, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(2f))
+            }
+            if (key != data.keys.last()) {
+                HorizontalDivider(color = BorderColor, thickness = 0.5.dp)
+            }
         }
-    }
-}
-
-@Composable
-fun StatusChipDetail(status: ExportStatus) {
-    val backgroundColor = when (status) {
-        ExportStatus.SUCCESS -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-        ExportStatus.FAILED -> Color(0xFFF44336).copy(alpha = 0.2f)
-        ExportStatus.PENDING -> Color(0xFF2196F3).copy(alpha = 0.2f)
-        ExportStatus.CANCELLED -> Color(0xFF9E9E9E).copy(alpha = 0.2f)
-    }
-    val textColor = when (status) {
-        ExportStatus.SUCCESS -> Color(0xFF81C784)
-        ExportStatus.FAILED -> Color(0xFFE57373)
-        ExportStatus.PENDING -> Color(0xFF64B5F6)
-        ExportStatus.CANCELLED -> Color(0xFFBDBDBD)
-    }
-
-    Surface(
-        color = backgroundColor,
-        shape = CircleShape,
-    ) {
-        Text(
-            text = status.name,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-            color = textColor
-        )
-    }
-}
-
-@Composable
-fun MetadataChipDetail(text: String) {
-    Surface(
-        color = BorderColor.copy(alpha = 0.2f),
-        shape = CircleShape,
-        border = BorderStroke(1.dp, BorderColor)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-            color = SecondaryText
-        )
     }
 }

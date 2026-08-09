@@ -1,83 +1,120 @@
 package com.halovoid.lncrawler.ui.screens.request
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.application
 import androidx.lifecycle.viewModelScope
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import com.halovoid.lncrawler.data.db.dao.ExportRecordDao
-import com.halovoid.lncrawler.data.export.ExportProgress
-import com.halovoid.lncrawler.data.export.ExportProgressManager
-import com.halovoid.lncrawler.data.export.ExportWorker
+import com.halovoid.lncrawler.data.db.dao.RequestDao
+import com.halovoid.lncrawler.data.repository.ArtifactRepository
+import com.halovoid.lncrawler.data.repository.ChapterRepository
 import com.halovoid.lncrawler.data.repository.NovelRepository
-import com.halovoid.lncrawler.domain.models.ExportRecord
+import com.halovoid.lncrawler.data.repository.VolumeRepository
+import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
+import com.halovoid.lncrawler.domain.models.Artifact
+import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.toDomain
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.io.File
 
 /**
  * ViewModel for the Request Detail screen.
  */
 class RequestDetailViewModel(
     application: Application,
-    private val exportRecordDao: ExportRecordDao
+    private val requestDao: RequestDao
 ) : AndroidViewModel(application) {
-    private val repository = NovelRepository(application)
-    private val workManager = WorkManager.getInstance(application)
+    private val chapterRepository = ChapterRepository(application)
+    private val artifactRepository = ArtifactRepository(application)
 
-    private val _novel = MutableStateFlow<Novel?>(null)
-    val novel: StateFlow<Novel?> = _novel.asStateFlow()
-
-    /** Observes the specific record from the database as a hot flow. */
-    fun getRecord(recordId: Int): Flow<ExportRecord?> {
-        return exportRecordDao.getRecordById(recordId.toLong())
-            .map { it?.toDomain() }
-            .onEach { domainRecord ->
-                if (domainRecord != null && _novel.value == null) {
-                    _novel.value = repository.getNovelDetails(
-                        domainRecord.crawlerName, 
-                        domainRecord.novelUrl, 
-                        refresh = false
-                    )
-                }
-            }
+    private val _requestId = MutableStateFlow<String?>(null)
+    fun setRequestId(id: String) {
+        _requestId.value = id
     }
 
-    /** Observes the global export progress map keyed by Record ID. */
-    val exportProgressMap: StateFlow<Map<Long, ExportProgress>> = ExportProgressManager.recordProgressMap
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val linkedRequests: StateFlow<List<Request>> = _requestId
+        .filterNotNull()
+        .flatMapLatest { id ->
+            requestDao.getRequestsByDependenceFlow(id)
+                .map { entities -> entities.map { it.toDomain() } }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    fun deleteHistoryRecord(id: Int, novelUrl: String) {
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val chapterMetadata: StateFlow<Chapter?> = _requestId
+        .filterNotNull()
+        .flatMapLatest { id ->
+            requestDao.getRequestByIdFlow(id)
+        }
+        .filterNotNull()
+        .map { request ->
+            // Move this to the IO Thread from the Main Thread
+            val chapters = chapterRepository.getChaptersByNovelUrl(request.novelUrl)
+            chapters.find { it.url == request.url }
+        }
+        .flowOn(Dispatchers.IO)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val artifactMetadata: StateFlow<Artifact?> = _requestId
+        .filterNotNull()
+        .flatMapLatest { id ->
+            requestDao.getRequestByIdFlow(id)
+        }
+        .filterNotNull()
+        .map { request ->
+            val artifacts = artifactRepository.getArtifactForRequest(request.id)
+            artifacts.find { it.requestId == request.id }
+        }
+        .flowOn(Dispatchers.IO)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+    fun getRequest(requestId: String): Flow<Request?> {
+        return requestDao.getRequestByIdFlow(requestId)
+            .map { it?.toDomain() }
+    }
+
+    fun replayRequest(requestId: String) {
         viewModelScope.launch {
-            exportRecordDao.deleteById(id)
-            ExportProgressManager.updateProgress(id.toLong(), novelUrl, null)
+            requestDao.replayRequest(requestId)
+
+            SchedulerService.startService(getApplication())
         }
     }
-    
-    fun rerequestExport(destinationUri: android.net.Uri, record: ExportRecord) {
-        val inputData = Data.Builder()
-            .putString("novelUrl", record.novelUrl)
-            .putString("crawlerName", record.crawlerName)
-            .putString("destinationUri", destinationUri.toString())
-            
-        record.parentId?.let { inputData.putInt("parentId", it) }
 
-        val request = OneTimeWorkRequestBuilder<ExportWorker>()
-            .setInputData(inputData.build())
-            .addTag(record.novelUrl)
-            .build()
-            
-        workManager.enqueueUniqueWork(
-            record.novelUrl,
-            ExistingWorkPolicy.REPLACE,
-            request
-        )
+    fun cancelRequest(requestId: String) {
+        viewModelScope.launch {
+            requestDao.cancelRequest(requestId)
+
+            SchedulerService.startService(getApplication())
+        }
     }
-
-    fun cancelExport(record: ExportRecord) {
-        workManager.cancelUniqueWork(record.novelUrl)
-        ExportProgressManager.updateProgress(record.id.toLong(), record.novelUrl, null)
+    fun copyArtifactToUri(artifact: Artifact, destinationUri: Uri, onComplete: (Uri?) -> Unit, onFileMissing: () -> Unit) {
+        viewModelScope.launch {
+            if (!artifactRepository.artifactExists(artifact)) {
+                artifactRepository.removeArtifact(artifact)
+                onFileMissing()
+                return@launch
+            }
+            val result = artifactRepository.copyArtifactToUri(artifact, destinationUri)
+            onComplete(result)
+        }
     }
 }

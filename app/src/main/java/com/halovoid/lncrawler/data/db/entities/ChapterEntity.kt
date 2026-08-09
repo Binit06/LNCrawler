@@ -2,12 +2,9 @@ package com.halovoid.lncrawler.data.db.entities
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
-/**
- * Room entity representing a chapter in the database.
- * Associated with a [NovelEntity] via a foreign key on [novelUrl].
- */
 @Entity(
     tableName = "chapters",
     foreignKeys = [
@@ -16,18 +13,24 @@ import androidx.room.PrimaryKey
             parentColumns = ["url"],
             childColumns = ["novelUrl"],
             onDelete = ForeignKey.CASCADE
+        ),
+        ForeignKey(
+            entity = VolumeEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["volumeId"]
         )
+    ],
+    indices = [
+        Index("novelUrl"),
+        Index("volumeId")
     ]
 )
 data class ChapterEntity(
-    /** Primary key for the chapter entity, auto-generated. */
-    @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    /** The URL of the parent novel, used as a foreign key. */
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val novelUrl: String,
-    /** The unique source URL of the chapter. */
+    val volumeId: String,
     val url: String,
-    /** The title of the chapter. */
     val title: String,
-    /** The sequence index of the chapter. */
-    val index: Int
+    val index: Int,
+    val fileLocation: String?
 )

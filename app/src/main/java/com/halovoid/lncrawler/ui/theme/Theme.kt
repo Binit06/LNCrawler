@@ -7,14 +7,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
 /**
- * Dark color scheme following Tachiyomi/Mihon design principles.
+ * Modern Dark color scheme for LNCrawler.
  */
 private val DarkColorScheme = darkColorScheme(
     primary = PrimaryAccent,
-    secondary = PrimaryAccent,
+    secondary = SuccessGreen,
+    tertiary = ErrorRed,
     background = DarkBackground,
     surface = DarkSurface,
-    onPrimary = Color.Black, // Icons on cyan buttons should be black
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
     onBackground = PrimaryText,
     onSurface = PrimaryText,
     onSurfaceVariant = SecondaryText,
@@ -22,7 +25,7 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 /**
- * Light color scheme (Simplified for now, as the user requested a dark theme focus).
+ * Light color scheme (simplified, focusing on Dark theme).
  */
 private val LightColorScheme = lightColorScheme(
     primary = PrimaryAccent,
@@ -30,13 +33,9 @@ private val LightColorScheme = lightColorScheme(
     surface = LightGray
 )
 
-/**
- * Main theme for LNCrawler.
- * Defaults to dark mode for the requested Tachiyomi aesthetic.
- */
 @Composable
 fun LNCrawlerTheme(
-    darkTheme: Boolean = true, // Default to dark theme
+    darkTheme: Boolean = true, // Default to dark theme as requested
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {

@@ -1,83 +1,53 @@
 package com.halovoid.lncrawler.ui.screens.request
 
-import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
-import androidx.compose.material.icons.automirrored.filled.LibraryBooks
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.halovoid.lncrawler.domain.models.ExportRecord
-import com.halovoid.lncrawler.domain.models.ExportStatus
+import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
+import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.theme.*
-import java.text.SimpleDateFormat
-import java.util.*
 
-/**
- * Hub screen for creating novel requests and viewing export history.
- * Follows a developer-tool aesthetic with high information density.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RequestScreen(
-    onNovelClick: (String, String) -> Unit,
-    onHistoryClick: (Int) -> Unit,
-    onLibraryClick: () -> Unit,
-    viewModel: RequestViewModel
+    onRequestClick: (String) -> Unit,
+    viewModel: RequestViewModel,
 ) {
     var urlInput by remember { mutableStateOf("") }
     val error by viewModel.error.collectAsState()
-    val activeFetches by viewModel.activeFetches.collectAsState()
-    val history by viewModel.exportHistory.collectAsStateWithLifecycle()
-    val progressMap by viewModel.exportProgressMap.collectAsState()
-    val context = LocalContext.current
-    val isFetching = !activeFetches.isEmpty()
-    var pendingDelete by remember { mutableStateOf<ExportRecord?>(null) }
+    val requestHistory by viewModel.requestHistory.collectAsStateWithLifecycle()
+
+    var statusFilter by remember { mutableStateOf<RequestStatus?>(null) }
+    var typeFilter by remember { mutableStateOf<RequestType?>(null) }
+
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = DarkBackground,
-        contentWindowInsets = WindowInsets.systemBars,
         topBar = {
             TopAppBar(
-                title = { 
-                    Text(
-                        "LNCrawler", 
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryText
-                    ) 
+                title = {
+                    Text("Request Novels", fontWeight = FontWeight.Bold, color = PrimaryText)
                 },
-                actions = {
-                    IconButton(onClick = onLibraryClick) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.LibraryBooks, 
-                            contentDescription = "Library", 
-                            tint = PrimaryAccent
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = DarkBackground,
-                    titleContentColor = PrimaryText,
-                    actionIconContentColor = PrimaryAccent
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
         }
     ) { innerPadding ->
@@ -86,9 +56,9 @@ fun RequestScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Request Creation Section
+            // Request Novel Section
             item {
                 Column {
                     Row(
@@ -104,7 +74,7 @@ fun RequestScreen(
                             value = urlInput,
                             onValueChange = { urlInput = it },
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("Novel URL", color = SecondaryText) },
+                            placeholder = { Text("Enter novel page URL", color = SecondaryText) },
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent,
                                 unfocusedContainerColor = Color.Transparent,
@@ -117,37 +87,34 @@ fun RequestScreen(
                             ),
                             singleLine = true
                         )
-                        
+
                         FilledIconButton(
                             onClick = {
-                                val crawlerName = viewModel.validateUrl(urlInput)
-                                if (crawlerName != null) {
-                                    viewModel.fetchNovel(crawlerName, urlInput) { name, url ->
-                                        urlInput = ""
-                                        onNovelClick(name, url)
+                                if (!isLoading) {
+                                    val crawlerName = viewModel.validateUrl(urlInput)
+                                    if (crawlerName != null) {
+                                        viewModel.startNovelCrawl(crawlerName, urlInput)
                                     }
                                 }
                             },
-                            enabled = !isFetching,
+                            enabled = !isLoading,
                             modifier = Modifier.size(48.dp),
                             shape = CircleShape,
                             colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = PrimaryAccent,
-                                contentColor = Color.Black,
-                                disabledContainerColor = PrimaryAccent.copy(alpha = 0.7f),
-                                disabledContentColor = Color.Black
+                                containerColor = SuccessGreen,
+                                contentColor = Color.White
                             )
                         ) {
-                            if (isFetching) {
+                            if (isLoading) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(22.dp),
-                                    strokeWidth = 2.dp,
-                                    color = Color.Black
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
                                 )
                             } else {
                                 Icon(
                                     Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Fetch",
+                                    contentDescription = "Submit",
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
@@ -157,238 +124,92 @@ fun RequestScreen(
                     if (error != null) {
                         Text(
                             text = error ?: "",
-                            color = MaterialTheme.colorScheme.error,
+                            color = ErrorRed,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Enter a direct URL from a supported source (e.g. NovelBin) to fetch chapters and prepare for export.",
-                        modifier = Modifier.padding(horizontal = 10.dp),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 13.sp, lineHeight = 18.sp),
-                        color = SecondaryText
+                        "Enter the full URL of Novel Page. It should start with 'http://' or 'https://' and should lead to the page containing all the novel details. URL not satisfying these condition will result in failure.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = SecondaryText,
+                        modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
             }
 
-            item { HorizontalDivider(color = BorderColor) }
-
-            // Request History Section
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            // Filters Section
+            if (requestHistory.isNotEmpty()) {
+                item {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Icon(
-                            Icons.Outlined.History,
-                            contentDescription = null,
-                            tint = SecondaryText,
-                            modifier = Modifier.size(20.dp)
-                        )
-
-                        Spacer(Modifier.width(8.dp))
-
-                        Text(
-                            text = "Request History",
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp
-                            ),
-                            color = PrimaryText
-                        )
-                    }
-
-                    OutlinedIconButton(
-                        onClick = {  },
-                        border = BorderStroke(1.dp, BorderColor),
-                        colors = IconButtonDefaults.outlinedIconButtonColors(
-                            containerColor = DarkSurface,
-                            contentColor = PrimaryText
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Refresh",
-                            modifier = Modifier.size(18.dp)
-                        )
+                        FilterDropdown("Status", RequestStatus.values().map { it.name }, { statusFilter = RequestStatus.valueOf(it) })
+                        FilterDropdown("Type", RequestType.values().map { it.name }, { typeFilter = RequestType.valueOf(it) })
                     }
                 }
             }
 
-            items(history, key = { it.id }) { record ->
-                val progress = progressMap[record.id.toLong()]
-                val isFinished = record.status == ExportStatus.SUCCESS
-                val displayProgress = if (progress != null) {
-                    progress.progress
-                } else if (isFinished) {
-                    1f
-                } else {
-                    0f
-                }
+            // Request List
+            val filteredHistory = requestHistory.filter { 
+                (statusFilter == null || it.status == statusFilter) &&
+                (typeFilter == null || it.type == typeFilter)
+            }
 
-                RequestHistoryCard(
-                    title = record.novelTitle,
-                    status = record.status,
-                    timestamp = record.timestamp,
-                    progress = displayProgress,
-                    errorLog = record.errorLog,
-                    onClick = { onHistoryClick(record.id) }
+            items(filteredHistory) { request ->
+                RequestCard(
+                    request = request,
+                    onClick = { onRequestClick(request.id) },
+                    onReplay = { viewModel.replayRequest(request.id) },
+                    onCancel = { viewModel.cancelRequest(request.id) }
                 )
             }
         }
+    }
+}
 
-        pendingDelete?.let { record ->
-            val displayName = record.novelTitle.ifBlank { record.novelUrl }
-            ConfirmDeleteDialog(
-                title = "Delete request?",
-                message = "This will permanently remove \"$displayName\" from your request history. This action cannot be undone.",
-                onConfirm = {
-                    viewModel.deleteHistoryRecord(record.id, record.novelUrl)
-                    pendingDelete = null
-                },
-                onDismiss = { pendingDelete = null }
+@Composable
+fun FilterDropdown(label: String, options: List<String>, onSelected: (String) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    var selectedOption by remember { mutableStateOf("Any") }
+
+    Box {
+        OutlinedButton(
+            onClick = { expanded = true },
+            shape = RoundedCornerShape(8.dp),
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = SecondaryText)
+        ) {
+            Text("$label: $selectedOption", fontSize = 12.sp)
+            Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            modifier = Modifier.background(DarkSurface)
+        ) {
+            DropdownMenuItem(
+                text = { Text("Any", color = PrimaryText) },
+                onClick = {
+                    selectedOption = "Any"
+                    expanded = false
+                    // Handle "Any" logic
+                }
             )
-        }
-    }
-}
-
-@Composable
-fun RequestHistoryCard(
-    title: String,
-    status: ExportStatus,
-    timestamp: Long,
-    progress: Float = 0f,
-    errorLog: String? = null,
-    onClick: () -> Unit = {}
-) {
-    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault()) }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        border = BorderStroke(1.dp, BorderColor)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 18.sp
-                ),
-                color = PrimaryText,
-                maxLines = 2,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatusChip(status)
-                MetadataChip("EPUB")
-                if (errorLog != null) {
-                    MetadataChip("Error Info", Color.Red.copy(alpha = 0.2f))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.AccessTime,
-                    contentDescription = null,
-                    modifier = Modifier.size(12.dp),
-                    tint = SecondaryText
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option, color = PrimaryText) },
+                    onClick = {
+                        selectedOption = option
+                        expanded = false
+                        onSelected(option)
+                    }
                 )
-
-                Spacer(Modifier.width(4.dp))
-
-                Text(
-                    text = dateFormatter.format(Date(timestamp)),
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    color = SecondaryText
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(6.dp)
-                        .clip(CircleShape),
-                    color = PrimaryAccent,
-                    trackColor = BorderColor
-                )
-                
-                Spacer(modifier = Modifier.width(10.dp))
-
-                Text (
-                    text = "${(progress * 100).toInt()}%",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SecondaryText
-                )
-
-                if (status == ExportStatus.SUCCESS) {
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(16.dp))
-                }
             }
         }
-    }
-}
-
-@Composable
-fun StatusChip(status: ExportStatus) {
-    val backgroundColor = when (status) {
-        ExportStatus.SUCCESS -> Color(0xFF4CAF50).copy(alpha = 0.2f)
-        ExportStatus.FAILED -> Color(0xFFF44336).copy(alpha = 0.2f)
-        ExportStatus.PENDING -> Color(0xFF2196F3).copy(alpha = 0.2f)
-        ExportStatus.CANCELLED -> Color(0xFF9E9E9E).copy(alpha = 0.2f)
-    }
-    val textColor = when (status) {
-        ExportStatus.SUCCESS -> Color(0xFF81C784)
-        ExportStatus.FAILED -> Color(0xFFE57373)
-        ExportStatus.PENDING -> Color(0xFF64B5F6)
-        ExportStatus.CANCELLED -> Color(0xFFBDBDBD)
-    }
-
-    Surface(
-        color = backgroundColor,
-        shape = CircleShape,
-    ) {
-        Text(
-            text = status.name,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
-            color = textColor
-        )
-    }
-}
-
-@Composable
-fun MetadataChip(text: String, color: Color = DarkBackground) {
-    Surface(
-        color = color,
-        shape = CircleShape,
-        border = BorderStroke(1.dp, BorderColor)
-    ) {
-        Text(
-            text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-            style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.sp),
-            color = SecondaryText
-        )
     }
 }
