@@ -35,11 +35,11 @@ import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Volume
 import com.halovoid.lncrawler.ui.ViewModelFactory
+import com.halovoid.lncrawler.ui.components.ConfirmDeleteDialog
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactExportButton
 import com.halovoid.lncrawler.ui.components.artifact.ExportFormat
-import com.halovoid.lncrawler.ui.screens.request.ConfirmDeleteDialog
 import com.halovoid.lncrawler.ui.theme.*
 import kotlinx.coroutines.launch
 

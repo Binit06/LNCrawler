@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.ui.screens.request
+package com.halovoid.lncrawler.ui.components
 
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog

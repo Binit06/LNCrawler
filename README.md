@@ -1,21 +1,35 @@
-```
-🚧 🛑 WORK IN PROGRESS: MAJOR ARCHITECTURAL REFACTOR 🛑 🚧
-
-Please note: This project is currently undergoing a massive structural rewrite. To prevent merge conflicts and wasted effort, I am temporarily pausing all outside contributions and feature requests.
-
-Please do not open new issues or submit Pull Requests at this time. I will remove this notice once the new architecture is stable. Thank you!
-```
-
 # LNCrawler
 
-**LNCrawler** is a Kotlin-based Android application for crawling and exporting light novels. It combines the powerful scraping logic inspired by [lightnovel-crawler](https://github.com/lncrawl/lightnovel-crawler) with a UI inspired by [Tachiyomi](https://github.com/tachiyomi).
+**LNCrawler** is an Android application for crawling and exporting light novels. It combines the powerful scraping logic inspired by [lightnovel-crawler](https://github.com/lncrawl/lightnovel-crawler) with a UI inspired by [Tachiyomi](https://github.com/tachiyomi).
 
 ## LNCrawler Overview
 <p align="center">
-  <img src="assets/lncrawler_novel_page_fetching.png" alt="LNCrawler Novel Page Fetching" width="220"/>
-  <img src="assets/lncrawler_novel_page.png" alt="LNCrawler Novel Page" width="220"/>
-  <img src="assets/lncrawler_request_page.png" alt="LNCrawler Request Page" width="220"/>
+  <img src="assets/novel_screen_1.png"
+    alt="LNCrawler Novel Page"
+    width="220"/>
+  <img src="assets/request_screen_1.png"
+    alt="LNCrawler Crawl Request"
+    width="220"/>
+  <img src="assets/export_artifact.png"
+    alt="LNCrawler Export Artifact"
+    width="220"/>
 </p>
+
+<p align="center">
+  <img src="assets/novel_screen_2.png"
+    alt="LNCrawler Novel Details"
+    width="220"/>
+  <img src="assets/request_screen_2.png"
+    alt="LNCrawler Request Details"
+    width="220"/>
+</p>
+
+## Key Features
+- **Job-based Crawling System:** Can handle multiple Crawl Requests at the same time.
+- **Tachiyomi-inspired UI:** A clean, modern interface built with Jetpack Compose.
+- **Exporting Options:** Package your favorite light novels into EPUB or other formats (more coming soon).
+- **Library Management:** Keep track of your downloaded novels.
+- **Multi-source Support:** Easily add new sources for expansion.
 
 ## Getting Started
 
@@ -32,6 +46,9 @@ Please do not open new issues or submit Pull Requests at this time. I will remov
 ## Supported Sources
 - [NovelBins](https://novelbins.com)
 - 📢 more sources will be added soon
+
+## 🏗 Architecture
+LNCrawler follows a **Clean Architecture** with a **Job-based request system** for reliability. For a deeper dive into how it works and how to contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## 🤝 Contributing
 

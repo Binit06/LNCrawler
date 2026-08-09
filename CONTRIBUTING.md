@@ -1,10 +1,3 @@
-```
-🚧 🛑 WORK IN PROGRESS: MAJOR ARCHITECTURAL REFACTOR 🛑 🚧
-
-Please note: This project is currently undergoing a massive structural rewrite. To prevent merge conflicts and wasted effort, I am temporarily pausing all outside contributions and feature requests.
-
-Please do not open new issues or submit Pull Requests at this time. I will remove this notice once the new architecture is stable. Thank you!
-```
 # Contributing to LNCrawler
 
 Welcome! We're excited that you're interested in contributing to **LNCrawler**. This project aims to bring the powerful scraping logic of `lightnovel-crawler` to a modern, Tachiyomi-inspired Android experience.
@@ -13,22 +6,27 @@ Welcome! We're excited that you're interested in contributing to **LNCrawler**. 
 
 ## 🏗 Architecture Overview
 
-The project follows a **Clean Architecture** pattern to ensure scalability and ease of contribution:
+The project follows a **Clean Architecture** pattern with a specialized **Job Scheduler System** to handle long-running crawling tasks:
 
 ### 1. Data Layer (`com.halovoid.lncrawler.data`)
-- **Crawler:** The scraping engine. All site-specific scrapers inherit from the `Crawler` base class.
-- **DB:** Room database for local persistence of novel metadata and chapter lists.
-- **Export:** Logic for packaging scraped data into formats like EPUB.
-- **Repository:** The single source of truth that coordinates data between the network and the local database.
+This is where the bulk of the logic resides, organized into several sub-systems:
+- **Crawler:** The scraping engine core. Sources implement the `Crawler` interface using `Scrapper` (OkHttp + Jsoup).
+- **Scheduler:** A persistent job management system.
+    - `RequestEntity`: Represents a unit of work (e.g., fetch novel, download chapter).
+    - `JobRunner` & `SchedulerService`: Execute requests from the queue.
+    - `JobHandler`: Specific handlers (`NovelHandler`, `ChapterHandler`, `ArtifactHandler`) that process different `RequestType`s.
+- **Repository:** Manages data access for Novels, Chapters, Volumes, Preferences (DataStore), and Storage (File System).
+- **DB:** Room database for storing metadata, chapter lists, and the request queue.
+- **Artifact:** Logic for generating export files (e.g., EPUB) via `ArtifactGenerator`.
 
 ### 2. Domain Layer (`com.halovoid.lncrawler.domain`)
-- **Models:** Plain data classes representing the core business objects (`Novel`, `Chapter`).
-- **UseCases:** Simple classes that execute a single task, containing the business logic.
+- **Models:** POJOs representing `Novel`, `Chapter`, `Volume`, and `Request`.
+- **Note:** Business logic is primarily orchestrated via `JobHandlers` in the Data layer for this specific implementation.
 
 ### 3. UI Layer (`com.halovoid.lncrawler.ui`)
-- **Screens:** Jetpack Compose-based UI screens.
-- **ViewModels:** Manage screen state and interact with the Domain layer via UseCases.
-- **Theme:** Centralized colors and typography (Tachiyomi-inspired dark theme).
+- **Screens:** Modular Jetpack Compose screens (Library, Request, Novel Detail, Settings).
+- **ViewModels:** Maintain UI state and trigger jobs by inserting requests into the database.
+- **Navigation:** Type-safe navigation using `NavGraph` and `Screen` sealed classes.
 
 ---
 
@@ -55,6 +53,16 @@ Adding support for a new light novel site is easy:
     }
     ```
 2.  **Register in `CrawlerFactory`:** Add your new crawler to the `crawlers` list in `CrawlerFactory.kt`.
+
+---
+
+## 🛠 Adding a New Job Handler
+
+If you need to introduce a new type of background task (e.g., a new export format or a different scraping strategy):
+
+1.  **Define `RequestType`:** Add a new entry to the `RequestType` enum in `data.db.entities`.
+2.  **Implement `JobHandler`:** Create a new handler in `data.handlers`.
+3.  **Register in `JobHandlerRegistry`:** Add your handler to the registry (typically done in the `SchedulerService` or a DI module).
 
 ---
 
