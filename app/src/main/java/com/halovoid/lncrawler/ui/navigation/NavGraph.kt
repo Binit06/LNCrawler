@@ -75,24 +75,24 @@ fun NavGraph(navController: NavHostController) {
         startRoute = if (folderUri != null) {
             Screen.Request.route
         } else {
-            Screen.Permissions.route
+            Screen.FolderSelection.route
         }
     }
     startRoute?.let { route ->
         NavHost(navController = navController, startDestination = route) {
-            composable(Screen.Permissions.route) {
-                PermissionScreen(
-                    onNext = {
-                        navController.navigate(Screen.FolderSelection.route)
-                    }
-                )
-            }
             composable(Screen.FolderSelection.route) {
                 FolderScreen(
                     folderViewModel,
                     onNext = {
+                        navController.navigate(Screen.Permissions.route)
+                    }
+                )
+            }
+            composable(Screen.Permissions.route) {
+                PermissionScreen(
+                    onNext = {
                         navController.navigate(Screen.Request.route) {
-                            popUpTo(Screen.Permissions.route) {
+                            popUpTo(Screen.FolderSelection.route) {
                                 inclusive = true
                             }
                         }

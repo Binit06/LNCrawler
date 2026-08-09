@@ -6,17 +6,21 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CreateNewFolder
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.halovoid.lncrawler.ui.theme.DarkSurface
+import com.halovoid.lncrawler.ui.theme.PrimaryAccent
 import com.halovoid.lncrawler.ui.theme.SecondaryText
 import kotlinx.coroutines.launch
 
@@ -28,6 +32,7 @@ fun FolderScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val selectedFolder by viewModel.exportFolderUri.collectAsState(initial = null)
+    val friendlyPath by viewModel.friendlyPath.collectAsState(initial = "")
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
@@ -44,70 +49,72 @@ fun FolderScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+    OnboardingStep(
+        title = "Storage Location",
+        subtitle = "Choose where your light novels, covers, and artifacts will be stored.",
+        buttonText = "Get Started",
+        onNext = onNext,
+        isNextEnabled = selectedFolder != null
     ) {
-        Text(
-            text = "Storage Location",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "Choose a directory where your light novels, covers, and exported artifacts will be stored.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = SecondaryText
-        )
-        Spacer(modifier = Modifier.height(32.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(5.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
 
-        Button(
-            onClick = { launcher.launch(null) },
-            modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            Text(text = if (selectedFolder == null) "Grant Folder Access" else "Change Folder")
-        }
-
-        if (selectedFolder != null) {
-            Spacer(modifier = Modifier.height(24.dp))
-            
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(DarkSurface)
-                    .padding(16.dp)
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(PrimaryAccent.copy(alpha = 0.1f)),
+                contentAlignment = Alignment.Center
             ) {
-                Column {
-                    Text(
-                        text = "Selected Folder:",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = selectedFolder.toString(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SecondaryText
-                    )
-                }
+                Icon(
+                    imageVector = if (selectedFolder == null) Icons.Default.CreateNewFolder else Icons.Default.Folder,
+                    contentDescription = null,
+                    tint = PrimaryAccent,
+                    modifier = Modifier.size(40.dp)
+                )
             }
-
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            if (selectedFolder != null) {
+                Text(
+                    text = "Selected Path",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = PrimaryAccent,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = friendlyPath,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 8.dp)
+                )
+            } else {
+                Text(
+                    text = "No folder selected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SecondaryText
+                )
+            }
+            
             Spacer(modifier = Modifier.height(32.dp))
             
-            Button(
-                onClick = onNext,
-                modifier = Modifier.fillMaxWidth(0.8f),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.secondary
-                )
+            OutlinedButton(
+                onClick = { launcher.launch(null) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryAccent)
             ) {
-                Text("Continue")
+                Text(
+                    text = if (selectedFolder == null) "Choose Directory" else "Change Directory",
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
             }
         }
     }
