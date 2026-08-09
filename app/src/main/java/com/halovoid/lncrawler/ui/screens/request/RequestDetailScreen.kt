@@ -1,9 +1,8 @@
 package com.halovoid.lncrawler.ui.screens.request
 
-import android.R
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -11,14 +10,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -26,11 +22,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halovoid.lncrawler.data.db.entities.RequestType
-import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.ui.ViewModelFactory
-import com.halovoid.lncrawler.ui.components.ArtifactCard
+import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,6 +41,8 @@ fun RequestDetailScreen(
     }
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val factory = remember { ViewModelFactory(context.applicationContext as android.app.Application) }
     val viewModel: RequestDetailViewModel = viewModel(factory = factory)
 
@@ -61,7 +59,33 @@ fun RequestDetailScreen(
         if (uri != null && artifactMetadata != null) {
             viewModel.copyArtifactToUri(
                 artifact = artifactMetadata!!,
-                destinationUri = uri
+                destinationUri = uri,
+                onComplete = { resultUri ->
+                    if (resultUri != null) {
+                        scope.launch {
+                            val result = snackbarHostState.showSnackbar(
+                                message = "Exported: ${artifactMetadata!!.artifactName}",
+                                actionLabel = "OPEN",
+                                duration = SnackbarDuration.Long
+                            )
+                            if (result == SnackbarResult.ActionPerformed) {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(resultUri, "application/epub+zip")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Open with"))
+                            }
+                        }
+                    }
+                },
+                onFileMissing = {
+                    scope.launch {
+                        snackbarHostState.showSnackbar(
+                            message = "Original file not found. It may have been removed or deleted.",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                }
             )
         }
     }
@@ -72,6 +96,7 @@ fun RequestDetailScreen(
 
     Scaffold(
         containerColor = DarkBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Request Details", fontWeight = FontWeight.Bold, color = PrimaryText) },

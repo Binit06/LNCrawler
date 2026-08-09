@@ -52,7 +52,7 @@ class NovelRepository(context: Context) {
      * @param novel The novel to save.
      */
     fun saveNovelMetadata(novel: Novel) {
-        novelDao.insertNovel(novel.toEntity())
+        novelDao.upsertNovel(novel.toEntity())
     }
 
     /**

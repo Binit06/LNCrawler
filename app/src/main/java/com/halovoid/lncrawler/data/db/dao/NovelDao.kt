@@ -20,6 +20,9 @@ interface NovelDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertNovel(novel: NovelEntity)
 
+    @Upsert
+    fun upsertNovel(novel: NovelEntity)
+
     @Delete
     fun deleteNovel(novel: NovelEntity)
 }

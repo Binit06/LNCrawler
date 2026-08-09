@@ -10,8 +10,7 @@ enum class RequestType {
     NOVEL_METADATA,
     VOLUME,
     CHAPTER,
-    ARTIFACT,
-    EXPORT
+    ARTIFACT
 }
 
 enum class RequestStatus {

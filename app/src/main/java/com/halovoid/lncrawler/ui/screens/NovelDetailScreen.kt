@@ -1,5 +1,6 @@
 package com.halovoid.lncrawler.ui.screens
 
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -34,9 +35,12 @@ import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Volume
 import com.halovoid.lncrawler.ui.ViewModelFactory
-import com.halovoid.lncrawler.ui.components.ArtifactCard
+import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
+import com.halovoid.lncrawler.ui.components.artifact.ArtifactExportButton
+import com.halovoid.lncrawler.ui.components.artifact.ExportFormat
 import com.halovoid.lncrawler.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,6 +50,8 @@ fun NovelDetailScreen(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val factory = remember { ViewModelFactory(context.applicationContext as android.app.Application) }
     val viewModel: NovelDetailViewModel = viewModel(factory = factory)
     
@@ -59,9 +65,38 @@ fun NovelDetailScreen(
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/epub+zip")
     ) { uri ->
-        uri?.let {
+        uri?.let { destUri ->
             selectedArtifact?.let { artifact ->
-                viewModel.copyArtifactToUri(artifact, it)
+                viewModel.copyArtifactToUri(
+                    artifact = artifact,
+                    destinationUri = destUri,
+                    onComplete = { resultUri ->
+                        if (resultUri != null) {
+                            scope.launch {
+                                val result = snackbarHostState.showSnackbar(
+                                    message = "Exported: ${artifact.artifactName}",
+                                    actionLabel = "OPEN",
+                                    duration = SnackbarDuration.Long
+                                )
+                                if (result == SnackbarResult.ActionPerformed) {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(resultUri, "application/epub+zip")
+                                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                    }
+                                    context.startActivity(Intent.createChooser(intent, "Open with"))
+                                }
+                            }
+                        }
+                    },
+                    onFileMissing = {
+                        scope.launch {
+                            snackbarHostState.showSnackbar(
+                                message = "Original file not found. It may have been removed or deleted.",
+                                duration = SnackbarDuration.Short
+                            )
+                        }
+                    }
+                )
             }
         }
     }
@@ -72,6 +107,7 @@ fun NovelDetailScreen(
 
     Scaffold(
         containerColor = DarkBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { },
@@ -210,7 +246,10 @@ fun NovelDetailScreen(
                 item {
                     ActionsSection(
                         onFetchMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
-                        onFetchFull = { viewModel.fetchFullNovel(currentNovel) }
+                        onFetchFull = { viewModel.fetchFullNovel(currentNovel) },
+                        onExport = { format ->
+                            viewModel.startBackgroundExport(currentNovel, format)
+                        }
                     )
                 }
 
@@ -265,7 +304,11 @@ fun MetadataSection(data: Map<String, String>) {
 }
 
 @Composable
-fun ActionsSection(onFetchMetadata: () -> Unit, onFetchFull: () -> Unit) {
+fun ActionsSection(
+    onFetchMetadata: () -> Unit,
+    onFetchFull: () -> Unit,
+    onExport: (ExportFormat) -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -277,11 +320,45 @@ fun ActionsSection(onFetchMetadata: () -> Unit, onFetchFull: () -> Unit) {
             "FETCH",
             style = MaterialTheme.typography.labelSmall,
             color = PrimaryAccent,
-            modifier = Modifier.padding(start = 8.dp, top = 8.dp, bottom = 4.dp)
+            modifier = Modifier.padding(
+                start = 8.dp,
+                top = 8.dp,
+                bottom = 4.dp
+            )
         )
-        ActionRow(icon = Icons.Default.Refresh, title = "Refresh Metadata", subtext = "Update novel info and chapter list", onClick = onFetchMetadata)
-        HorizontalDivider(color = BorderColor, modifier = Modifier.padding(horizontal = 8.dp))
-        ActionRow(icon = Icons.Default.DownloadForOffline, title = "Fetch Full Novel", subtext = "Download all volumes and chapters", onClick = onFetchFull)
+
+        ActionRow(
+            icon = Icons.Default.Refresh,
+            title = "Refresh Metadata",
+            subtext = "Update novel info and chapter list",
+            onClick = onFetchMetadata
+        )
+
+        HorizontalDivider(color = BorderColor)
+
+        ActionRow(
+            icon = Icons.Default.DownloadForOffline,
+            title = "Fetch Full Novel",
+            subtext = "Download all volumes and chapters",
+            onClick = onFetchFull
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            "EXPORT",
+            style = MaterialTheme.typography.labelSmall,
+            color = PrimaryAccent,
+            modifier = Modifier.padding(
+                start = 8.dp,
+                top = 8.dp,
+                bottom = 4.dp
+            )
+        )
+
+        ArtifactExportButton(
+            onExport = onExport
+        )
     }
 }
 

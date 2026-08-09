@@ -106,25 +106,15 @@ class RequestDetailViewModel(
             SchedulerService.startService(getApplication())
         }
     }
-    fun copyArtifactToUri(artifact: Artifact, destinationUri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val sourceFile = File(artifact.artifactDestination)
-
-                if (!sourceFile.exists()) {
-                    return@launch
-                }
-
-                application.contentResolver
-                    .openOutputStream(destinationUri)
-                    ?.use { outputStream ->
-                        sourceFile.inputStream().use { inputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                    }
-            } catch (e: Exception) {
-                e.printStackTrace()
+    fun copyArtifactToUri(artifact: Artifact, destinationUri: Uri, onComplete: (Uri?) -> Unit, onFileMissing: () -> Unit) {
+        viewModelScope.launch {
+            if (!artifactRepository.artifactExists(artifact)) {
+                artifactRepository.removeArtifact(artifact)
+                onFileMissing()
+                return@launch
             }
+            val result = artifactRepository.copyArtifactToUri(artifact, destinationUri)
+            onComplete(result)
         }
     }
 }

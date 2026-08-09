@@ -26,9 +26,6 @@ interface RequestDao {
     @Query("SELECT * FROM requests WHERE id = :id")
     suspend fun getRequestById(id: String) : RequestEntity?
 
-    @Query("SELECT * FROM requests WHERE novelUrl = :novelId AND type = :type")
-    fun getRequestsByNovelAndTypeFlow(novelId: String, type: RequestType): Flow<List<RequestEntity>>
-
     @Query("SELECT * FROM requests WHERE id = :id")
     fun getRequestByIdFlow(id: String): Flow<RequestEntity?>
 

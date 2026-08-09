@@ -17,6 +17,7 @@ import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.toDomain
+import com.halovoid.lncrawler.ui.components.artifact.ExportFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +30,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.io.File
 
 /**
  * ViewModel for the [NovelDetailScreen].
@@ -84,10 +84,10 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun startBackgroundExport(novel: Novel, format: String) {
+    fun startBackgroundExport(novel: Novel, format: ExportFormat) {
         viewModelScope.launch {
             val metadata = JSONObject().apply {
-                put("format", format)
+                put("format", format.toString())
                 put("crawlerName", novel.crawlerName)
             }.toString()
 
@@ -156,54 +156,15 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun startFileExport(artifactId: Int, destinationUri: String) {
-        val currentNovel = _novel.value ?: return
+    fun copyArtifactToUri(artifact: Artifact, destinationUri: Uri, onComplete: (Uri?) -> Unit, onFileMissing: () -> Unit) {
         viewModelScope.launch {
-            val metadata = JSONObject().apply {
-                put("artifactId", artifactId)
-                put("destinationUri", destinationUri)
-            }.toString()
-
-            val request = RequestEntity(
-                // Use a unique ID to allow multiple exports if needed
-                id = "${currentNovel.url}_file_save_${System.currentTimeMillis()}",
-                type = RequestType.EXPORT,
-                novelUrl = currentNovel.url,
-                name = "Saving File: ${currentNovel.title}",
-                metadata = metadata,
-                parentNovel = currentNovel.url,
-                url = null,
-                completedAt = null,
-                status = RequestStatus.PENDING,
-                priority = 10 // Higher priority for user-initiated exports
-            )
-
-            requestDao.insertRequests(listOf(request))
-
-            // Trigger the scheduler to process the new Export task
-            SchedulerService.startService(getApplication())
-        }
-    }
-
-    fun copyArtifactToUri(artifact: Artifact, destinationUri: Uri) {
-        viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val sourceFile = File(artifact.artifactDestination)
-
-                if (!sourceFile.exists()) {
-                    return@launch
-                }
-
-                getApplication<Application>().contentResolver
-                    .openOutputStream(destinationUri)
-                    ?.use { outputStream ->
-                        sourceFile.inputStream().use { inputStream ->
-                            inputStream.copyTo(outputStream)
-                        }
-                    }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            if (!artifactRepository.artifactExists(artifact)) {
+                artifactRepository.removeArtifact(artifact)
+                onFileMissing()
+                return@launch
             }
+            val result = artifactRepository.copyArtifactToUri(artifact, destinationUri)
+            onComplete(result)
         }
     }
 

@@ -7,6 +7,7 @@ import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Volume
 import android.net.Uri
+import androidx.core.net.toUri
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -86,6 +87,15 @@ class EpubGenerator(
         """.trimMargin()
     }
 
+    private fun buildCoverPage(imageFileName: String): String {
+        val content = """
+            |<div id="cover" style="text-align: center; margin: 0; padding: 0;">
+            |    <img src="$imageFileName" alt="Cover Image" style="max-width: 100%; height: auto;" />
+            |</div>
+        """.trimMargin()
+        return wrapXHTML("Cover", content)
+    }
+
     // Page Templates
     private fun buildIntroPage(novel: Novel): String {
         val content = """
@@ -142,7 +152,8 @@ class EpubGenerator(
     private fun generateOpf(novel: Novel, items: List<EpubItem>): String {
         val manifest = items.joinToString("\n") {
             val navAttr = if (it.fileName == "nav.xhtml") " properties=\"nav\"" else ""
-            "|      <item id=\"${it.id}\" href=\"${it.fileName}\" media-type=\"${it.mediaType}\"$navAttr/>"
+            val coverAttr = if (it.id == "cover-image") "properties=\"cover-image\"" else ""
+            "|      <item id=\"${it.id}\" href=\"${it.fileName}\" media-type=\"${it.mediaType}\"$navAttr$coverAttr/>"
         }
 
         // Determined reading order
@@ -223,6 +234,23 @@ class EpubGenerator(
         metadata: RequestMetadata
     ): File = withContext(Dispatchers.IO) {
         val items = mutableListOf<EpubItem>()
+        // 0. Add Cover Image and Page
+        novel.coverUrl?.let { url ->
+            try {
+                val coverUri = url.toUri()
+                storageRepository.openInputStream(coverUri)?.use { input ->
+                    val bytes = input.readBytes()
+                    val extension = if (url.contains(".png", ignoreCase = true)) "png" else "jpg"
+                    val imageFileName = "cover.$extension"
+                    val mediaType = if (extension == "png") "image/png" else "image/jpeg"
+
+                    items.add(EpubItem(imageFileName, bytes, mediaType, "cover-image"))
+                    items.add(EpubItem("cover.xhtml", buildCoverPage(imageFileName).toByteArray(), "application/xhtml+xml", "cover"))
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
 
         // 1. Add static assets
         items.add(EpubItem(styleFileName, epubStyleCSS.toByteArray(), "text/css", "style"))
@@ -255,10 +283,30 @@ class EpubGenerator(
                 }
         }
 
-        // 3. Add Navigation
-        items.add(EpubItem("nav.xhtml", generateNav(novel, items).toByteArray(), "application/xhtml+xml", "nav"))
+        // 3. Generate nav item before adding to the list
+        val navItem = EpubItem(
+            fileName = "nav.xhtml",
+            content = generateNav(novel, items).toByteArray(),
+            mediaType = "application/xhtml+xml",
+            id = "nav"
+        )
 
-        //4. Prepare Metadata Files
+        // 4. Handles the Final reordering of items
+        val orderedItems = mutableListOf<EpubItem>()
+
+        // 5. Put All items in order
+        items.find { it.id == "style" }?.let { orderedItems.add(it) }
+        items.find { it.id == "cover-image" }?.let { orderedItems.add(it) }
+        items.find { it.id == "cover" }?.let { orderedItems.add(it) }
+        items.find { it.id == "intro" }?.let { orderedItems.add(it) }
+
+        // Insert TOC here (after Synopsis/Intro)
+        orderedItems.add(navItem)
+
+        // Add all volumes and chapters in their existing sequence
+        items.filter { it.id.startsWith("volume_") || it.id.startsWith("chapter_") }
+            .forEach { orderedItems.add(it) }
+
         val opf = generateOpf(novel, items)
         val ncx = generateNcx(novel, items)
 
@@ -289,7 +337,7 @@ class EpubGenerator(
             zip.write(ncx.toByteArray())
             zip.closeEntry()
 
-            items.forEach { item ->
+            orderedItems.forEach { item ->
                 zip.putNextEntry(ZipEntry("OEBPS/${item.fileName}"))
                 zip.write(item.content)
                 zip.closeEntry()
