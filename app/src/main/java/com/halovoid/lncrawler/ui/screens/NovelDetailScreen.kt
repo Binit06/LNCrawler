@@ -39,6 +39,7 @@ import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactExportButton
 import com.halovoid.lncrawler.ui.components.artifact.ExportFormat
+import com.halovoid.lncrawler.ui.screens.request.ConfirmDeleteDialog
 import com.halovoid.lncrawler.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -61,6 +62,8 @@ fun NovelDetailScreen(
     val requestHistory by viewModel.rootRequests.collectAsStateWithLifecycle()
     val artifacts by viewModel.artifacts.collectAsStateWithLifecycle()
     var selectedArtifact by remember { mutableStateOf<Artifact?>(null) }
+
+    var showDeleteConfirmation by remember { mutableStateOf(false) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/epub+zip")
@@ -249,6 +252,9 @@ fun NovelDetailScreen(
                         onFetchFull = { viewModel.fetchFullNovel(currentNovel) },
                         onExport = { format ->
                             viewModel.startBackgroundExport(currentNovel, format)
+                        },
+                        onDelete = {
+                            showDeleteConfirmation = true
                         }
                     )
                 }
@@ -272,6 +278,19 @@ fun NovelDetailScreen(
                         onFetchVolume = { viewModel.fetchVolume(currentNovel, volume.volumeIndex) }
                     )
                 }
+            }
+            if (showDeleteConfirmation) {
+                val displayName = currentNovel.title
+                ConfirmDeleteDialog (
+                    title = "Delete request?",
+                    message = "This will permanently remove \"$displayName\" from your request history. This action cannot be undone.",
+                    onConfirm = {
+                        showDeleteConfirmation = false
+                        viewModel.deleteNovelPermanently(currentNovel)
+                        onBack()
+                    },
+                    onDismiss = { showDeleteConfirmation = false }
+                )
             }
         }
     }
@@ -307,7 +326,8 @@ fun MetadataSection(data: Map<String, String>) {
 fun ActionsSection(
     onFetchMetadata: () -> Unit,
     onFetchFull: () -> Unit,
-    onExport: (ExportFormat) -> Unit
+    onExport: (ExportFormat) -> Unit,
+    onDelete: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -343,6 +363,14 @@ fun ActionsSection(
             onClick = onFetchFull
         )
 
+        HorizontalDivider(color = BorderColor)
+
+        ActionRow(
+            icon = Icons.Default.DeleteForever,
+            title = "Delete Novel",
+            subtext = "Permanently remove this novel and all assosiated data",
+            onClick = onDelete
+        )
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(

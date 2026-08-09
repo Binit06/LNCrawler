@@ -14,7 +14,7 @@ import kotlin.collections.emptyList
  * This class handles the specific HTML structure and AJAX endpoints of the site
  * using Jsoup for static parsing and custom logic for paginated chapter lists.
  */
-class NovelBinsCrawler : Crawler() {
+class NovelBins : Crawler() {
     override val name: String = "NovelBins"
     override val baseUrl: String = "https://novelbins.com"
 

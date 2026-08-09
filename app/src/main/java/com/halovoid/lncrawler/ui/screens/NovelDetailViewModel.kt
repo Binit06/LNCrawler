@@ -168,11 +168,9 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    fun getArtifactIdForFormat(format: String): Int? {
-        val novelUrl = _novel.value?.url ?: return null
-        return rootRequests.value
-            .filter { it.type == RequestType.ARTIFACT && it.status == RequestStatus.SUCCESS }
-            .find { it.name.contains(format, ignoreCase = true) }
-            ?.let { it.id.hashCode() }
+    fun deleteNovelPermanently(novel: Novel) {
+        viewModelScope.launch {
+            novelRepository.deleteNovel(novel)
+        }
     }
 }
