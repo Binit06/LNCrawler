@@ -148,7 +148,14 @@ fun NavGraph(navController: NavHostController) {
                     backStackEntry.arguments?.getString("novelUrl") ?: "",
                     "UTF-8"
                 )
-                NovelDetailScreen(crawlerName, novelUrl)
+                NovelDetailScreen(
+                    novelUrl,
+                    onRequestClick = {requestId ->
+                        navController.navigate(Screen.RequestDetail.createRoute(requestId))
+                    },
+                    onBack = {
+                        navController.popBackStack()
+                    })
             }
         }
     }

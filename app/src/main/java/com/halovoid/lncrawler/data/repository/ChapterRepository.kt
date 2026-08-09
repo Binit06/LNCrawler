@@ -5,6 +5,7 @@ import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.domain.models.toEntity
+import kotlinx.coroutines.flow.Flow
 
 class ChapterRepository(context: Context) {
     private val db = AppDatabase.getDatabase(context)
@@ -25,4 +26,7 @@ class ChapterRepository(context: Context) {
     suspend fun updateChapter(chapter: Chapter) {
         chapterDao.updateChapter(chapter = chapter.toEntity())
     }
+
+    fun getChapterCount(novelUrl: String): Flow<Int> =
+        chapterDao.getChapterCountFlow(novelUrl)
 }

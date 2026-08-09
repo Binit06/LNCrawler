@@ -6,8 +6,10 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import com.halovoid.lncrawler.data.db.entities.NovelEntity
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -18,8 +20,14 @@ interface RequestDao {
     @Query("SELECT * FROM requests WHERE dependsOn IS NULL")
     fun getRootRequests(): Flow<List<RequestEntity>>
 
+    @Query("SELECT * FROM requests WHERE dependsOn IS NULL AND novelUrl = :url")
+    fun getRootRequestByNovelFlow(url: String): Flow<List<RequestEntity>>
+
     @Query("SELECT * FROM requests WHERE id = :id")
     suspend fun getRequestById(id: String) : RequestEntity?
+
+    @Query("SELECT * FROM requests WHERE novelUrl = :novelId AND type = :type")
+    fun getRequestsByNovelAndTypeFlow(novelId: String, type: RequestType): Flow<List<RequestEntity>>
 
     @Query("SELECT * FROM requests WHERE id = :id")
     fun getRequestByIdFlow(id: String): Flow<RequestEntity?>

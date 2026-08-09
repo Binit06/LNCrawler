@@ -221,7 +221,6 @@ class SchedulerService : Service() {
     private fun observeProgress() {
         requestDao.getRootRequests()
             .onEach { requests ->
-
                 val activeRequests = requests.filter { it.progressSuccess + it.progressFailed + it.progressCancelled < it.progressTotal }
                     .sortedWith (
                         compareByDescending<RequestEntity> {

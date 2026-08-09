@@ -27,7 +27,10 @@ fun RequestCard(
     request: Request,
     onClick: () -> Unit,
     onReplay: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    allowReplay : Boolean? = true,
+    allowCancel : Boolean? = true,
+    showProgress: Boolean? = true,
 ) {
     val isWorkFinished = (request.progressSuccess + request.progressFailed + request.progressCancelled) == request.progressTotal
 

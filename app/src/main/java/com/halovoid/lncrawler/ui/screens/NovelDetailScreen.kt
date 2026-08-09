@@ -1,5 +1,7 @@
 package com.halovoid.lncrawler.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
@@ -10,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,18 +27,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Volume
 import com.halovoid.lncrawler.ui.ViewModelFactory
+import com.halovoid.lncrawler.ui.components.ArtifactCard
+import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NovelDetailScreen(
-    crawlerName: String,
-    novelUrl: String
+    novelUrl: String,
+    onRequestClick: (String) -> Unit,
+    onBack: () -> Unit
 ) {
     val context = LocalContext.current
     val factory = remember { ViewModelFactory(context.applicationContext as android.app.Application) }
@@ -43,6 +51,20 @@ fun NovelDetailScreen(
     
     val novel by viewModel.novel.collectAsState()
     var descriptionExpanded by remember { mutableStateOf(false) }
+
+    val requestHistory by viewModel.rootRequests.collectAsStateWithLifecycle()
+    val artifacts by viewModel.artifacts.collectAsStateWithLifecycle()
+    var selectedArtifact by remember { mutableStateOf<Artifact?>(null) }
+
+    val exportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/epub+zip")
+    ) { uri ->
+        uri?.let {
+            selectedArtifact?.let { artifact ->
+                viewModel.copyArtifactToUri(artifact, it)
+            }
+        }
+    }
 
     LaunchedEffect(novelUrl) {
         viewModel.loadNovel(novelUrl)
@@ -54,13 +76,13 @@ fun NovelDetailScreen(
             TopAppBar(
                 title = { },
                 navigationIcon = {
-                    IconButton(onClick = { /* Handle back if needed, but Scaffold in MainScreen might not have it */ }) {
+                    IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
                     }
                 },
                 actions = {
                     IconButton(onClick = { /* Open external link */ }) {
-                        Icon(Icons.Default.OpenInNew, contentDescription = "Open in browser", tint = PrimaryAccent)
+                        Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open in browser", tint = PrimaryAccent)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -152,10 +174,35 @@ fun NovelDetailScreen(
                     }
                 }
 
+                // Request History Section
+                items(requestHistory) { request ->
+                    RequestCard(
+                        request = request,
+                        onClick = { onRequestClick(request.id) },
+                        onReplay = { },
+                        onCancel = { }
+                    )
+                }
+
                 // Artifacts Section
-                item {
-                    ArtifactsSection(formats = listOf("EPUB")) { format ->
-                        // viewModel.startBackgroundExport(currentNovel, format)
+                if (artifacts.isNotEmpty()) {
+                    item {
+                        Text(
+                            "Artifacts",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryText,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    items(artifacts) { artifact ->
+                        ArtifactCard (
+                            artifact = artifact,
+                            onDownload = {
+                                selectedArtifact = it
+                                exportLauncher.launch(it.artifactName)
+                            }
+                        )
                     }
                 }
 
@@ -212,56 +259,6 @@ fun MetadataSection(data: Map<String, String>) {
             }
             if (key != data.keys.last()) {
                 HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 4.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun ArtifactsSection(formats: List<String>, onExport: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(DarkSurface)
-            .clickable { expanded = !expanded }
-            .padding(16.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Download, contentDescription = null, tint = PrimaryAccent)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("Generate Artifacts", color = PrimaryText, fontWeight = FontWeight.Bold)
-            }
-            Icon(
-                if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = null,
-                tint = SecondaryText
-            )
-        }
-        
-        AnimatedVisibility(visible = expanded) {
-            Column(modifier = Modifier.padding(top = 16.dp)) {
-                formats.forEach { format ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onExport(format) }
-                            .padding(vertical = 8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(text = format, color = PrimaryText)
-                        Icon(Icons.Default.FileDownload, contentDescription = null, tint = SuccessGreen, modifier = Modifier.size(20.dp))
-                    }
-                    if (format != formats.last()) HorizontalDivider(color = BorderColor)
-                }
             }
         }
     }

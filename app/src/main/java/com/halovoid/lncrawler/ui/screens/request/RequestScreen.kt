@@ -38,12 +38,14 @@ fun RequestScreen(
     var statusFilter by remember { mutableStateOf<RequestStatus?>(null) }
     var typeFilter by remember { mutableStateOf<RequestType?>(null) }
 
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+
     Scaffold(
         containerColor = DarkBackground,
         topBar = {
             TopAppBar(
-                title = { 
-                    Text("Requests", fontWeight = FontWeight.Bold, color = PrimaryText) 
+                title = {
+                    Text("Request Novels", fontWeight = FontWeight.Bold, color = PrimaryText)
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
@@ -59,12 +61,6 @@ fun RequestScreen(
             // Request Novel Section
             item {
                 Column {
-                    Text(
-                        "Request Novel",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = PrimaryText,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -94,12 +90,14 @@ fun RequestScreen(
 
                         FilledIconButton(
                             onClick = {
-                                val crawlerName = viewModel.validateUrl(urlInput)
-                                if (crawlerName != null) {
-                                    viewModel.startNovelCrawl(crawlerName, urlInput)
+                                if (!isLoading) {
+                                    val crawlerName = viewModel.validateUrl(urlInput)
+                                    if (crawlerName != null) {
+                                        viewModel.startNovelCrawl(crawlerName, urlInput)
+                                    }
                                 }
-                                // TODO: Redirect to Request Detail Screen after sending the request
                             },
+                            enabled = !isLoading,
                             modifier = Modifier.size(48.dp),
                             shape = CircleShape,
                             colors = IconButtonDefaults.filledIconButtonColors(
@@ -107,12 +105,19 @@ fun RequestScreen(
                                 contentColor = Color.White
                             )
                         ) {
-                            // TODO: Implement a small animation when the user clicks that happens till the user is not redirected
-                            Icon(
-                                Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Submit",
-                                modifier = Modifier.size(24.dp)
-                            )
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.Send,
+                                    contentDescription = "Submit",
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
                         }
                     }
 
@@ -127,7 +132,7 @@ fun RequestScreen(
 
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        "Supported sources: NovelBin, etc. Format: https://novelbins.com/b/novel-title",
+                        "Enter the full URL of Novel Page. It should start with 'http://' or 'https://' and should lead to the page containing all the novel details. URL not satisfying these condition will result in failure.",
                         style = MaterialTheme.typography.bodySmall,
                         color = SecondaryText,
                         modifier = Modifier.padding(horizontal = 4.dp)
@@ -136,20 +141,15 @@ fun RequestScreen(
             }
 
             // Filters Section
-            // TODO: Show the filters only if there are some requests available
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterDropdown("Status", RequestStatus.values().map { it.name }, { statusFilter = RequestStatus.valueOf(it) })
-                    FilterDropdown("Type", RequestType.values().map { it.name }, { typeFilter = RequestType.valueOf(it) })
-                    
-                    Spacer(modifier = Modifier.weight(1f))
-                    
-                    IconButton(onClick = { /* Refresh logic */ }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh", tint = PrimaryAccent)
+            if (requestHistory.isNotEmpty()) {
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        FilterDropdown("Status", RequestStatus.values().map { it.name }, { statusFilter = RequestStatus.valueOf(it) })
+                        FilterDropdown("Type", RequestType.values().map { it.name }, { typeFilter = RequestType.valueOf(it) })
                     }
                 }
             }

@@ -6,11 +6,19 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.halovoid.lncrawler.data.db.entities.ArtifactEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ArtifactDao {
+
+    @Query("SELECT * FROM artifacts WHERE id = :id")
+    fun getArtifactById(id: Int): ArtifactEntity
+
     @Query("SELECT * FROM artifacts WHERE requestId = :id")
-    fun getArtifactForRequest(id: String): ArtifactEntity
+    fun getArtifactForRequest(id: String): List<ArtifactEntity>
+
+    @Query("SELECT * FROM artifacts WHERE novelUrl = :url")
+    fun getArtifactsByNovelFlow(url: String): Flow<List<ArtifactEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertArtifact(artifact: ArtifactEntity)

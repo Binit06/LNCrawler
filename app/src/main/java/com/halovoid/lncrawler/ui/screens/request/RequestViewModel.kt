@@ -24,6 +24,9 @@ class RequestViewModel(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     fun validateUrl(url: String): String? {
         val crawler = CrawlerFactory.getCrawlerByUrl(url)
         return if (crawler != null) {
@@ -37,6 +40,8 @@ class RequestViewModel(
 
     fun startNovelCrawl(crawlerName: String, url: String) {
         viewModelScope.launch {
+            _isLoading.value = true
+
             val metadata = JSONObject().apply {
                 put("crawlerName", crawlerName)
             }.toString()
@@ -58,6 +63,8 @@ class RequestViewModel(
             requestDao.insertRequests(listOf(request))
 
             SchedulerService.startService(getApplication())
+
+            _isLoading.value = false
         }
     }
 

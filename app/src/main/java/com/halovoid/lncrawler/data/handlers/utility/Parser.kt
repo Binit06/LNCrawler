@@ -14,7 +14,7 @@ val RequestEntity.parsedMetadata: RequestMetadata
                 artifactFormat = json.optString("artifactFormat", null),
                 volumeId = json.optString("volumeId", null),
                 chapterId = json.optInt("chapterId", -1),
-                format = json.optString("format", null)
+                format = json.optString("format", null),
             )
         } catch (e: Exception) {
             RequestMetadata()

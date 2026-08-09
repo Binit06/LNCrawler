@@ -6,6 +6,7 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import com.halovoid.lncrawler.data.db.entities.ChapterEntity
+import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ChapterDao {
@@ -17,6 +18,9 @@ interface ChapterDao {
 
     @Query("SELECT * FROM chapters WHERE id = :id")
     fun getChapterById(id: Int): ChapterEntity
+
+    @Query("SELECT COUNT(*) FROM chapters WHERE novelUrl = :novelUrl")
+    fun getChapterCountFlow(novelUrl: String): Flow<Int>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChapters(chapters: List<ChapterEntity>)

@@ -1,5 +1,9 @@
 package com.halovoid.lncrawler.ui.screens.request
 
+import android.R
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,11 +11,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -19,7 +26,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.halovoid.lncrawler.data.db.entities.RequestType
+import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.ui.ViewModelFactory
+import com.halovoid.lncrawler.ui.components.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.theme.*
 
@@ -42,6 +51,20 @@ fun RequestDetailScreen(
     val record by viewModel.getRequest(requestId).collectAsState(initial = null)
     val linkedRequests by viewModel.linkedRequests.collectAsStateWithLifecycle()
     val chapterMetadata by viewModel.chapterMetadata.collectAsState()
+    val artifactMetadata by viewModel.artifactMetadata.collectAsState()
+
+    val saveLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument(
+            "application/epub+zip"
+        )
+    ) { uri ->
+        if (uri != null && artifactMetadata != null) {
+            viewModel.copyArtifactToUri(
+                artifact = artifactMetadata!!,
+                destinationUri = uri
+            )
+        }
+    }
 
     LaunchedEffect(requestId) {
         viewModel.setRequestId(requestId)
@@ -103,6 +126,20 @@ fun RequestDetailScreen(
                                 )
                             )
                         }
+                    }
+                }
+
+                // Download Columns - if artifact metadata is not null that means the file has been saved in the folder
+                // The user shall be able to download the file from the saved places
+                // By download it means to just copy and paste to his desired place
+                if (currentRecord.type == RequestType.ARTIFACT && artifactMetadata != null) {
+                    item {
+                        ArtifactCard(
+                            artifact = artifactMetadata!!,
+                            onDownload = {
+                                saveLauncher.launch(it.artifactName)
+                            }
+                        )
                     }
                 }
 

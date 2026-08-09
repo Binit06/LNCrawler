@@ -5,5 +5,5 @@ data class RequestMetadata(
     val artifactFormat: String? = null,
     val volumeId: String? = null,
     val chapterId: Int? = null,
-    val format: String? = null
+    val format: String? = null,
 )

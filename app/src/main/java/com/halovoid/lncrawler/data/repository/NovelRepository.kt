@@ -33,6 +33,10 @@ class NovelRepository(context: Context) {
         }
     }
 
+    fun getNovelByUrlFlow(url: String): Flow<Novel?> {
+        return novelDao.getNovelByUrlFlow(url).map { it?.toDomain() }
+    }
+
     /**
      * Retrieves full details for a novel.
      *
