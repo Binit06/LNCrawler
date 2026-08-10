@@ -9,15 +9,19 @@ import com.halovoid.lncrawler.api.loader.SourceLoader
 import com.halovoid.lncrawler.api.loader.VersionUtils
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 sealed class SyncState {
     object Idle : SyncState()
     object Loading : SyncState()
     data class Success(val message: String) : SyncState()
+    data class Incompatible(val minVersion: String) : SyncState()
     data class Error(val error: String) : SyncState()
 }
 
@@ -25,8 +29,7 @@ class CrawlerViewModel(application: Application) : AndroidViewModel(application)
     private val sourceLoader = SourceLoader(application)
     private val preferenceRepository = PreferenceRepository(application)
     
-    private val _crawlers = MutableStateFlow(CrawlerFactory.getCrawlers())
-    val crawlers: StateFlow<List<Crawler>> = _crawlers.asStateFlow()
+    val crawlers: StateFlow<List<Crawler>> = CrawlerFactory.crawlersFlow
 
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
@@ -34,34 +37,32 @@ class CrawlerViewModel(application: Application) : AndroidViewModel(application)
     private val _isUpdateAvailable = MutableStateFlow(false)
     val isUpdateAvailable: StateFlow<Boolean> = _isUpdateAvailable.asStateFlow()
 
-    private val _showSyncOption = MutableStateFlow(false)
-    val showSyncOption: StateFlow<Boolean> = _showSyncOption.asStateFlow()
+    val showSyncOption: StateFlow<Boolean> = combine(
+        preferenceRepository.currentDexTag,
+        _isUpdateAvailable,
+        crawlers
+    ) { currentTag, updateAvailable, crawlerList ->
+        currentTag == null || updateAvailable || crawlerList.isEmpty()
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), true)
 
     private var latestReleaseInfo: SourceLoader.ReleaseInfo? = null
 
     init {
+        viewModelScope.launch {
+            sourceLoader.loadLocalSources()
+        }
         checkForUpdates()
     }
 
     fun checkForUpdates() {
         viewModelScope.launch {
             try {
-                val currentTag = preferenceRepository.currentDexTag.first()
-                if (currentTag == null) {
-                    _showSyncOption.value = true
-                    return@launch
-                }
+                val currentTag = preferenceRepository.currentDexTag.first() ?: return@launch
 
                 val info = sourceLoader.fetchLatestReleaseInfo()
                 latestReleaseInfo = info
                 
-                if (VersionUtils.isUpdateAvailable(currentTag, info.tagName)) {
-                    _isUpdateAvailable.value = true
-                    _showSyncOption.value = true
-                } else {
-                    _isUpdateAvailable.value = false
-                    _showSyncOption.value = false
-                }
+                _isUpdateAvailable.value = VersionUtils.isUpdateAvailable(currentTag, info.tagName)
             } catch (e: Exception) {
                 // Ignore update check errors silently or log them
             }
@@ -73,10 +74,10 @@ class CrawlerViewModel(application: Application) : AndroidViewModel(application)
             _syncState.value = SyncState.Loading
             try {
                 sourceLoader.loadSources(latestReleaseInfo)
-                _crawlers.value = CrawlerFactory.getCrawlers()
                 _syncState.value = SyncState.Success("Crawlers updated successfully")
                 _isUpdateAvailable.value = false
-                _showSyncOption.value = false
+            } catch (e: SourceLoader.IncompatibleAppException) {
+                _syncState.value = SyncState.Incompatible(e.minVersion)
             } catch (e: Exception) {
                 _syncState.value = SyncState.Error(e.message ?: "Failed to sync crawlers")
             }

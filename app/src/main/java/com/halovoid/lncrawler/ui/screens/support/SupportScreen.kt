@@ -5,9 +5,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -66,14 +70,13 @@ fun SupportScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (updateState is AppUpdateState.UpdateAvailable) {
-                val state = updateState as AppUpdateState.UpdateAvailable
-                UpdateBox(
-                    tagName = state.tagName,
-                    onClick = { uriHandler.openUri(state.releaseUrl) }
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-            }
+            AppUpdateCard(
+                state = updateState,
+                onUpdateClick = { uriHandler.openUri(it) },
+                onRetryClick = { viewModel.checkForUpdates() }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
 
             Icon(
                 Icons.Default.Favorite,
@@ -156,15 +159,19 @@ fun SupportScreen(
 }
 
 @Composable
-fun UpdateBox(
-    tagName: String,
-    onClick: () -> Unit
+fun AppUpdateCard(
+    state: AppUpdateState,
+    onUpdateClick: (String) -> Unit,
+    onRetryClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.1f)),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (state is AppUpdateState.UpdateAvailable) PrimaryAccent.copy(alpha = 0.5f) else BorderColor
+        )
     ) {
         Row(
             modifier = Modifier
@@ -174,26 +181,76 @@ fun UpdateBox(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    val (title, color, icon) = when (state) {
+                        is AppUpdateState.Loading, is AppUpdateState.Idle -> 
+                            Triple("Checking Updates", PrimaryText, Icons.Default.Refresh)
+                        is AppUpdateState.UpdateAvailable -> 
+                            Triple("Update Available", PrimaryAccent, Icons.Default.SystemUpdate)
+                        is AppUpdateState.UpToDate -> 
+                            Triple("Latest Version", PrimaryText, Icons.Default.CheckCircle)
+                        is AppUpdateState.Error -> 
+                            Triple("Check Failed", MaterialTheme.colorScheme.error, Icons.Default.Error)
+                    }
+                    
+                    if (state !is AppUpdateState.Loading) {
+                        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = color,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
                 Text(
-                    text = "App Update Available",
-                    style = MaterialTheme.typography.titleMedium,
-                    color = PrimaryAccent,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "A new version $tagName of LNCrawler is available!",
+                    text = when (state) {
+                        is AppUpdateState.Loading, is AppUpdateState.Idle -> "Connecting to GitHub..."
+                        is AppUpdateState.UpdateAvailable -> "Version ${state.tagName} is now ready."
+                        is AppUpdateState.UpToDate -> "You are on the latest release."
+                        is AppUpdateState.Error -> "Please check your internet connection."
+                    },
                     style = MaterialTheme.typography.bodySmall,
                     color = SecondaryText
                 )
             }
-            Button(
-                onClick = onClick,
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
-                shape = RoundedCornerShape(8.dp),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
-                modifier = Modifier.height(32.dp)
-            ) {
-                Text("Update", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            when (state) {
+                is AppUpdateState.Loading, is AppUpdateState.Idle -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = PrimaryAccent,
+                        strokeWidth = 2.dp
+                    )
+                }
+                is AppUpdateState.UpdateAvailable -> {
+                    Button(
+                        onClick = { onUpdateClick(state.releaseUrl) },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("Update", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+                is AppUpdateState.UpToDate -> {
+                    // No trailing icon needed if we have one in the title
+                }
+                is AppUpdateState.Error -> {
+                    IconButton(onClick = onRetryClick) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Retry",
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
         }
     }

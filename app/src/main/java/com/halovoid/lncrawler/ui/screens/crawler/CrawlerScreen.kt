@@ -73,7 +73,32 @@ fun CrawlerScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            if (isUpdateAvailable) {
+            if (syncState is SyncState.Incompatible) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = "App Update Required",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "The latest crawlers require LNCrawler version ${(syncState as SyncState.Incompatible).minVersion} or higher. Please update the app from the Support screen.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer
+                        )
+                    }
+                }
+            }
+
+            if (isUpdateAvailable && syncState !is SyncState.Incompatible) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()

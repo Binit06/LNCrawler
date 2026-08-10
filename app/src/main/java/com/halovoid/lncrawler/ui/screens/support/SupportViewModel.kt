@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 
 sealed class AppUpdateState {
     object Idle : AppUpdateState()
+    object Loading : AppUpdateState()
     data class UpdateAvailable(val tagName: String, val releaseUrl: String) : AppUpdateState()
     object UpToDate : AppUpdateState()
     data class Error(val message: String) : AppUpdateState()
@@ -28,6 +29,7 @@ class SupportViewModel : ViewModel() {
 
     fun checkForUpdates() {
         viewModelScope.launch {
+            _updateState.value = AppUpdateState.Loading
             try {
                 val latest = appUpdateManager.fetchLatestAppRelease()
                 val currentVersion = BuildConfig.VERSION_NAME

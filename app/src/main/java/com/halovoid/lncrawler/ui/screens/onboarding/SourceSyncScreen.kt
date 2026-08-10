@@ -47,6 +47,10 @@ fun SourceSyncScreen(
                 })
                 delay(1000.milliseconds)
                 onComplete()
+            } catch (e: SourceLoader.IncompatibleAppException) {
+                error = "App Update Required: ${e.message}"
+                logs.add("Error: $error")
+                isSyncing = false
             } catch (e: Exception) {
                 error = e.message ?: "An unknown error occurred"
                 logs.add("Error: $error")

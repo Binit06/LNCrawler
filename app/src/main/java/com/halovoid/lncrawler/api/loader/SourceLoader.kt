@@ -5,6 +5,7 @@ import android.util.Log
 import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
+import com.halovoid.lncrawler.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -26,6 +27,8 @@ class SourceLoader(private val context: Context) {
 
     data class ReleaseInfo(val tagName: String, val downloadUrl: String)
 
+    class IncompatibleAppException(val minVersion: String) : Exception("This crawler bundle requires LNCrawler version $minVersion or higher.")
+
     /**
      * Downloads the latest DEX file and loads crawlers into the Factory.
      */
@@ -42,30 +45,7 @@ class SourceLoader(private val context: Context) {
             onProgress("Downloading crawler DEX bundle (${info.tagName})...")
             val dexFile = downloadDex(info.downloadUrl)
             
-            onProgress("Initializing DexClassLoader...")
-            val aggregatorClass = dexLoader.load(dexFile, AGGREGATOR_CLASS)
-            
-            onProgress("Instantiating Crawler Aggregator...")
-            val aggregator = aggregatorClass.getDeclaredConstructor().newInstance()
-            val getCrawlersMethod = aggregatorClass.getMethod("getCrawlers")
-            
-            onProgress("Extracting crawler definitions...")
-            val rawCrawlers = getCrawlersMethod.invoke(aggregator) as? List<*>
-            val validCrawlers = mutableListOf<Crawler>()
-
-            rawCrawlers?.forEach { item ->
-                if (item is Crawler) {
-                    onProgress("Loaded Crawler: ${item.name}")
-                    validCrawlers.add(item)
-                } else {
-                    val className = item?.javaClass?.name ?: "null"
-                    onProgress("Skipping incompatible source: $className")
-                    Log.e("SourceLoader", "Incompatible crawler found: $className")
-                }
-            }
-            
-            onProgress("Finalizing: ${validCrawlers.size} crawlers registered.")
-            CrawlerFactory.registerCrawlers(validCrawlers)
+            loadFromDex(dexFile, onProgress)
             
             // Save the tag name upon successful sync
             preferenceRepository.setCurrentDexTag(info.tagName)
@@ -74,6 +54,80 @@ class SourceLoader(private val context: Context) {
             onProgress("Error: ${e.message ?: "Sync failed"}")
             Log.e("SourceLoader", "Failed to load sources", e)
         }
+    }
+
+    /**
+     * Attempts to load crawlers from the locally stored DEX file.
+     */
+    suspend fun loadLocalSources() = withContext(Dispatchers.IO) {
+        val dexFile = File(File(context.filesDir, "sources"), "sources.dex")
+        if (dexFile.exists()) {
+            Log.i("SourceLoader", "Loading sources from local DEX...")
+            try {
+                loadFromDex(dexFile)
+            } catch (e: IncompatibleAppException) {
+                Log.e("SourceLoader", "Local DEX is incompatible with this app version.", e)
+                // Optionally clear the tag so the user is prompted to sync/update
+                preferenceRepository.setCurrentDexTag("") 
+            } catch (e: Exception) {
+                Log.e("SourceLoader", "Failed to load local sources", e)
+            }
+        } else {
+            Log.i("SourceLoader", "No local DEX found to load.")
+        }
+    }
+
+    private fun loadFromDex(dexFile: File, onProgress: (String) -> Unit = {}) {
+        Log.i("SourceLoader", "Loading from DEX: ${dexFile.absolutePath} (Size: ${dexFile.length()})")
+        onProgress("Initializing DexClassLoader...")
+        val aggregatorClass = try {
+            dexLoader.load(dexFile, AGGREGATOR_CLASS)
+        } catch (e: Exception) {
+            Log.e("SourceLoader", "Failed to load aggregator class: $AGGREGATOR_CLASS", e)
+            onProgress("Error: Failed to load aggregator class")
+            throw e
+        }
+        
+        onProgress("Instantiating Crawler Aggregator...")
+        val aggregator = aggregatorClass.getDeclaredConstructor().newInstance()
+
+        // Version Check
+        try {
+            val getMinVersionMethod = aggregatorClass.getMethod("getMinAppVersion")
+            val minVersion = getMinVersionMethod.invoke(aggregator) as String
+            val currentVersion = BuildConfig.VERSION_NAME
+            
+            if (VersionUtils.isUpdateAvailable(currentVersion, minVersion)) {
+                Log.e("SourceLoader", "Incompatible App: Current $currentVersion, Required $minVersion")
+                throw IncompatibleAppException(minVersion)
+            }
+        } catch (e: NoSuchMethodException) {
+            Log.w("SourceLoader", "Aggregator does not provide getMinAppVersion. Skipping check.")
+        }
+
+        val getCrawlersMethod = aggregatorClass.getMethod("getCrawlers")
+        
+        onProgress("Extracting crawler definitions...")
+        val rawCrawlers = getCrawlersMethod.invoke(aggregator) as? List<*>
+        Log.i("SourceLoader", "Aggregator returned ${rawCrawlers?.size ?: 0} raw crawlers")
+        
+        val validCrawlers = mutableListOf<Crawler>()
+
+        rawCrawlers?.forEach { item ->
+            if (item is Crawler) {
+                Log.d("SourceLoader", "Found valid crawler: ${item.name}")
+                onProgress("Loaded Crawler: ${item.name}")
+                validCrawlers.add(item)
+            } else {
+                val className = item?.javaClass?.name ?: "null"
+                Log.w("SourceLoader", "Incompatible source found: $className")
+                onProgress("Skipping incompatible source: $className")
+            }
+        }
+        
+        Log.i("SourceLoader", "Successfully registered ${validCrawlers.size} crawlers")
+        onProgress("Finalizing: ${validCrawlers.size} crawlers registered.")
+        CrawlerFactory.registerCrawlers(validCrawlers)
     }
 
     suspend fun fetchLatestReleaseInfo(): ReleaseInfo = withContext(Dispatchers.IO) {
