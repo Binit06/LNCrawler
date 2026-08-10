@@ -79,6 +79,13 @@ class SourceLoader(private val context: Context) {
 
     private fun loadFromDex(dexFile: File, onProgress: (String) -> Unit = {}) {
         Log.i("SourceLoader", "Loading from DEX: ${dexFile.absolutePath} (Size: ${dexFile.length()})")
+        
+        // Android 14+ security requirement: Dynamically loaded files must be read-only
+        if ((android.os.Build.VERSION.SDK_INT >= 34) && dexFile.canWrite()) {
+            dexFile.setReadOnly()
+            Log.i("SourceLoader", "Set DEX file to read-only for API 34+ compliance")
+        }
+
         onProgress("Initializing DexClassLoader...")
         val aggregatorClass = try {
             dexLoader.load(dexFile, AGGREGATOR_CLASS)
@@ -101,7 +108,7 @@ class SourceLoader(private val context: Context) {
                 Log.e("SourceLoader", "Incompatible App: Current $currentVersion, Required $minVersion")
                 throw IncompatibleAppException(minVersion)
             }
-        } catch (e: NoSuchMethodException) {
+        } catch (_: NoSuchMethodException) {
             Log.w("SourceLoader", "Aggregator does not provide getMinAppVersion. Skipping check.")
         }
 
@@ -162,6 +169,11 @@ class SourceLoader(private val context: Context) {
         
         val targetFile = File(dexDir, "sources.dex")
         
+        // If file exists, delete it first to handle potential read-only state from previous runs
+        if (targetFile.exists()) {
+            targetFile.delete()
+        }
+        
         val request = Request.Builder().url(url).build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw Exception("Failed to download DEX: $response")
@@ -171,6 +183,11 @@ class SourceLoader(private val context: Context) {
                     input.copyTo(output)
                 }
             }
+        }
+        
+        // Ensure read-only for Android 14+
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            targetFile.setReadOnly()
         }
         
         return targetFile
