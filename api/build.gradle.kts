@@ -9,11 +9,6 @@ android {
         version = release(37)
     }
 
-    defaultConfig {
-        minSdk = 24
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-    }
-
     buildTypes {
         release {
             optimization {
