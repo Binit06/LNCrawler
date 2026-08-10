@@ -5,33 +5,49 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Coffee
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.halovoid.lncrawler.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupportScreen() {
     val uriHandler = LocalUriHandler.current
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         containerColor = DarkBackground,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            TopAppBar(
-                title = { Text("Support Development", fontWeight = FontWeight.Bold, color = PrimaryText) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+            CenterAlignedTopAppBar(
+                title = {
+                    Text(
+                        "Support Development",
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryText
+                    )
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = DarkBackground
+                )
             )
         }
     ) { innerPadding ->
@@ -80,11 +96,26 @@ fun SupportScreen() {
             Spacer(modifier = Modifier.height(16.dp))
             
             SupportCard(
-                title = "Buy Me a Coffee",
-                description = "Financial support allows me to dedicate more time to adding new features and fixing bugs.",
-                icon = Icons.Default.Coffee,
-                buttonText = "Support via Ko-fi",
-                onClick = { uriHandler.openUri("https://ko-fi.com/binit06") }
+                title = "Support Using UPI",
+                description = "If you are in India, you can support development directly via UPI. Every contribution helps!",
+                icon = Icons.Default.Payments,
+                buttonText = "Pay via UPI",
+                onClick = { 
+                    try {
+                        uriHandler.openUri("upi://pay?pa=binitlenka@okhdfcbank&pn=LNCrawler%20Developer")
+                    } catch (e: Exception) {
+                        scope.launch {
+                            snackbarHostState.showSnackbar("No UPI app found. Please copy the ID.")
+                        }
+                    }
+                },
+                secondaryButtonText = "Copy ID",
+                onSecondaryClick = {
+                    clipboardManager.setText(AnnotatedString("binitlenka@okhdfcbank"))
+                    scope.launch {
+                        snackbarHostState.showSnackbar("UPI ID copied to clipboard")
+                    }
+                }
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -114,7 +145,9 @@ fun SupportCard(
     description: String,
     icon: ImageVector,
     buttonText: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    secondaryButtonText: String? = null,
+    onSecondaryClick: (() -> Unit)? = null
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -146,13 +179,26 @@ fun SupportCard(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            Button(
-                onClick = onClick,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text(buttonText, color = DarkBackground, fontWeight = FontWeight.Bold)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Button(
+                    onClick = onClick,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(buttonText, color = DarkBackground, fontWeight = FontWeight.Bold)
+                }
+                
+                if (secondaryButtonText != null && onSecondaryClick != null) {
+                    OutlinedButton(
+                        onClick = onSecondaryClick,
+                        modifier = Modifier.weight(1f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(secondaryButtonText, color = PrimaryAccent, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
