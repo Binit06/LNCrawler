@@ -9,6 +9,7 @@ import com.halovoid.lncrawler.ui.screens.NovelDetailViewModel
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel
+import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 
@@ -34,6 +35,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(CrawlerViewModel::class.java) -> {
                 CrawlerViewModel(application) as T
+            }
+            modelClass.isAssignableFrom(SupportViewModel::class.java) -> {
+                SupportViewModel() as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }

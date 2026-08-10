@@ -2,11 +2,89 @@ name: Create Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      version_changed: ${{ steps.version_check.outputs.version_changed }}
+      new_version: ${{ steps.version_check.outputs.new_version }}
+      version_code: ${{ steps.version_check.outputs.version_code }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check version change
+        id: version_check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ ! -f app/build.gradle.kts ]; then
+            echo "::error::File app/build.gradle.kts does not exist"
+            exit 1
+          fi
+
+          # Extract current versionName and versionCode from Gradle
+          CURRENT_VERSION=$(grep -m1 -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts || echo "")
+          VERSION_CODE=$(grep -m1 -oP 'versionCode\s*=\s*\K\d+' app/build.gradle.kts || echo "")
+          CURRENT_VERSION=$(echo "$CURRENT_VERSION" | xargs)
+          
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "::error::Could not find versionName in app/build.gradle.kts"
+            exit 1
+          fi
+
+          # Fetch latest release tag from GitHub
+          LATEST_TAG=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "")
+          LATEST_VERSION=$(echo "$LATEST_TAG" | sed 's/^v//' | xargs)
+
+          echo "Gradle version: $CURRENT_VERSION"
+          echo "Latest release: ${LATEST_TAG:-None}"
+
+          # Version comparison function
+          # Returns: 0 if equal, 1 if v1 > v2, 2 if v2 > v1
+          vercomp () {
+              if [[ $1 == $2 ]]; then return 0; fi
+              local IFS=.
+              local i ver1=($1) ver2=($2)
+              # fill empty fields in ver1 with zeros
+              for ((i=${#ver1[@]}; i<${#ver2[@]}; i++)); do ver1[i]=0; done
+              # fill empty fields in ver2 with zeros
+              for ((i=${#ver2[@]}; i<${#ver1[@]}; i++)); do ver2[i]=0; done
+              for ((i=0; i<${#ver1[@]}; i++)); do
+                  if [[ -z ${ver2[i]} ]]; then ver2[i]=0; fi
+                  if ((10#${ver1[i]} > 10#${ver2[i]})); then return 1; fi
+                  if ((10#${ver1[i]} < 10#${ver2[i]})); then return 2; fi
+              done
+              return 0
+          }
+
+          if [ -z "$LATEST_VERSION" ]; then
+            echo "No previous release found. Initial release."
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+            echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+            echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+          else
+            vercomp "$CURRENT_VERSION" "$LATEST_VERSION"
+            res=$?
+            if [ $res -eq 1 ]; then
+              echo "Version upgrade detected: $LATEST_VERSION -> $CURRENT_VERSION"
+              echo "version_changed=true" >> $GITHUB_OUTPUT
+              echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+              echo "version_code=$VERSION_CODE" >> $GITHUB_OUTPUT
+            elif [ $res -eq 2 ]; then
+              echo "::error::Version downgrade detected! Gradle version ($CURRENT_VERSION) is lower than latest release ($LATEST_VERSION)."
+              exit 1
+            else
+              echo "Version is up to date ($CURRENT_VERSION). Skipping release."
+              echo "version_changed=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
   release:
+    needs: check-version
+    if: needs.check-version.outputs.version_changed == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,15 +122,15 @@ jobs:
             --out LNCrawler.apk \
             "$UNSIGNED_APK"
 
-          # 5. Clean up the keystore file for security
           rm release.jks
 
       - name: Create Github Release
         uses: softprops/action-gh-release@v2
         with:
           files: LNCrawler.apk
-          name: Release ${{ github.ref_name }}
-          draft: true
-          prerelease: ${{ contains(github.ref, '-alpha') || contains(github.ref, '-beta') || contains(github.ref, '-rc') }}
+          tag_name: v${{ needs.check-version.outputs.new_version }}
+          name: Release v${{ needs.check-version.outputs.new_version }}
+          draft: false
+          prerelease: ${{ contains(needs.check-version.outputs.new_version, '-alpha') || contains(needs.check-version.outputs.new_version, '-beta') || contains(needs.check-version.outputs.new_version, '-rc') }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

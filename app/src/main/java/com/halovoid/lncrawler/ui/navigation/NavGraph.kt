@@ -33,6 +33,7 @@ import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.support.SupportScreen
+import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
 import kotlinx.coroutines.flow.first
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -78,6 +79,10 @@ fun NavGraph(navController: NavHostController) {
     )
 
     val crawlerViewModel: CrawlerViewModel = viewModel(
+        factory = remember { ViewModelFactory(application) }
+    )
+
+    val supportViewModel: SupportViewModel = viewModel(
         factory = remember { ViewModelFactory(application) }
     )
 
@@ -179,7 +184,7 @@ fun NavGraph(navController: NavHostController) {
                 CrawlerScreen(viewModel = crawlerViewModel)
             }
             composable(Screen.Support.route) {
-                SupportScreen()
+                SupportScreen(viewModel = supportViewModel)
             }
             composable(Screen.RequestDetail.route) { backStackEntry ->
                 val encodedId = backStackEntry.arguments?.getString("requestId") ?: ""

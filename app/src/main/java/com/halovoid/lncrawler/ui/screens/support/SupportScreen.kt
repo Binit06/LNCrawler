@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -22,16 +23,22 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.halovoid.lncrawler.BuildConfig
 import com.halovoid.lncrawler.ui.theme.*
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SupportScreen() {
+fun SupportScreen(
+    viewModel: SupportViewModel
+) {
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val updateState by viewModel.updateState.collectAsStateWithLifecycle()
 
     Scaffold(
         containerColor = DarkBackground,
@@ -59,6 +66,15 @@ fun SupportScreen() {
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            if (updateState is AppUpdateState.UpdateAvailable) {
+                val state = updateState as AppUpdateState.UpdateAvailable
+                UpdateBox(
+                    tagName = state.tagName,
+                    onClick = { uriHandler.openUri(state.releaseUrl) }
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+            }
+
             Icon(
                 Icons.Default.Favorite,
                 contentDescription = null,
@@ -131,10 +147,54 @@ fun SupportScreen() {
             Spacer(modifier = Modifier.height(32.dp))
             
             Text(
-                text = "Version 1.0.0",
+                text = "Version ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
                 color = SecondaryText.copy(alpha = 0.5f)
             )
+        }
+    }
+}
+
+@Composable
+fun UpdateBox(
+    tagName: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.1f)),
+        shape = RoundedCornerShape(12.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.5f))
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "App Update Available",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = PrimaryAccent,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "A new version $tagName of LNCrawler is available!",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SecondaryText
+                )
+            }
+            Button(
+                onClick = onClick,
+                colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                shape = RoundedCornerShape(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                modifier = Modifier.height(32.dp)
+            ) {
+                Text("Update", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
         }
     }
 }
