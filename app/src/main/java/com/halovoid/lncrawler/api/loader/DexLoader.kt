@@ -37,7 +37,7 @@ class DexLoader(
             targetFile.delete()
         }
 
-        context.assets.open("test.dex").use { input ->
+        sourceFile.inputStream().use { input ->
             targetFile.outputStream().use { output ->
                 input.copyTo(output)
             }

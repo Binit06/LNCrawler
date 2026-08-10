@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import com.halovoid.lncrawler.ui.screens.NovelDetailViewModel
+import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailViewModel
@@ -30,6 +31,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(LibraryViewModel::class.java) -> {
                 LibraryViewModel(application) as T
+            }
+            modelClass.isAssignableFrom(CrawlerViewModel::class.java) -> {
+                CrawlerViewModel(application) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }

@@ -21,8 +21,12 @@ import com.halovoid.lncrawler.ui.screens.request.RequestDetailScreen
 import com.halovoid.lncrawler.ui.screens.library.LibraryScreen
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderScreen
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel
+import androidx.compose.runtime.rememberCoroutineScope
 import com.halovoid.lncrawler.ui.screens.onboarding.PermissionScreen
+import com.halovoid.lncrawler.ui.screens.onboarding.SourceSyncScreen
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerScreen
+import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
+import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.settings.SettingsScreen
 import kotlinx.coroutines.flow.first
@@ -35,6 +39,7 @@ import java.net.URLEncoder
 sealed class Screen(val route: String) {
     object Permissions : Screen("permissions")
     object FolderSelection: Screen("folder_selection")
+    object SourceSync: Screen("source_sync")
     object Request : Screen("request")
     object Library : Screen("library")
     object Crawlers : Screen("crawlers")
@@ -54,6 +59,7 @@ sealed class Screen(val route: String) {
 fun NavGraph(navController: NavHostController) {
     val application = LocalContext.current.applicationContext as Application
     val preferenceRepository = remember { PreferenceRepository(application) }
+    val scope = rememberCoroutineScope()
     
     val requestViewModel: RequestViewModel = viewModel(
         factory = remember { ViewModelFactory(application) }
@@ -67,12 +73,17 @@ fun NavGraph(navController: NavHostController) {
         factory = remember { ViewModelFactory(application) }
     )
 
+    val crawlerViewModel: CrawlerViewModel = viewModel(
+        factory = remember { ViewModelFactory(application) }
+    )
+
     var startRoute by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         val folderUri = preferenceRepository.exportFolderUri.first()
+        val onboardingCompleted = preferenceRepository.isOnboardingCompleted.first()
 
-        startRoute = if (folderUri != null) {
+        startRoute = if (onboardingCompleted && folderUri != null) {
             Screen.Request.route
         } else {
             Screen.FolderSelection.route
@@ -91,9 +102,19 @@ fun NavGraph(navController: NavHostController) {
             composable(Screen.Permissions.route) {
                 PermissionScreen(
                     onNext = {
-                        navController.navigate(Screen.Request.route) {
-                            popUpTo(Screen.FolderSelection.route) {
-                                inclusive = true
+                        navController.navigate(Screen.SourceSync.route)
+                    }
+                )
+            }
+            composable(Screen.SourceSync.route) {
+                SourceSyncScreen(
+                    onComplete = {
+                        scope.launch {
+                            preferenceRepository.setOnboardingCompleted(true)
+                            navController.navigate(Screen.Request.route) {
+                                popUpTo(Screen.FolderSelection.route) {
+                                    inclusive = true
+                                }
                             }
                         }
                     }
@@ -124,7 +145,7 @@ fun NavGraph(navController: NavHostController) {
                 )
             }
             composable(Screen.Crawlers.route) {
-                CrawlerScreen()
+                CrawlerScreen(viewModel = crawlerViewModel)
             }
             composable(Screen.Settings.route) {
                 SettingsScreen()

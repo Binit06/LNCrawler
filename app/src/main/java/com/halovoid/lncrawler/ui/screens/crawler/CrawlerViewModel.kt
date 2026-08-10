@@ -1,0 +1,46 @@
+package com.halovoid.lncrawler.ui.screens.crawler
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.halovoid.lncrawler.api.core.crawler.Crawler
+import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.loader.SourceLoader
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+sealed class SyncState {
+    object Idle : SyncState()
+    object Loading : SyncState()
+    data class Success(val message: String) : SyncState()
+    data class Error(val error: String) : SyncState()
+}
+
+class CrawlerViewModel(application: Application) : AndroidViewModel(application) {
+    private val sourceLoader = SourceLoader(application)
+    
+    private val _crawlers = MutableStateFlow(CrawlerFactory.getCrawlers())
+    val crawlers: StateFlow<List<Crawler>> = _crawlers.asStateFlow()
+
+    private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
+    val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
+
+    fun syncCrawlers() {
+        viewModelScope.launch {
+            _syncState.value = SyncState.Loading
+            try {
+                sourceLoader.loadSources()
+                _crawlers.value = CrawlerFactory.getCrawlers()
+                _syncState.value = SyncState.Success("Crawlers updated successfully")
+            } catch (e: Exception) {
+                _syncState.value = SyncState.Error(e.message ?: "Failed to sync crawlers")
+            }
+        }
+    }
+
+    fun resetSyncState() {
+        _syncState.value = SyncState.Idle
+    }
+}

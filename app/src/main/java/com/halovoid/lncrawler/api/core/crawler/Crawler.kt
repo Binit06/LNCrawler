@@ -3,9 +3,6 @@ package com.halovoid.lncrawler.api.core.crawler
 import android.net.Uri
 import com.halovoid.lncrawler.data.config.CrawlerConfig
 import com.halovoid.lncrawler.api.core.scrapper.Scrapper
-import com.halovoid.lncrawler.data.db.dao.ChapterDao
-import com.halovoid.lncrawler.data.db.dao.NovelDao
-import com.halovoid.lncrawler.data.db.dao.VolumeDao
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Volume
 import okhttp3.RequestBody
@@ -21,20 +18,14 @@ import kotlin.math.max
  * and defines the interface for site-specific implementations using Jsoup for scraping.
  */
 abstract class Crawler {
-    protected var novelDao: NovelDao? = null
-    protected var chapterDao: ChapterDao? = null
-    protected var volumeDao: VolumeDao? = null
     protected var _config: CrawlerConfig? = null
 
     /** Current configuration for the crawler. */
     open val config: CrawlerConfig
         get() = _config ?: CrawlerConfig(userFolderLocation = "", maxAttempts = 3)
 
-    /** Initializes the crawler with its dependencies. */
-    fun initialize(novelDao: NovelDao, chapterDao: ChapterDao, volumeDao: VolumeDao, config: CrawlerConfig) {
-        this.novelDao = novelDao
-        this.chapterDao = chapterDao
-        this.volumeDao = volumeDao
+    /** Initializes the crawler with its configuration. */
+    fun initialize(config: CrawlerConfig) {
         this._config = config
     }
     private val version = 1
