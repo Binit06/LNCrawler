@@ -1,14 +1,24 @@
 package com.halovoid.lncrawler.ui.screens.onboarding
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.halovoid.lncrawler.api.loader.SourceLoader
+import com.halovoid.lncrawler.ui.theme.DarkSurface
 import com.halovoid.lncrawler.ui.theme.PrimaryAccent
+import com.halovoid.lncrawler.ui.theme.PrimaryText
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -21,35 +31,47 @@ fun SourceSyncScreen(
     val scope = rememberCoroutineScope()
     val sourceLoader = remember { SourceLoader(context) }
     
-    var status by remember { mutableStateOf("Initializing sync...") }
+    val logs = remember { mutableStateListOf<String>() }
     var isSyncing by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
+    
+    val listState = rememberLazyListState()
 
-    LaunchedEffect(Unit) {
+    fun performSync() {
+        isSyncing = true
+        error = null
         scope.launch {
             try {
-                status = "Connecting to source repository..."
-                delay(500.milliseconds) // Small delay for UX
-                sourceLoader.loadSources()
-                status = "Successfully loaded crawlers!"
-                isSyncing = false
-                delay(800.milliseconds)
+                sourceLoader.loadSources { log ->
+                    logs.add(log)
+                }
+                delay(1000.milliseconds)
                 onComplete()
             } catch (e: Exception) {
                 error = e.message ?: "An unknown error occurred"
+                logs.add("Error: $error")
                 isSyncing = false
             }
         }
     }
 
+    LaunchedEffect(logs.size) {
+        if (logs.isNotEmpty()) {
+            listState.animateScrollToItem(logs.size - 1)
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        performSync()
+    }
+
     OnboardingStep(
         title = "Syncing Crawlers",
         subtitle = "We're downloading the latest sources so you can start crawling novels immediately.",
-        buttonText = if (error != null) "Retry" else "Continue",
+        buttonText = if (error != null) "Retry Sync" else "Continue",
         onNext = {
             if (error != null) {
-                // Trigger retry logic or just move on
-                onComplete() 
+                performSync()
             } else {
                 onComplete()
             }
@@ -60,20 +82,55 @@ fun SourceSyncScreen(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(DarkSurface)
+                    .padding(8.dp)
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(logs) { log ->
+                        Text(
+                            text = "> $log",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 11.sp
+                            ),
+                            color = if (log.startsWith("Error")) MaterialTheme.colorScheme.error else PrimaryText
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
             if (isSyncing) {
                 CircularProgressIndicator(
                     color = PrimaryAccent,
-                    modifier = Modifier.size(48.dp)
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp
                 )
-                Spacer(modifier = Modifier.height(24.dp))
+            } else if (error != null) {
+                TextButton(onClick = onComplete) {
+                    Text(
+                        text = "Proceed Anyway",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            } else {
+                Text(
+                    text = "Sync Complete!",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = PrimaryAccent
+                )
             }
-
-            Text(
-                text = error ?: status,
-                style = MaterialTheme.typography.bodyLarge,
-                color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-            )
         }
     }
 }

@@ -52,7 +52,7 @@ fun FolderScreen(
     OnboardingStep(
         title = "Storage Location",
         subtitle = "Choose where your light novels, covers, and artifacts will be stored.",
-        buttonText = "Get Started",
+        buttonText = "Proceed",
         onNext = onNext,
         isNextEnabled = selectedFolder != null
     ) {

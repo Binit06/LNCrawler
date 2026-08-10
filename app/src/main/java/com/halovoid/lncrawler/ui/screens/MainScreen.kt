@@ -5,7 +5,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountTree
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Extension
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,7 +31,7 @@ fun MainScreen() {
         Triple(Screen.Request, "Requests", Icons.Default.AccountTree),
         Triple(Screen.Library, "Novels", Icons.Default.Book),
         Triple(Screen.Crawlers, "Crawlers", Icons.Default.Extension),
-        Triple(Screen.Settings, "Settings", Icons.Default.Settings)
+        Triple(Screen.Support, "Support", Icons.Default.Favorite)
     )
 
     // Only show navigation bar on main screens

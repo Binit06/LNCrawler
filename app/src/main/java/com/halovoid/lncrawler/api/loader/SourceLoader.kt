@@ -24,33 +24,41 @@ class SourceLoader(private val context: Context) {
     /**
      * Downloads the latest DEX file and loads crawlers into the Factory.
      */
-    suspend fun loadSources() = withContext(Dispatchers.IO) {
+    suspend fun loadSources(onProgress: (String) -> Unit = {}) = withContext(Dispatchers.IO) {
         try {
+            onProgress("Starting source synchronization...")
             Log.i("SourceLoader", "Starting to load sources...")
+            
+            onProgress("Downloading latest crawler DEX bundle...")
             val dexFile = downloadDex()
+            
+            onProgress("Initializing DexClassLoader...")
             val aggregatorClass = dexLoader.load(dexFile, AGGREGATOR_CLASS)
             
+            onProgress("Instantiating Crawler Aggregator...")
             val aggregator = aggregatorClass.getDeclaredConstructor().newInstance()
             val getCrawlersMethod = aggregatorClass.getMethod("getCrawlers")
             
+            onProgress("Extracting crawler definitions...")
             val rawCrawlers = getCrawlersMethod.invoke(aggregator) as? List<*>
             val validCrawlers = mutableListOf<Crawler>()
 
             rawCrawlers?.forEach { item ->
                 if (item is Crawler) {
+                    onProgress("Loaded Crawler: ${item.name}")
                     validCrawlers.add(item)
                 } else {
                     val className = item?.javaClass?.name ?: "null"
-                    val superName = item?.javaClass?.superclass?.name ?: "none"
-                    Log.e("SourceLoader", "Incompatible crawler found: $className (extends $superName). " +
-                            "Expected superclass: com.halovoid.lncrawler.api.core.crawler.Crawler")
+                    onProgress("Skipping incompatible source: $className")
+                    Log.e("SourceLoader", "Incompatible crawler found: $className")
                 }
             }
             
-            Log.i("SourceLoader", "Loaded ${validCrawlers.size} valid crawlers from DEX")
+            onProgress("Finalizing: ${validCrawlers.size} crawlers registered.")
             CrawlerFactory.registerCrawlers(validCrawlers)
             
         } catch (e: Exception) {
+            onProgress("Error: ${e.message ?: "Sync failed"}")
             Log.e("SourceLoader", "Failed to load sources", e)
         }
     }

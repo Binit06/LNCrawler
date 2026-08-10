@@ -1,5 +1,9 @@
 package com.halovoid.lncrawler.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,7 +32,7 @@ import com.halovoid.lncrawler.ui.screens.crawler.CrawlerScreen
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
-import com.halovoid.lncrawler.ui.screens.settings.SettingsScreen
+import com.halovoid.lncrawler.ui.screens.support.SupportScreen
 import kotlinx.coroutines.flow.first
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -43,7 +47,7 @@ sealed class Screen(val route: String) {
     object Request : Screen("request")
     object Library : Screen("library")
     object Crawlers : Screen("crawlers")
-    object Settings : Screen("settings")
+    object Support : Screen("support")
     object RequestDetail : Screen("request_detail/{requestId}") {
         fun createRoute(requestId: String) = "request_detail/${URLEncoder.encode(requestId, "UTF-8")}"
     }
@@ -90,7 +94,34 @@ fun NavGraph(navController: NavHostController) {
         }
     }
     startRoute?.let { route ->
-        NavHost(navController = navController, startDestination = route) {
+        NavHost(
+            navController = navController,
+            startDestination = route,
+            enterTransition = {
+                fadeIn(animationSpec = tween(400)) + slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    tween(400)
+                )
+            },
+            exitTransition = {
+                fadeOut(animationSpec = tween(400)) + slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    tween(400)
+                )
+            },
+            popEnterTransition = {
+                fadeIn(animationSpec = tween(400)) + slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    tween(400)
+                )
+            },
+            popExitTransition = {
+                fadeOut(animationSpec = tween(400)) + slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    tween(400)
+                )
+            }
+        ) {
             composable(Screen.FolderSelection.route) {
                 FolderScreen(
                     folderViewModel,
@@ -147,8 +178,8 @@ fun NavGraph(navController: NavHostController) {
             composable(Screen.Crawlers.route) {
                 CrawlerScreen(viewModel = crawlerViewModel)
             }
-            composable(Screen.Settings.route) {
-                SettingsScreen()
+            composable(Screen.Support.route) {
+                SupportScreen()
             }
             composable(Screen.RequestDetail.route) { backStackEntry ->
                 val encodedId = backStackEntry.arguments?.getString("requestId") ?: ""
