@@ -2,6 +2,8 @@
 
 **LNCrawler** is an Android application for crawling and exporting light novels. It combines the powerful scraping logic inspired by [lightnovel-crawler](https://github.com/lncrawl/lightnovel-crawler) with a UI inspired by [Tachiyomi](https://github.com/tachiyomi).
 
+[![](https://jitpack.io/v/Binit06/LNCrawler.svg)](https://jitpack.io/#Binit06/LNCrawler)
+
 ## LNCrawler Overview
 <p align="center">
   <img src="assets/novel_screen_1.png"
