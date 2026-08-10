@@ -1,9 +1,7 @@
 package com.halovoid.lncrawler.data.db.dao
 
 import androidx.room.*
-import com.halovoid.lncrawler.data.db.entities.ChapterEntity
 import com.halovoid.lncrawler.data.db.entities.NovelEntity
-import com.halovoid.lncrawler.domain.models.Novel
 import kotlinx.coroutines.flow.Flow
 
 @Dao

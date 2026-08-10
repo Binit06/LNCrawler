@@ -24,3 +24,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "LNCrawler"
 include(":app")
+include(":api")

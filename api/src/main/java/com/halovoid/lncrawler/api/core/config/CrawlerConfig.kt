@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.config
+package com.halovoid.lncrawler.api.core.config
 
 data class CrawlerConfig (
     val userFolderLocation: String,

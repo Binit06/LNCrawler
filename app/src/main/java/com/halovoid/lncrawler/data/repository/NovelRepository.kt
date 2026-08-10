@@ -21,7 +21,7 @@ class NovelRepository(context: Context) {
 
     /**
      * Retrieves all novels saved in the local database.
-     * @return A [Flow] emitting the latest list of [Novel]s.
+     * @return A [Flow] emitting the latest list of [com.halovoid.lncrawler.domain.models.Novel]s.
      */
     fun getAllNovels(): Flow<List<Novel>> {
         return novelDao.getAllNovels().map { entities ->
@@ -37,7 +37,7 @@ class NovelRepository(context: Context) {
      * Retrieves full details for a novel.
      *
      * @param novelUrl The URL of the novel.
-     * @return The populated [Novel] or null if not found.
+     * @return The populated [com.halovoid.lncrawler.domain.models.Novel] or null if not found.
      */
     suspend fun getNovelDetails(novelUrl: String): Novel? {
         return novelDao.getNovelByUrl(novelUrl)?.toDomain()

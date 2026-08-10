@@ -1,7 +1,7 @@
 package com.halovoid.lncrawler.api.core.crawler
 
 import android.net.Uri
-import com.halovoid.lncrawler.data.config.CrawlerConfig
+import com.halovoid.lncrawler.api.core.config.CrawlerConfig
 import com.halovoid.lncrawler.api.core.scrapper.Scrapper
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Volume
@@ -59,7 +59,7 @@ abstract class Crawler {
     /**
      * Scrapes the novel details (metadata and chapter list) from the source.
      * @param novelUrl The URL of the novel landing page.
-     * @return A [Novel] object populated with metadata and chapters.
+     * @return A [com.halovoid.lncrawler.domain.models.Novel] object populated with metadata and chapters.
      */
     abstract suspend fun getNovelDetails(novelUrl: String): Novel
 
@@ -171,7 +171,7 @@ abstract class Crawler {
     /**
      * Fetches and parses HTML into a Jsoup Document.
      * @param url The target URL.
-     * @return A [Document] object or null if fetching fails.
+     * @return A [org.jsoup.nodes.Document] object or null if fetching fails.
      */
     protected suspend fun getDocument(url: String): Document? = scrapper.document(url)
 
