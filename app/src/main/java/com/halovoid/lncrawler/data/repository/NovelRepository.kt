@@ -1,11 +1,7 @@
 package com.halovoid.lncrawler.data.repository
 
 import android.content.Context
-import com.halovoid.lncrawler.data.crawler.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.data.db.AppDatabase
-import com.halovoid.lncrawler.data.db.entities.ChapterEntity
-import com.halovoid.lncrawler.data.db.entities.NovelEntity
-import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.domain.models.toEntity
@@ -14,7 +10,7 @@ import kotlinx.coroutines.flow.map
 
 /**
  * Main repository for managing novel data in the Data layer.
- * Coordinates between the [com.halovoid.lncrawler.data.crawler.core.crawler.Crawler]s (Network)
+ * Coordinates between the [com.halovoid.lncrawler.api.core.crawler.Crawler]s (Network)
  * and [com.halovoid.lncrawler.data.db.AppDatabase] (Local Storage).
  */
 class NovelRepository(context: Context) {

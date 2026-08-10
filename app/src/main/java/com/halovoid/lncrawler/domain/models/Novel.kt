@@ -21,7 +21,7 @@ data class Novel(
     val chapters: List<Chapter> = emptyList(),
     /** List of [Volume]s associated with this novel.*/
     val volumes: List<Volume> = emptyList(),
-    /** The name of the [com.halovoid.lncrawler.data.crawler.core.crawler.Crawler] that handled this novel. */
+    /** The name of the [com.halovoid.lncrawler.api.core.crawler.Crawler] that handled this novel. */
     val crawlerName: String,
     /** Alternative names or titles for the novel. */
     val alternativeNames: String? = null

@@ -1,6 +1,6 @@
-package com.halovoid.lncrawler.data.crawler.core.crawler
+package com.halovoid.lncrawler.api.core.crawler
 
-import com.halovoid.lncrawler.data.crawler.sources.NovelBins
+import com.halovoid.lncrawler.api.sources.NovelBins
 
 object CrawlerFactory {
     private val crawlers = listOf(

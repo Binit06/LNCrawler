@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.crawler.core.scrapper
+package com.halovoid.lncrawler.api.core.scrapper
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers

@@ -3,7 +3,7 @@ package com.halovoid.lncrawler.ui.screens.request
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.halovoid.lncrawler.data.crawler.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus

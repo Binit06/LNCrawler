@@ -1,7 +1,7 @@
 package com.halovoid.lncrawler.data.handlers
 
 import com.halovoid.lncrawler.data.artifact.ArtifactGeneratorFactory
-import com.halovoid.lncrawler.data.crawler.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.handlers.utility.parsedMetadata

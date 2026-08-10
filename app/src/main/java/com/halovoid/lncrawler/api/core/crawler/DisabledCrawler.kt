@@ -1,4 +1,4 @@
-package com.halovoid.lncrawler.data.crawler.core.crawler
+package com.halovoid.lncrawler.api.core.crawler
 
 /**
  * Represents a crawler that is currently disabled and the reason why.

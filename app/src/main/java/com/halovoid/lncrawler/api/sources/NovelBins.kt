@@ -1,10 +1,11 @@
-package com.halovoid.lncrawler.data.crawler.sources
+package com.halovoid.lncrawler.api.sources
 
 import android.util.Log
-import com.halovoid.lncrawler.data.crawler.core.crawler.Crawler
+import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
 import okhttp3.FormBody
+import org.json.JSONArray
 import org.jsoup.Jsoup
 import java.io.IOException
 import kotlin.collections.emptyList
@@ -146,7 +147,7 @@ class NovelBins : Crawler() {
         
         val chapters = mutableListOf<Chapter>()
         try {
-            val jsonArray = org.json.JSONArray(html)
+            val jsonArray = JSONArray(html)
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
                 val chapterNum = obj.getString("chapter")
