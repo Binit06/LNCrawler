@@ -27,19 +27,25 @@ jobs:
         run: ./gradlew :app:assembleRelease
 
       - name: Sign APK
-        uses: r0adkll/sign-android-release@v1
-        id: sign_app
-        with:
-          releaseDirectory: app/build/outputs/apk/release
-          signingKeyBase64: ${{ secrets.SIGNING_KEY }}
-          alias: ${{ secrets.ALIAS }}
-          keyStorePassword: ${{ secrets.KEY_STORE_PASSWORD }}
-          keyPassword: ${{ secrets.KEY_PASSWORD }}
-          buildToolsVersion: 34.0.0
-
-      - name: Prepare APK for Release
         run: |
-          cp ${{ steps.sign_app.outputs.signedReleaseFile }} LNCrawler.apk
+          echo "${{ secrets.SIGNING_KEY }}" | base64 -d > release.jks
+
+          UNSIGNED_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          echo "Signing APK: $UNSIGNED_APK"
+
+          BUILD_TOOLS_PATH=$(ls -d $ANDROID_HOME/build-tools/* | sort -V | tail -n 1)
+          echo "Using Build Tools from: $BUILD_TOOLS_PATH"
+
+          $BUILD_TOOLS_PATH/apksigner sign \
+            --ks release.jks \
+            --ks-key-alias "${{ secrets.ALIAS }}" \
+            --ks-pass pass:"${{ secrets.KEY_STORE_PASSWORD }}" \
+            --key-pass pass:"${{ secrets.KEY_PASSWORD }}" \
+            --out LNCrawler.apk \
+            "$UNSIGNED_APK"
+
+          # 5. Clean up the keystore file for security
+          rm release.jks
 
       - name: Create Github Release
         uses: softprops/action-gh-release@v2
