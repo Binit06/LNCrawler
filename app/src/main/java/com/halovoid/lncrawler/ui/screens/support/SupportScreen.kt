@@ -17,13 +17,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -31,7 +28,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.BuildConfig
 import com.halovoid.lncrawler.ui.theme.*
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,9 +35,7 @@ fun SupportScreen(
     viewModel: SupportViewModel
 ) {
     val uriHandler = LocalUriHandler.current
-    val clipboardManager = LocalClipboardManager.current
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -115,26 +109,11 @@ fun SupportScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             SupportCard(
-                title = "Support Using UPI",
-                description = "If you are in India, you can support development directly via UPI. Every contribution helps!",
+                title = "Buy Me A Coffee",
+                description = "Help support the development by buying me a coffee! Your contributions help keep the project alive and free of ads.",
                 icon = Icons.Default.Payments,
-                buttonText = "Pay via UPI",
-                onClick = { 
-                    try {
-                        uriHandler.openUri("upi://pay?pa=binitlenka@okhdfcbank&pn=LNCrawler%20Developer")
-                    } catch (e: Exception) {
-                        scope.launch {
-                            snackbarHostState.showSnackbar("No UPI app found. Please copy the ID.")
-                        }
-                    }
-                },
-                secondaryButtonText = "Copy ID",
-                onSecondaryClick = {
-                    clipboardManager.setText(AnnotatedString("binitlenka@okhdfcbank"))
-                    scope.launch {
-                        snackbarHostState.showSnackbar("UPI ID copied to clipboard")
-                    }
-                }
+                buttonText = "Support",
+                onClick = { uriHandler.openUri("https://buymeacoffee.com/halovoid") }
             )
             
             Spacer(modifier = Modifier.height(16.dp))
