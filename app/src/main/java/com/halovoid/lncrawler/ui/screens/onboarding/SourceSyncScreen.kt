@@ -42,9 +42,9 @@ fun SourceSyncScreen(
         error = null
         scope.launch {
             try {
-                sourceLoader.loadSources { log ->
+                sourceLoader.loadSources(onProgress = { log ->
                     logs.add(log)
-                }
+                })
                 delay(1000.milliseconds)
                 onComplete()
             } catch (e: Exception) {

@@ -26,6 +26,8 @@ fun CrawlerScreen(
 ) {
     val crawlers by viewModel.crawlers.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
+    val isUpdateAvailable by viewModel.isUpdateAvailable.collectAsStateWithLifecycle()
+    val showSyncOption by viewModel.showSyncOption.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(syncState) {
@@ -56,7 +58,7 @@ fun CrawlerScreen(
                             strokeWidth = 2.dp
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                    } else {
+                    } else if (showSyncOption) {
                         IconButton(onClick = { viewModel.syncCrawlers() }) {
                             Icon(Icons.Default.Sync, contentDescription = "Sync Crawlers", tint = PrimaryAccent)
                         }
@@ -71,6 +73,46 @@ fun CrawlerScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
+            if (isUpdateAvailable) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.1f)),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.5f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .padding(12.dp)
+                            .fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                "Update Available",
+                                style = MaterialTheme.typography.labelLarge,
+                                color = PrimaryAccent,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "New crawler versions are ready to download.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = SecondaryText
+                            )
+                        }
+                        Button(
+                            onClick = { viewModel.syncCrawlers() },
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Text("Update Now", fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+
             if (crawlers.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text("No crawlers available. Please sync.", color = SecondaryText)

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 private val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
 private val ONBOARDING_COMPLETED = stringPreferencesKey("onboarding_completed")
 private val LAST_SYNC_TIME = stringPreferencesKey("last_sync_time")
+private val CURRENT_DEX_TAG = stringPreferencesKey("current_dex_tag")
 
 class PreferenceRepository(
     private val context: Context
@@ -24,6 +25,11 @@ class PreferenceRepository(
     val isOnboardingCompleted: Flow<Boolean> =
         context.appDataStore.data.map { preferences ->
             preferences[ONBOARDING_COMPLETED]?.toBoolean() ?: false
+        }
+
+    val currentDexTag: Flow<String?> =
+        context.appDataStore.data.map { preferences ->
+            preferences[CURRENT_DEX_TAG]
         }
 
     suspend fun setOnboardingCompleted(completed: Boolean) {
@@ -41,6 +47,12 @@ class PreferenceRepository(
     suspend fun clearExportFolder() {
         context.appDataStore.edit { preferences ->
             preferences.remove(EXPORT_FOLDER_URI)
+        }
+    }
+
+    suspend fun setCurrentDexTag(tag: String) {
+        context.appDataStore.edit { preferences ->
+            preferences[CURRENT_DEX_TAG] = tag
         }
     }
 }
