@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.api.loader.SourceLoader
+import com.halovoid.lncrawler.api.loader.VersionUtils
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -54,7 +55,7 @@ class CrawlerViewModel(application: Application) : AndroidViewModel(application)
                 val info = sourceLoader.fetchLatestReleaseInfo()
                 latestReleaseInfo = info
                 
-                if (info.tagName != currentTag) {
+                if (VersionUtils.isUpdateAvailable(currentTag, info.tagName)) {
                     _isUpdateAvailable.value = true
                     _showSyncOption.value = true
                 } else {
