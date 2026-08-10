@@ -1,5 +1,6 @@
 plugins {
-    alias(libs.plugins.android.application)
+    alias(libs.plugins.android.library)
+    id("maven-publish")
 }
 
 android {
@@ -9,12 +10,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.halovoid.lncrawler.api"
         minSdk = 24
-        targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -29,10 +25,30 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
 }
 
 dependencies {
     implementation(libs.androidx.core.ktx)
-    implementation(libs.jsoup)
-    implementation(libs.okhttp)
+    api(libs.jsoup)
+    api(libs.okhttp)
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            register<MavenPublication>("release") {
+                from(components["release"])
+
+                groupId = "com.halovoid.lncrawler"
+                artifactId = "api"
+                version = "1.0.0"
+            }
+        }
+    }
 }

@@ -467,7 +467,7 @@ fun ExpandableVolume(volume: Volume, chapters: List<Chapter>, onFetchVolume: () 
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
-                        if (chapter.fileLocation != null && chapter.fileLocation.contains("content://")) {
+                        if (chapter.fileLocation?.contains("content://") == true) {
                             Button(
                                 onClick = { /* Read chapter */ },
                                 contentPadding = PaddingValues(horizontal = 12.dp),

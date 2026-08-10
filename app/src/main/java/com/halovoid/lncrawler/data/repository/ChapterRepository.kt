@@ -2,6 +2,8 @@ package com.halovoid.lncrawler.data.repository
 
 import android.content.Context
 import com.halovoid.lncrawler.data.db.AppDatabase
+import com.halovoid.lncrawler.data.db.mappers.toDomain
+import com.halovoid.lncrawler.data.db.mappers.toEntity
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.domain.models.toEntity

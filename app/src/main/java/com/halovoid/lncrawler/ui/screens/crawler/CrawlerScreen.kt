@@ -2,6 +2,7 @@ package com.halovoid.lncrawler.ui.screens.crawler
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Language
@@ -80,7 +81,7 @@ fun CrawlerScreen(
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(crawlers) { crawler ->
+                    items(crawlers, key = { it.baseUrl }) { crawler ->
                         CrawlerItem(crawler)
                     }
                 }
@@ -89,6 +90,7 @@ fun CrawlerScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrawlerItem(crawler: Crawler) {
     Card(

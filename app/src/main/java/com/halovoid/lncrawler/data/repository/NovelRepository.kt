@@ -2,9 +2,9 @@ package com.halovoid.lncrawler.data.repository
 
 import android.content.Context
 import com.halovoid.lncrawler.data.db.AppDatabase
+import com.halovoid.lncrawler.data.db.mappers.toDomain
+import com.halovoid.lncrawler.data.db.mappers.toEntity
 import com.halovoid.lncrawler.domain.models.Novel
-import com.halovoid.lncrawler.domain.models.toDomain
-import com.halovoid.lncrawler.domain.models.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
