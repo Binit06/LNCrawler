@@ -9,32 +9,27 @@
 <div align="center">
 
 <p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/stars/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=dark">
-    <img alt="GitHub Stars" src="https://www.shieldcn.dev/github/stars/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=light">
-  </picture>
+  <a href="https://github.com/Binit06/LNCrawler/stargazers">
+    <img alt="GitHub Stars" src="https://img.shields.io/github/stars/Binit06/LNCrawler?style=flat-square&color=blue">
+  </a>
   &nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/forks/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=dark">
-    <img alt="GitHub Forks" src="https://www.shieldcn.dev/github/forks/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=light">
-  </picture>
+  <a href="https://github.com/Binit06/LNCrawler/network/members">
+    <img alt="GitHub Forks" src="https://img.shields.io/github/forks/Binit06/LNCrawler?style=flat-square&color=blue">
+  </a>
   &nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/contributors/Binit06/LNCrawler.svg?theme=emerald&size=sm&mode=dark">
-    <img alt="Contributors" src="https://www.shieldcn.dev/github/contributors/Binit06/LNCrawler.svg?theme=emerald&size=sm&mode=light">
-  </picture>
+  <a href="https://github.com/Binit06/LNCrawler/graphs/contributors">
+    <img alt="Contributors" src="https://img.shields.io/github/contributors/Binit06/LNCrawler?style=flat-square&color=2ea44f">
+  </a>
 </p>
 
 <p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/release/Binit06/LNCrawler.svg?size=sm&mode=dark">
-    <img alt="Release" src="https://www.shieldcn.dev/github/release/Binit06/LNCrawler.svg?size=sm&mode=light">
-  </picture>
+  <a href="https://github.com/Binit06/LNCrawler/releases">
+    <img alt="Release" src="https://img.shields.io/github/v/release/Binit06/LNCrawler?style=flat-square">
+  </a>
   &nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/license/Binit06/LNCrawler.svg?variant=ghost&size=sm&mode=dark">
-    <img alt="License" src="https://www.shieldcn.dev/github/license/Binit06/LNCrawler.svg?variant=ghost&size=sm&mode=light">
-  </picture>
+  <a href="https://github.com/Binit06/LNCrawler/blob/main/LICENSE">
+    <img alt="License" src="https://img.shields.io/github/license/Binit06/LNCrawler?style=flat-square&color=lightgrey">
+  </a>
 </p>
 
 </div>
