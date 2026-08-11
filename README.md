@@ -1,57 +1,197 @@
+<div align="center">
+<img src="assets/icon.png" width="200" />
+
 # LNCrawler
 
-**LNCrawler** is an Android application for crawling and exporting light novels. It combines the powerful scraping logic inspired by [lightnovel-crawler](https://github.com/lncrawl/lightnovel-crawler) with a UI inspired by [Tachiyomi](https://github.com/tachiyomi).
+### EBook Exporter for Android
 
-[![](https://jitpack.io/v/Binit06/LNCrawler.svg)](https://jitpack.io/#Binit06/LNCrawler)
+<br />
+<div align="center">
 
-## LNCrawler Overview
-<p align="center">
-  <img src="assets/novel_screen_1.png"
-    alt="LNCrawler Novel Page"
-    width="220"/>
-  <img src="assets/request_screen_1.png"
-    alt="LNCrawler Crawl Request"
-    width="220"/>
-  <img src="assets/export_artifact.png"
-    alt="LNCrawler Export Artifact"
-    width="220"/>
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/stars/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=dark">
+    <img alt="GitHub Stars" src="https://www.shieldcn.dev/github/stars/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=light">
+  </picture>
+  &nbsp;
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/forks/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=dark">
+    <img alt="GitHub Forks" src="https://www.shieldcn.dev/github/forks/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=light">
+  </picture>
+  &nbsp;
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/contributors/Binit06/LNCrawler.svg?theme=emerald&size=sm&mode=dark">
+    <img alt="Contributors" src="https://www.shieldcn.dev/github/contributors/Binit06/LNCrawler.svg?theme=emerald&size=sm&mode=light">
+  </picture>
 </p>
 
-<p align="center">
-  <img src="assets/novel_screen_2.png"
-    alt="LNCrawler Novel Details"
-    width="220"/>
-  <img src="assets/request_screen_2.png"
-    alt="LNCrawler Request Details"
-    width="220"/>
+<p>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/release/Binit06/LNCrawler.svg?size=sm&mode=dark">
+    <img alt="Release" src="https://www.shieldcn.dev/github/release/Binit06/LNCrawler.svg?size=sm&mode=light">
+  </picture>
+  &nbsp;
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/license/Binit06/LNCrawler.svg?variant=ghost&size=sm&mode=dark">
+    <img alt="License" src="https://www.shieldcn.dev/github/license/Binit06/LNCrawler.svg?variant=ghost&size=sm&mode=light">
+  </picture>
 </p>
 
-## Key Features
-- **Job-based Crawling System:** Can handle multiple Crawl Requests at the same time.
-- **Tachiyomi-inspired UI:** A clean, modern interface built with Jetpack Compose.
-- **Exporting Options:** Package your favorite light novels into EPUB or other formats (more coming soon).
-- **Library Management:** Keep track of your downloaded novels.
-- **Multi-source Support:** Easily add new sources for expansion.
+</div>
 
-## Getting Started
+<br />
 
-### Prerequisites
-- Android Studio Ladybug (or newer)
-- JDK 17+
-- Android Device or Emulator (API 26+)
+</div>
 
-### Installation
-1. Clone the repository.
-2. Open the project in Android Studio.
-3. Sync Gradle and run the `app` module.
+<div align="center">
 
-## Supported Sources
-- [NovelBins](https://novelbins.com)
-- 📢 more sources will be added soon
+<h1><a id="screenshots"></a>Screenshots</h1>
+<img src="assets/screenshots/artifact.jpg" alt="Artifacts" width="30%" />
+<img src="assets/screenshots/novel_screen.jpg" alt="Novel Screen" width="30%" />
+<img src="assets/screenshots/request_screen.jpg" alt="Request Screen" width="30%" />
+<img src="assets/screenshots/novel_actions.jpg" alt="Novel Features" width="30%" />
+<img src="assets/screenshots/crawler_screen.jpg" alt="Linked Request Screen" width="30%" />
+<img src="assets/screenshots/request_details.jpg" alt="Linked Request Screen" width="30%" />
 
-## 🏗 Architecture
-LNCrawler follows a **Clean Architecture** with a **Job-based request system** for reliability. For a deeper dive into how it works and how to contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
+</div>
 
-## 🤝 Contributing
+---
 
-Contributions are welcome! Please check out our [CONTRIBUTING.md](CONTRIBUTING.md) to learn about the architecture and how to add new crawlers.
+<div align="center">
+
+<h1><a id="features"></a>Features</h1>
+
+</div>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+
+#### Crawling
+- Fetch EBooks from supported sources
+- Supports multiple novel sources through independent crawlers
+- Update Novel Metadata
+
+</td>
+    <td width="50%" valign="top">
+
+#### Dynamic Sources
+- Loads crawlers automatically from DEX extensions
+- Add new sources without modifying the core crawling engine
+
+</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+
+#### Performance
+- Coroutine Based Scrapping
+- Concurrent chapter + content fetching
+- Implements Local Processing
+
+</td>
+    <td width="50%" valign="top">
+
+#### Architecture
+- Isolated crawler implementations
+- Pluggable source architecture
+
+</td>
+  </tr>
+  <tr>
+    <td width="50%" valign="top">
+
+#### Developer Experiences
+- Easy-to-add new sources
+- Clearly separates crawler implementaion and core architechture
+
+</td>
+    <td width="50%" valign="top">
+
+#### Android
+- Build with Kotlin
+- Jetpack Compose UI
+- Local file access
+
+</td>
+  </tr>
+</table>
+
+---
+
+<div align="center">
+
+<h1><a id="download-now"></a>Download Now</h1>
+
+<table>
+  <tr>
+    <th align="center">GitHub</th>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="https://github.com/Binit06/LNCrawler/releases/latest/download/LNCrawler.apk">
+        <img src="assets/badge_github.png" alt="Download from GitHub" height="75">
+      </a>
+    </td>
+  </tr>
+</table>
+
+</div>
+
+---
+
+<div align="center">
+
+<h1><a id="support-the-project"></a>Support the Project</h1>
+
+<h3>LNCrawler is free and open-source. If you find it useful, consider supporting the development!</h3>
+
+#### Buy Me a Coffee
+
+<a href="https://www.buymeacoffee.com/halovoid">
+  <img src="assets/buymeacoffee.png" alt="Buy Me a Coffee" width="150" />
+</a>
+
+</div>
+
+---
+
+<div align="center">
+
+<h1>Special Thanks</h1>
+
+<h3>LNCrawler took a lot of inspiration from these incredible open-source work.</h3>
+
+<a href="https://github.com/tachiyomiorg/tachiyomi">
+  <img src="https://www.shieldcn.dev/badge/Tachiyomi-GitHub.svg?variant=secondary&size=sm" alt="Tachiyomi">
+</a>
+
+<a href="https://github.com/lncrawl/lightnovel-crawler">
+  <img src="https://www.shieldcn.dev/badge/Lightnovel%20Crawler-GitHub.svg?variant=secondary&size=sm" alt="Lightnovel Crawler">
+</a>
+
+</div>
+
+---
+
+<div align="center">
+
+<h1>Contributors</h1>
+
+<h3>Thanks to everyone who contributes to LNCrawler!</h3>
+
+<a href="https://github.com/Binit06/LNCrawler/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Binit06/LNCrawler" alt="Contributors" />
+</a>
+
+</div>
+
+---
+
+<div align="center">
+
+<br/>
+
+**Made with ❤️ by [Binit06](https://github.com/Binit06)**
+
+</div>
