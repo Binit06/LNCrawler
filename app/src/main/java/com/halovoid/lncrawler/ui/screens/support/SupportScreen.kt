@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,6 +38,8 @@ fun SupportScreen(
     val uriHandler = LocalUriHandler.current
     val snackbarHostState = remember { SnackbarHostState() }
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
 
     Scaffold(
         containerColor = DarkBackground,
@@ -66,7 +69,16 @@ fun SupportScreen(
         ) {
             AppUpdateCard(
                 state = updateState,
-                onUpdateClick = { uriHandler.openUri(it) },
+                onUpdateClick = { update ->
+                    if (update.apkDownloadUrl != null) {
+                        viewModel.startUpdateDownload(update.apkDownloadUrl)
+                    } else {
+                        uriHandler.openUri(update.releaseUrl)
+                    }
+                },
+                onInstallClick = { uri ->
+                    viewModel.installUpdate(context, uri)
+                },
                 onRetryClick = { viewModel.checkForUpdates() }
             )
 
@@ -140,9 +152,11 @@ fun SupportScreen(
 @Composable
 fun AppUpdateCard(
     state: AppUpdateState,
-    onUpdateClick: (String) -> Unit,
+    onUpdateClick: (AppUpdateState.UpdateAvailable) -> Unit,
+    onInstallClick: (String) -> Unit,
     onRetryClick: () -> Unit
 ) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
@@ -166,6 +180,12 @@ fun AppUpdateCard(
                             Triple("Checking Updates", PrimaryText, Icons.Default.Refresh)
                         is AppUpdateState.UpdateAvailable -> 
                             Triple("Update Available", PrimaryAccent, Icons.Default.SystemUpdate)
+                        is AppUpdateState.Downloading ->
+                            Triple("Downloading...", PrimaryAccent, Icons.Default.SystemUpdate)
+                        is AppUpdateState.ReadyToInstall ->
+                            Triple("Ready to Install", PrimaryAccent, Icons.Default.CheckCircle)
+                        is AppUpdateState.Installing ->
+                            Triple("Installing...", PrimaryAccent, Icons.Default.Refresh)
                         is AppUpdateState.UpToDate -> 
                             Triple("Latest Version", PrimaryText, Icons.Default.CheckCircle)
                         is AppUpdateState.Error -> 
@@ -189,6 +209,9 @@ fun AppUpdateCard(
                     text = when (state) {
                         is AppUpdateState.Loading, is AppUpdateState.Idle -> "Connecting to GitHub..."
                         is AppUpdateState.UpdateAvailable -> "Version ${state.tagName} is now ready."
+                        is AppUpdateState.Downloading -> "Fetching latest APK..."
+                        is AppUpdateState.ReadyToInstall -> "Download complete. Tap to install."
+                        is AppUpdateState.Installing -> "The installer should open shortly."
                         is AppUpdateState.UpToDate -> "You are on the latest release."
                         is AppUpdateState.Error -> "Please check your internet connection."
                     },
@@ -200,22 +223,40 @@ fun AppUpdateCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             when (state) {
-                is AppUpdateState.Loading, is AppUpdateState.Idle -> {
+                is AppUpdateState.Loading, is AppUpdateState.Idle, is AppUpdateState.Installing -> {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
                         color = PrimaryAccent,
                         strokeWidth = 2.dp
                     )
                 }
+                is AppUpdateState.Downloading -> {
+                    LinearProgressIndicator(
+                        modifier = Modifier.width(64.dp),
+                        color = PrimaryAccent,
+                        trackColor = PrimaryAccent.copy(alpha = 0.1f)
+                    )
+                }
                 is AppUpdateState.UpdateAvailable -> {
                     Button(
-                        onClick = { onUpdateClick(state.releaseUrl) },
+                        onClick = { onUpdateClick(state) },
                         colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
                         Text("Update", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+                is AppUpdateState.ReadyToInstall -> {
+                    Button(
+                        onClick = { onInstallClick(state.uri) },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                        shape = RoundedCornerShape(8.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        Text("Install", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
                 is AppUpdateState.UpToDate -> {

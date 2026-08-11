@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -58,6 +59,10 @@ fun PermissionScreen(
         mutableStateOf(isIgnoringBatteryOptimizations(context))
     }
 
+    var canInstallPackages by remember {
+        mutableStateOf(context.packageManager.canRequestPackageInstalls())
+    }
+
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { isGranted ->
@@ -94,12 +99,26 @@ fun PermissionScreen(
                 context.startActivity(intent)
             }
         )
+
+        PermissionItem(
+            icon = Icons.Default.SystemUpdate,
+            title = "App Updates",
+            description = "Download and install app updates directly.",
+            isGranted = canInstallPackages,
+            onClick = {
+                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                    data = Uri.parse("package:${context.packageName}")
+                }
+                context.startActivity(intent)
+            }
+        )
         
-        // Re-check battery status when returning to app
+        // Re-check status when returning to app
         LaunchedEffect(Unit) {
             while(true) {
                 kotlinx.coroutines.delay(1000)
                 isIgnoringBatteryOptimizations = isIgnoringBatteryOptimizations(context)
+                canInstallPackages = context.packageManager.canRequestPackageInstalls()
             }
         }
     }

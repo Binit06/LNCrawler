@@ -37,7 +37,7 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
                 CrawlerViewModel(application) as T
             }
             modelClass.isAssignableFrom(SupportViewModel::class.java) -> {
-                SupportViewModel() as T
+                SupportViewModel(application) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }

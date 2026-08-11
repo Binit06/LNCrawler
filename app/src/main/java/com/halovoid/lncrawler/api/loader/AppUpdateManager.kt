@@ -10,7 +10,7 @@ class AppUpdateManager {
     private val client = OkHttpClient()
     private val GITHUB_API_URL = "https://api.github.com/repos/Binit06/LNCrawler/releases/latest"
 
-    data class AppReleaseInfo(val tagName: String, val releaseUrl: String)
+    data class AppReleaseInfo(val tagName: String, val releaseUrl: String, val apkDownloadUrl: String?)
 
     suspend fun fetchLatestAppRelease(): AppReleaseInfo = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(GITHUB_API_URL).build()
@@ -20,9 +20,22 @@ class AppUpdateManager {
             val body = response.body?.string() ?: throw Exception("Empty response body")
             val json = JSONObject(body)
             
+            val assets = json.optJSONArray("assets")
+            var apkDownloadUrl: String? = null
+            if (assets != null) {
+                for (i in 0 until assets.length()) {
+                    val asset = assets.getJSONObject(i)
+                    if (asset.getString("name").endsWith(".apk")) {
+                        apkDownloadUrl = asset.getString("browser_download_url")
+                        break
+                    }
+                }
+            }
+
             AppReleaseInfo(
                 tagName = json.getString("tag_name"),
-                releaseUrl = json.getString("html_url")
+                releaseUrl = json.getString("html_url"),
+                apkDownloadUrl = apkDownloadUrl
             )
         }
     }
