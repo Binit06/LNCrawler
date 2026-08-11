@@ -153,7 +153,7 @@ class EpubGenerator(
         val manifest = items.joinToString("\n") {
             val navAttr = if (it.fileName == "nav.xhtml") " properties=\"nav\"" else ""
             val coverAttr = if (it.id == "cover-image") "properties=\"cover-image\"" else ""
-            "|      <item id=\"${it.id}\" href=\"${it.fileName}\" media-type=\"${it.mediaType}\"$navAttr$coverAttr/>"
+            "|      <item id=\"${it.id}\" href=\"${it.fileName}\" media-type=\"${it.mediaType}\" $navAttr$coverAttr/>"
         }
 
         // Determined reading order

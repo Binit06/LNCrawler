@@ -19,9 +19,7 @@ import com.halovoid.lncrawler.api.loader.SourceLoader
 import com.halovoid.lncrawler.ui.theme.DarkSurface
 import com.halovoid.lncrawler.ui.theme.PrimaryAccent
 import com.halovoid.lncrawler.ui.theme.PrimaryText
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun SourceSyncScreen(
@@ -45,8 +43,7 @@ fun SourceSyncScreen(
                 sourceLoader.loadSources(onProgress = { log ->
                     logs.add(log)
                 })
-                delay(1000.milliseconds)
-                onComplete()
+                isSyncing = false
             } catch (e: SourceLoader.IncompatibleAppException) {
                 error = "App Update Required: ${e.message}"
                 logs.add("Error: $error")

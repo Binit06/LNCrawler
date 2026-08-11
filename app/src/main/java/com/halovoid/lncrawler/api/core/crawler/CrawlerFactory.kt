@@ -31,8 +31,13 @@ object CrawlerFactory {
     fun getCrawlerByUrl(url: String): Crawler? = getCrawlers().find { it.canHandle(url) }
 
     fun registerCrawlers(newCrawlers: List<Crawler>) {
+        // Filter out crawlers that have the same name as a built-in static crawler
+        val filteredCrawlers = newCrawlers.filter { dynamic ->
+            staticCrawlers.none { static -> static.name == dynamic.name }
+        }
+        
         dynamicCrawlers.clear()
-        dynamicCrawlers.addAll(newCrawlers)
+        dynamicCrawlers.addAll(filteredCrawlers)
         _crawlersFlow.value = getCrawlers()
     }
 }

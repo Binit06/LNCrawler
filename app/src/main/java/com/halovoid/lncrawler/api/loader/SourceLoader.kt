@@ -53,6 +53,7 @@ class SourceLoader(private val context: Context) {
         } catch (e: Exception) {
             onProgress("Error: ${e.message ?: "Sync failed"}")
             Log.e("SourceLoader", "Failed to load sources", e)
+            throw e
         }
     }
 
