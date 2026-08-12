@@ -39,6 +39,11 @@
             android:process=":crash"
             android:theme="@style/Theme.LNCrawler" />
 
+        <activity
+            android:name=".ui.cloudflare.CloudflareActivity"
+            android:exported="false"
+            android:theme="@style/Theme.LNCrawler" />
+
         <service
             android:name=".data.scheduler.services.SchedulerService"
             android:enabled="true"

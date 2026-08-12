@@ -32,6 +32,9 @@ class RequestDetailViewModel(
         _requestId.value = id
     }
 
+    private val _cancellingRequestIds = MutableStateFlow<Set<String>>(emptySet())
+    val cancellingRequestIds: StateFlow<Set<String>> = _cancellingRequestIds.asStateFlow()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val linkedRequests: StateFlow<List<Request>> = _requestId
         .filterNotNull()
@@ -96,9 +99,13 @@ class RequestDetailViewModel(
 
     fun cancelRequest(requestId: String) {
         viewModelScope.launch {
-            requestDao.cancelRequest(requestId)
-
-            SchedulerService.startService(getApplication())
+            _cancellingRequestIds.update { it + requestId }
+            try {
+                requestDao.cancelRequest(requestId)
+                SchedulerService.startService(getApplication())
+            } finally {
+                _cancellingRequestIds.update { it - requestId }
+            }
         }
     }
     fun copyArtifactToUri(artifact: Artifact, destinationUri: Uri, onComplete: (Uri?) -> Unit, onFileMissing: () -> Unit) {

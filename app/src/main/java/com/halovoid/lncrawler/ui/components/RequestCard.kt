@@ -7,8 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +32,7 @@ fun RequestCard(
     allowReplay : Boolean? = true,
     allowCancel : Boolean? = true,
     showProgress: Boolean? = true,
+    isCancelling: Boolean = false,
 ) {
     val isWorkFinished = (request.progressSuccess + request.progressFailed + request.progressCancelled) == request.progressTotal
 
@@ -51,10 +51,24 @@ fun RequestCard(
         SimpleDateFormat("MMM dd, HH:mm", locale).format(Date(request.createdAt))
     }
 
+    var showCancelDialog by remember { mutableStateOf(false) }
+
+    if (showCancelDialog) {
+        ConfirmCancelDialog(
+            title = "Cancel Request?",
+            message = "Are you sure you want to stop \"${request.name}\"? Any progress made will be preserved, but the current task will stop.",
+            onConfirm = {
+                showCancelDialog = false
+                onCancel()
+            },
+            onDismiss = { showCancelDialog = false }
+        )
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick() },
+            .clickable(enabled = !isCancelling) { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
@@ -143,11 +157,24 @@ fun RequestCard(
             // Actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                if (isProcessing) {
+                if (isCancelling) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = ErrorRed
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Cancelling...",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = ErrorRed
+                    )
+                } else if (isProcessing) {
                     TextButton(
-                        onClick = onCancel,
+                        onClick = { showCancelDialog = true },
                         colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
                     ) {
                         Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))

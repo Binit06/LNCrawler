@@ -48,6 +48,7 @@ fun RequestDetailScreen(
 
     val record by viewModel.getRequest(requestId).collectAsState(initial = null)
     val linkedRequests by viewModel.linkedRequests.collectAsStateWithLifecycle()
+    val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
     val chapterMetadata by viewModel.chapterMetadata.collectAsState()
     val artifactMetadata by viewModel.artifactMetadata.collectAsState()
 
@@ -183,7 +184,8 @@ fun RequestDetailScreen(
                             request = linked,
                             onClick = { onRequestClick(linked.id) },
                             onReplay = { viewModel.replayRequest(linked.id) },
-                            onCancel = { viewModel.cancelRequest(linked.id) }
+                            onCancel = { viewModel.cancelRequest(linked.id) },
+                            isCancelling = cancellingRequestIds.contains(linked.id)
                         )
                     }
                 }

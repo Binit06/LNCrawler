@@ -42,6 +42,12 @@ abstract class Crawler {
      */
     open val chapterPerVolume: Int = 100
 
+    /** Opens a webview on phone to extract all the cookies and website headers
+     * This is only required if the crawler can't crawl the website normally and needs
+     * to bypass Cloudflare or some other protection
+     */
+    abstract val webviewNeeded: Boolean?
+
     /** Generic HTTP and scraping utility */
     protected val scrapper = Scrapper()
 
@@ -166,14 +172,14 @@ abstract class Crawler {
         url: String,
         headers: Map<String, String> = emptyMap(),
         body: RequestBody? = null
-    ): String? = scrapper.fetch(url, headers, body)
+    ): String? = scrapper.fetch(url, headers, body, webviewNeeded = webviewNeeded ?: false)
 
     /**
      * Fetches and parses HTML into a Jsoup Document.
      * @param url The target URL.
      * @return A [org.jsoup.nodes.Document] object or null if fetching fails.
      */
-    protected suspend fun getDocument(url: String): Document? = scrapper.document(url)
+    protected suspend fun getDocument(url: String, webviewNeeded: Boolean = false): Document? = scrapper.document(url, webviewNeeded=webviewNeeded)
 
     /**
      * Utility to resolve a relative URL to an absolute one.

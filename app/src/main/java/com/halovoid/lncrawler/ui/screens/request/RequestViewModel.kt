@@ -27,6 +27,9 @@ class RequestViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    private val _cancellingRequestIds = MutableStateFlow<Set<String>>(emptySet())
+    val cancellingRequestIds: StateFlow<Set<String>> = _cancellingRequestIds.asStateFlow()
+
     fun validateUrl(url: String): String? {
         val crawler = CrawlerFactory.getCrawlerByUrl(url)
         return if (crawler != null) {

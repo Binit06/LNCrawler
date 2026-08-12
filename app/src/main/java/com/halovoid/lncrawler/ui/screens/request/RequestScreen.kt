@@ -34,6 +34,7 @@ fun RequestScreen(
     var urlInput by remember { mutableStateOf("") }
     val error by viewModel.error.collectAsState()
     val requestHistory by viewModel.requestHistory.collectAsStateWithLifecycle()
+    val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
 
     var statusFilter by remember { mutableStateOf<RequestStatus?>(null) }
     var typeFilter by remember { mutableStateOf<RequestType?>(null) }
@@ -165,7 +166,8 @@ fun RequestScreen(
                     request = request,
                     onClick = { onRequestClick(request.id) },
                     onReplay = { viewModel.replayRequest(request.id) },
-                    onCancel = { viewModel.cancelRequest(request.id) }
+                    onCancel = { viewModel.cancelRequest(request.id) },
+                    isCancelling = cancellingRequestIds.contains(request.id)
                 )
             }
         }
