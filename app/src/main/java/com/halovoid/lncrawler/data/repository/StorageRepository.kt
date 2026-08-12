@@ -200,7 +200,7 @@ class StorageRepositoryImpl(
         }
     }
 
-    private fun createDocument(parentUri: Uri, mimeType: String, displayName: String): Uri {
+    fun createDocument(parentUri: Uri, mimeType: String, displayName: String): Uri {
         return DocumentsContract.createDocument(
             context.contentResolver,
             parentUri,
