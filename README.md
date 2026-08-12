@@ -8,34 +8,14 @@
 <br />
 <div align="center">
 
-<p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/stars/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=dark">
-    <img alt="GitHub Stars" src="https://www.shieldcn.dev/github/stars/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=light">
-  </picture>
-  &nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/forks/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=dark">
-    <img alt="GitHub Forks" src="https://www.shieldcn.dev/github/forks/Binit06/LNCrawler.svg?variant=secondary&size=sm&mode=light">
-  </picture>
-  &nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/contributors/Binit06/LNCrawler.svg?theme=emerald&size=sm&mode=dark">
-    <img alt="Contributors" src="https://www.shieldcn.dev/github/contributors/Binit06/LNCrawler.svg?theme=emerald&size=sm&mode=light">
-  </picture>
-</p>
+[![Latest release](https://img.shields.io/github/v/release/Binit06/LNCrawler?style=for-the-badge&labelColor=0d1117)](https://github.com/Binit06/LNCrawler/releases)
+[![License](https://img.shields.io/github/license/Binit06/LNCrawler?style=for-the-badge&labelColor=0d1117)](https://github.com/Binit06/LNCrawler/blob/main/LICENSE)
+[![Downloads](https://img.shields.io/github/downloads/Binit06/LNCrawler/total?style=for-the-badge&labelColor=0d1117)](https://github.com/Binit06/LNCrawler/releases)
 
-<p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/release/Binit06/LNCrawler.svg?size=sm&mode=dark">
-    <img alt="Release" src="https://www.shieldcn.dev/github/release/Binit06/LNCrawler.svg?size=sm&mode=light">
-  </picture>
-  &nbsp;
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://www.shieldcn.dev/github/license/Binit06/LNCrawler.svg?variant=ghost&size=sm&mode=dark">
-    <img alt="License" src="https://www.shieldcn.dev/github/license/Binit06/LNCrawler.svg?variant=ghost&size=sm&mode=light">
-  </picture>
-</p>
+<br />
+
+![Forks](https://img.shields.io/github/forks/Binit06/LNCrawler?style=for-the-badge&labelColor=0d1117)
+![Stars](https://img.shields.io/github/stars/Binit06/LNCrawler?style=for-the-badge&labelColor=0d1117)
 
 </div>
 
