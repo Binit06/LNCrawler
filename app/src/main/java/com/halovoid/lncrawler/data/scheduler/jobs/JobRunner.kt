@@ -54,6 +54,13 @@ class JobRunner(
 
             while (retryCount <= config.maxRetries && !success) {
                 var result = handler.handle(currentRequest)
+                
+                // CRITICAL: Check if the request was cancelled in the DB while we were working
+                val latestStatus = requestDao.getRequestById(currentRequest.id)?.status
+                if (latestStatus == RequestStatus.CANCELLED) {
+                    return // Exit immediately without overwriting the DB
+                }
+
                 val latestRequest = requestDao.getRequestById(currentRequest.id) ?: currentRequest
                 when (result) {
                     is JobResult.Success -> {

@@ -1,11 +1,10 @@
 package com.halovoid.lncrawler.data.db.dao
 
 import androidx.room.Dao
-import androidx.room.Insert
-import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Update
+import androidx.room.Upsert
 import com.halovoid.lncrawler.data.db.entities.NovelEntity
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
@@ -94,6 +93,7 @@ interface RequestDao {
             progressCancelled = 0,
             error = null,
             completedAt = null,
+            metadata = request.metadata,
             updatedAt = System.currentTimeMillis()
         ))
 
@@ -113,7 +113,7 @@ interface RequestDao {
     """)
     suspend fun hasChildren(requestId: String): Boolean
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertRequests(request: List<RequestEntity>)
 
     @Update

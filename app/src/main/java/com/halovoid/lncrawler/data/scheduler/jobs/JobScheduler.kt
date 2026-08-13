@@ -62,6 +62,25 @@ class JobScheduler(
     fun cancelActiveJob(requestId: String) {
         // removed manual removal since AbandonedJobRecovery was picking up creating a race condition
         activeJobs[requestId]?.cancel()
+        
+        // Also cancel any active children/dependents
+        activeJobs.forEach { (id, job) ->
+            scope.launch {
+                val req = requestDao.getRequestById(id)
+                if (req?.dependsOn == requestId || isDescendant(id, requestId)) {
+                    job.cancel()
+                }
+            }
+        }
+    }
+
+    private suspend fun isDescendant(childId: String, potentialParentId: String): Boolean {
+        var current = requestDao.getRequestById(childId)
+        while (current?.dependsOn != null) {
+            if (current.dependsOn == potentialParentId) return true
+            current = requestDao.getRequestById(current.dependsOn!!)
+        }
+        return false
     }
 
     /**

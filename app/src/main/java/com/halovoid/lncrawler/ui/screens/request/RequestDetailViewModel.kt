@@ -118,7 +118,7 @@ class RequestDetailViewModel(
             _cancellingRequestIds.update { it + requestId }
             try {
                 requestDao.cancelRequest(requestId)
-                SchedulerService.startService(getApplication())
+                SchedulerService.cancelJob(getApplication(), requestId)
             } finally {
                 _cancellingRequestIds.update { it - requestId }
             }

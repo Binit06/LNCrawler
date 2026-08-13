@@ -89,9 +89,13 @@ class RequestViewModel(
 
     fun cancelRequest(requestId: String) {
         viewModelScope.launch {
-            requestDao.cancelRequest(requestId)
-
-            SchedulerService.cancelJob(getApplication(), requestId)
+            _cancellingRequestIds.update { it + requestId }
+            try {
+                requestDao.cancelRequest(requestId)
+                SchedulerService.cancelJob(getApplication(), requestId)
+            } finally {
+                _cancellingRequestIds.update { it - requestId }
+            }
         }
     }
 
