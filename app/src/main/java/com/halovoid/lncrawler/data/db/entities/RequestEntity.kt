@@ -29,7 +29,7 @@ enum class RequestStatus {
         ForeignKey(
             entity = NovelEntity::class,
             parentColumns = ["url"],
-            childColumns = ["parentNovel"],
+            childColumns = ["novelUrl"],
             onDelete = ForeignKey.CASCADE
         ),
         ForeignKey(

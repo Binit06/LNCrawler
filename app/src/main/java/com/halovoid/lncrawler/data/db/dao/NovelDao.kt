@@ -22,5 +22,5 @@ interface NovelDao {
     fun upsertNovel(novel: NovelEntity)
 
     @Delete
-    fun deleteNovel(novel: NovelEntity)
+    suspend fun deleteNovel(novel: NovelEntity)
 }
