@@ -175,11 +175,18 @@ abstract class Crawler {
     ): String? = scrapper.fetch(url, headers, body, webviewNeeded = webviewNeeded ?: false)
 
     /**
-     * Fetches and parses HTML into a Jsoup Document.
-     * @param url The target URL.
-     * @return A [org.jsoup.nodes.Document] object or null if fetching fails.
+     * Supports compatibility for older crawlers where webview is not given
      */
-    protected suspend fun getDocument(url: String, webviewNeeded: Boolean = false): Document? = scrapper.document(url, webviewNeeded=webviewNeeded)
+    protected suspend fun getDocument(url: String): Document? {
+        return getDocument(url, webviewNeeded = false)
+    }
+
+    /**
+     * Newer crawlers with webview parameters
+     */
+    protected suspend fun getDocument(url: String, webviewNeeded: Boolean): Document? {
+        return scrapper.document(url, webviewNeeded = webviewNeeded)
+    }
 
     /**
      * Utility to resolve a relative URL to an absolute one.

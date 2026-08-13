@@ -18,7 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import com.halovoid.lncrawler.ui.ViewModelFactory
-import com.halovoid.lncrawler.ui.screens.NovelDetailScreen
+import com.halovoid.lncrawler.ui.screens.novel.NovelDetailScreen
 import com.halovoid.lncrawler.ui.screens.request.RequestScreen
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailScreen

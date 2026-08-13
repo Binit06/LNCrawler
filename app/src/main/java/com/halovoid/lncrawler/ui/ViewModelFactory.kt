@@ -5,7 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
-import com.halovoid.lncrawler.ui.screens.NovelDetailViewModel
+import com.halovoid.lncrawler.ui.screens.novel.NovelDetailViewModel
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel

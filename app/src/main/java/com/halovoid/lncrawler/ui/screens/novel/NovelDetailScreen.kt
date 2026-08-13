@@ -1,5 +1,6 @@
-package com.halovoid.lncrawler.ui.screens
+package com.halovoid.lncrawler.ui.screens.novel
 
+import android.app.Application
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -53,7 +56,7 @@ fun NovelDetailScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val factory = remember { ViewModelFactory(context.applicationContext as android.app.Application) }
+    val factory = remember { ViewModelFactory(context.applicationContext as Application) }
     val viewModel: NovelDetailViewModel = viewModel(factory = factory)
     
     val novel by viewModel.novel.collectAsState()
@@ -120,7 +123,10 @@ fun NovelDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { /* Open external link */ }) {
+                    IconButton(onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, novelUrl.toUri())
+                        context.startActivity(intent)
+                    }) {
                         Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = "Open in browser", tint = PrimaryAccent)
                     }
                 },
@@ -391,7 +397,7 @@ fun ActionsSection(
 }
 
 @Composable
-fun ActionRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, subtext: String, onClick: () -> Unit) {
+fun ActionRow(icon: ImageVector, title: String, subtext: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
