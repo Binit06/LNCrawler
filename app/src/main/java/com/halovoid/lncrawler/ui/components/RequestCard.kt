@@ -171,6 +171,17 @@ fun RequestCard(
                 }
             }
 
+            if (!request.error.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = request.error,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ErrorRed,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
             Spacer(modifier = Modifier.height(12.dp))
 
             // Actions

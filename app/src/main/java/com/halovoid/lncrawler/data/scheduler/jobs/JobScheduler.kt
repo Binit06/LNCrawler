@@ -118,11 +118,16 @@ class JobScheduler(
         }
 
         for (request in abandoned) {
-            requestDao.updateRequest(request.copy(
-                status = RequestStatus.PENDING,
-                updatedAt = now,
-                error = "Recovered from abandoned state (stale for > ${config.abandonedTimeoutMs}ms)"
-            ))
+            // Automatically cancel jobs that were interrupted by a crash/restart
+            requestDao.cancelRequest(request.id)
+            
+            // Add a note to the error field explaining why it was cancelled
+            val updated = requestDao.getRequestById(request.id)
+            if (updated != null) {
+                requestDao.updateRequest(updated.copy(
+                    error = "Interrupted by unexpected app termination or restart."
+                ))
+            }
         }
     }
 
