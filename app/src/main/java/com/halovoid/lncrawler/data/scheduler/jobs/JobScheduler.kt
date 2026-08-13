@@ -60,8 +60,8 @@ class JobScheduler(
     }
 
     fun cancelActiveJob(requestId: String) {
+        // removed manual removal since AbandonedJobRecovery was picking up creating a race condition
         activeJobs[requestId]?.cancel()
-        activeJobs.remove(requestId)
     }
 
     /**

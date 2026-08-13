@@ -37,10 +37,13 @@ fun RequestCard(
 ) {
     val isWorkFinished = (request.progressSuccess + request.progressFailed + request.progressCancelled) == request.progressTotal
 
-    val isProcessing = request.status == RequestStatus.RUNNING ||
-            request.status == RequestStatus.PENDING
+    val isProcessing = when (request.status) {
+        RequestStatus.RUNNING, RequestStatus.PENDING, RequestStatus.BLOCKED -> true
+        RequestStatus.SUCCESS -> !isWorkFinished
+        else -> false // FAILED, CANCELLED
+    }
 
-    val displayStatus = if (isProcessing || (request.status == RequestStatus.SUCCESS && !isWorkFinished)) {
+    val displayStatus = if (isProcessing) {
         RequestStatus.RUNNING
     } else {
         request.status

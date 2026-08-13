@@ -5,6 +5,7 @@ import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
@@ -87,6 +88,10 @@ class JobRunner(
                     }
                 }
             }
+        } catch (e: CancellationException) {
+            // If a request is canceled first update on the DB
+            markCancelled(request)
+            throw e
         } catch (e: Exception) {
             fail(request, e.message ?: "Unexpected error during execution")
         } finally {
