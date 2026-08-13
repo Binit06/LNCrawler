@@ -7,30 +7,34 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.halovoid.lncrawler.ui.theme.LNCrawlerTheme
+import com.halovoid.lncrawler.ui.theme.SecondaryText
+import com.halovoid.lncrawler.ui.theme.SuccessGreen
 
 class CloudflareActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val url = intent.getStringExtra("url") ?: "https://google.com"
+        val host = intent.getStringExtra("host") ?: ""
 
         setContent {
             LNCrawlerTheme {
-                CloudflareScreen(url = url) { success ->
-                    CloudflareResolverImpl.onResolutionResult(success)
+                CloudflareScreen(url = url) { success, userAgent ->
+                    if (success && userAgent != null && host.isNotEmpty()) {
+                        CloudflareResolverImpl.getInstance().saveUserAgent(host, userAgent)
+                    }
+                    CloudflareResolverImpl.onResolutionResult(host, success)
                     finish()
                 }
             }
@@ -41,41 +45,68 @@ class CloudflareActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun CloudflareScreen(url: String, onFinished: (Boolean) -> Unit) {
+fun CloudflareScreen(url: String, onFinished: (Boolean, String?) -> Unit) {
     var isLoading by remember { mutableStateOf(true) }
-    val context = androidx.compose.ui.platform.LocalContext.current
+    var hasCookie by remember { mutableStateOf(false) }
+    var currentUrl by remember { mutableStateOf(url) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Security Check") })
+            TopAppBar(
+                title = { 
+                    Column {
+                        Text("Security Verification", style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            currentUrl, 
+                            style = MaterialTheme.typography.labelSmall, 
+                            color = SecondaryText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                },
+                actions = {
+                    Button(
+                        onClick = { 
+                            CookieManager.getInstance().flush()
+                            onFinished(true, webViewRef?.settings?.userAgentString) 
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = if (hasCookie) SuccessGreen else MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("DONE")
+                    }
+                }
+            )
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)) {
             AndroidView(
                 factory = { ctx ->
                     WebView(ctx).apply {
+                        webViewRef = this
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
-                        settings.databaseEnabled = true
                         
-                        // Capture and save User-Agent immediately
-                        val resolver = CloudflareResolverImpl(ctx)
-                        resolver.saveUserAgent(settings.userAgentString)
-
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView?, url: String?) {
                                 super.onPageFinished(view, url)
                                 isLoading = false
+                                url?.let { currentUrl = it }
                                 
-                                // Check if cookies contain cf_clearance
                                 val cookies = CookieManager.getInstance().getCookie(url)
                                 if (cookies?.contains("cf_clearance") == true) {
-                                    onFinished(true)
+                                    hasCookie = true
                                 }
                             }
 
                             override fun shouldOverrideUrlLoading(view: WebView?, request: android.webkit.WebResourceRequest?): Boolean {
-                                return false // Allow WebView to handle navigation
+                                return false 
                             }
                         }
                         loadUrl(url)
@@ -85,7 +116,9 @@ fun CloudflareScreen(url: String, onFinished: (Boolean) -> Unit) {
             )
 
             if (isLoading) {
-                CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                LinearProgressIndicator(modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter))
             }
         }
     }

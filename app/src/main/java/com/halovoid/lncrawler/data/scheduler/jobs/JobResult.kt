@@ -23,4 +23,9 @@ sealed class JobResult {
      * Job was cancelled.
      */
     object Cancelled : JobResult()
+
+    /**
+     * Job is blocked by external protection (e.g. Cloudflare)
+     */
+    object Blocked : JobResult()
 }

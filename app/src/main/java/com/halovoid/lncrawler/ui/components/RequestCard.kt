@@ -29,6 +29,7 @@ fun RequestCard(
     onClick: () -> Unit,
     onReplay: () -> Unit,
     onCancel: () -> Unit,
+    onSecurityClick: (() -> Unit)? = null,
     allowReplay : Boolean? = true,
     allowCancel : Boolean? = true,
     showProgress: Boolean? = true,
@@ -37,10 +38,9 @@ fun RequestCard(
     val isWorkFinished = (request.progressSuccess + request.progressFailed + request.progressCancelled) == request.progressTotal
 
     val isProcessing = request.status == RequestStatus.RUNNING ||
-            request.status == RequestStatus.PENDING ||
-            !isWorkFinished
+            request.status == RequestStatus.PENDING
 
-    val displayStatus = if (isProcessing) {
+    val displayStatus = if (isProcessing || (request.status == RequestStatus.SUCCESS && !isWorkFinished)) {
         RequestStatus.RUNNING
     } else {
         request.status
@@ -117,7 +117,23 @@ fun RequestCard(
                     }
                 }
                 
-                StatusIcon(displayStatus)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (request.status == RequestStatus.BLOCKED && onSecurityClick != null) {
+                        IconButton(
+                            onClick = onSecurityClick,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Shield,
+                                contentDescription = "Security Check Needed",
+                                tint = PrimaryAccent,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    StatusIcon(displayStatus)
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -203,6 +219,7 @@ fun StatusIcon(status: RequestStatus) {
         RequestStatus.FAILED -> Icon(Icons.Default.Error, contentDescription = "Failed", tint = ErrorRed)
         RequestStatus.CANCELLED -> Icon(Icons.Default.Cancel, contentDescription = "Cancelled", tint = SecondaryText)
         RequestStatus.RUNNING -> CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = PrimaryAccent)
+        RequestStatus.BLOCKED -> Icon(Icons.Default.Security, contentDescription = "Blocked", tint = PrimaryAccent)
         else -> Icon(Icons.Default.Schedule, contentDescription = "Pending", tint = SecondaryText)
     }
 }

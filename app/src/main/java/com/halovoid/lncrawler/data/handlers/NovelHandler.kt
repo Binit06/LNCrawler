@@ -3,6 +3,7 @@ package com.halovoid.lncrawler.data.handlers
 import android.net.Uri
 import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.scrapper.CloudflareBlockedException
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestType
@@ -33,49 +34,55 @@ class NovelHandler(
         val crawler = crawlerFactory.getCrawler(metadata.crawlerName)
             ?: return JobResult.Failure(Exception("No Crawler Found"))
 
-        val novel = crawler.getNovelDetails(request.novelUrl)
+        try {
+            val novel = crawler.getNovelDetails(request.novelUrl)
 
-        requestDao.updateProgressTotal(request.id, novel.chapters.size) // total progress is just the count of the leaf requests
+            requestDao.updateProgressTotal(request.id, novel.chapters.size) // total progress is just the count of the leaf requests
 
-        // 1. Download and Save Cover Image
-        val coverFilePath = downloadAndSaveCover(novel.coverUrl, crawler)
+            // 1. Download and Save Cover Image
+            val coverFilePath = downloadAndSaveCover(novel.coverUrl, crawler)
 
-        // 2. Create the updateNovel with all the data
-        val updatedNovel = crawler.prepareNovel(novel).copy(
-            coverUrl = coverFilePath.toString()
-        )
-
-        // 2. Persist Novel Metadata (Order Maters over here since they have foreign keys linked to each other)
-        novelRepository.saveNovelMetadata(updatedNovel)
-        volumeRepository.insertVolumes(updatedNovel.volumes)
-        chapterRepository.insertChapters(updatedNovel.chapters)
-
-        // TODO: Update the Progress Total in here after chapter size is known
-        // 3. Create Follow Up Requests
-        val volumeRequests = updatedNovel.volumes.map { volume ->
-            currentCoroutineContext().ensureActive()
-            val volumeMetadata = JSONObject(request.metadata ?: "{}").apply {
-                put("volumeId", volume.id)
-            }.toString()
-
-            RequestEntity(
-                id = "${novel.url}_vol_${volume.id}",
-                type = RequestType.VOLUME,
-                parentNovel = novel.url,
-                novelUrl = volume.novelUrl,
-                priority = request.priority,
-                name = "Volume ${volume.volumeIndex} Request",
-                dependsOn = request.id,
-                completedAt = null,
-                metadata = volumeMetadata,
-                url = null,
-                progressTotal = novel.chapters.filter { it.volumeId == volume.id }.size, // total count of leaf requests from this point in the tree
-                progressSuccess = 0
+            // 2. Create the updateNovel with all the data
+            val updatedNovel = crawler.prepareNovel(novel).copy(
+                coverUrl = coverFilePath.toString()
             )
-        }
-        requestDao.insertRequests(volumeRequests)
 
-        return JobResult.Success
+            // 2. Persist Novel Metadata (Order Maters over here since they have foreign keys linked to each other)
+            novelRepository.saveNovelMetadata(updatedNovel)
+            volumeRepository.insertVolumes(updatedNovel.volumes)
+            chapterRepository.insertChapters(updatedNovel.chapters)
+
+            // TODO: Update the Progress Total in here after chapter size is known
+            // 3. Create Follow Up Requests
+            val volumeRequests = updatedNovel.volumes.map { volume ->
+                currentCoroutineContext().ensureActive()
+                val volumeMetadata = JSONObject(request.metadata ?: "{}").apply {
+                    put("volumeId", volume.id)
+                }.toString()
+
+                RequestEntity(
+                    id = "${novel.url}_vol_${volume.id}",
+                    type = RequestType.VOLUME,
+                    parentNovel = novel.url,
+                    novelUrl = volume.novelUrl,
+                    priority = request.priority,
+                    name = "Volume ${volume.volumeIndex} Request",
+                    dependsOn = request.id,
+                    completedAt = null,
+                    metadata = volumeMetadata,
+                    url = null,
+                    progressTotal = novel.chapters.filter { it.volumeId == volume.id }.size, // total count of leaf requests from this point in the tree
+                    progressSuccess = 0
+                )
+            }
+            requestDao.insertRequests(volumeRequests)
+
+            return JobResult.Success
+        } catch (e: CloudflareBlockedException) {
+            return JobResult.Blocked
+        } catch (e: Exception) {
+            return JobResult.Failure(e)
+        }
     }
 
     suspend fun downloadAndSaveCover(url: String?, crawler: Crawler) : Uri? {

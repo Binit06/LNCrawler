@@ -12,6 +12,7 @@ class LNCrawlerApplication : Application() {
         GlobalExceptionHandler.initialize(this, CrashActivity::class.java)
 
         // Initialize Cloudflare Resolver
-        Scrapper.globalResolver = CloudflareResolverImpl(this)
+        CloudflareResolverImpl.initialize(this)
+        Scrapper.globalResolver = CloudflareResolverImpl.getInstance()
     }
 }

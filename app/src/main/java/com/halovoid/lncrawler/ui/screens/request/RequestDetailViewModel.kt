@@ -8,6 +8,7 @@ import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.repository.ArtifactRepository
 import com.halovoid.lncrawler.data.repository.ChapterRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
+import com.halovoid.lncrawler.api.core.scrapper.Scrapper
 import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Request
@@ -34,6 +35,21 @@ class RequestDetailViewModel(
 
     private val _cancellingRequestIds = MutableStateFlow<Set<String>>(emptySet())
     val cancellingRequestIds: StateFlow<Set<String>> = _cancellingRequestIds.asStateFlow()
+
+    fun resolveCloudflare(requestId: String, url: String) {
+        viewModelScope.launch {
+            android.util.Log.i("RequestDetailViewModel", "Starting Cloudflare resolution for $requestId at $url")
+            val success = Scrapper.globalResolver?.resolve(url) ?: false
+            android.util.Log.i("RequestDetailViewModel", "Resolution result: $success")
+            if (success) {
+                // Reset status so scheduler can try again
+                android.util.Log.i("RequestDetailViewModel", "Replaying request $requestId")
+                requestDao.replayRequest(requestId)
+                android.util.Log.i("RequestDetailViewModel", "Starting SchedulerService")
+                SchedulerService.startService(getApplication())
+            }
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val linkedRequests: StateFlow<List<Request>> = _requestId

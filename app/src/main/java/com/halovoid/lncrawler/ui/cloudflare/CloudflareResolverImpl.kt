@@ -3,65 +3,85 @@ package com.halovoid.lncrawler.ui.cloudflare
 import android.content.Context
 import android.content.Intent
 import android.util.Log
+import android.webkit.WebSettings
 import com.halovoid.lncrawler.api.core.scrapper.CloudflareResolver
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import androidx.core.content.edit
+import androidx.core.net.toUri
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
 
-/**
- * Implementation of CloudflareResolver that launches a WebView activity
- * to solve challenges.
- */
-class CloudflareResolverImpl(private val context: Context) : CloudflareResolver {
+class CloudflareResolverImpl(private val context: Context): CloudflareResolver {
+    private val sharedPrefs = context.getSharedPreferences("cloudfare_prefs", Context.MODE_PRIVATE)
 
-    private val sharedPrefs = context.getSharedPreferences("cloudflare_prefs", Context.MODE_PRIVATE)
-    
-    // We use a singleton-like pattern to communicate between the Resolver and the Activity
     companion object {
-        private var currentDeferred: CompletableDeferred<Boolean>? = null
+        private val activeResolutions = ConcurrentHashMap<String, CompletableDeferred<Boolean>>()
+        private var instance: CloudflareResolverImpl? = null
 
-        /**
-         * Called by the CloudflareActivity when the challenge is solved or failed.
-         */
-        fun onResolutionResult(success: Boolean) {
-            currentDeferred?.complete(success)
-            currentDeferred = null
+        fun initialize(context: Context) {
+            if (instance == null) {
+                instance = CloudflareResolverImpl(context)
+            }
+        }
+
+        fun getInstance(): CloudflareResolverImpl {
+            return instance ?: throw IllegalStateException("CloudflareResolverImpl not initialized")
+        }
+
+        fun onResolutionResult(host: String, success: Boolean) {
+            activeResolutions.remove(host)?.complete(success)
         }
     }
 
-    override suspend fun resolve(url: String): Boolean = withContext(Dispatchers.Main) {
-        Log.i("CloudflareResolver", "Launching resolution for $url")
-        
-        // If a resolution is already in progress, wait for it
-        if (currentDeferred != null) {
-            return@withContext currentDeferred?.await() ?: false
+    override suspend fun resolve(url: String): Boolean = withContext(Dispatchers.IO) {
+        val host = url.toUri().host ?: return@withContext false
+
+        Log.i("CloudflareResolver", "Resolution requested for host: $host ($url)")
+        activeResolutions[host]?.let { existingDeferred ->
+            Log.i("CloudflarResolver", "Waiting for ongoing resolution for $host")
+            return@withContext existingDeferred.await()
         }
 
         val deferred = CompletableDeferred<Boolean>()
-        currentDeferred = deferred
+        val previous = activeResolutions.putIfAbsent(host, deferred)
+        if (previous != null) {
+            return@withContext previous.await()
+        }
 
         try {
             val intent = Intent(context, CloudflareActivity::class.java).apply {
                 putExtra("url", url)
+                putExtra("host", host)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
+
             context.startActivity(intent)
-            
-            // Wait for the activity to call onResolutionResult
-            deferred.await()
+
+            val result = deferred.await()
+            if (result) {
+                delay(500.milliseconds)
+            }
+            result
         } catch (e: Exception) {
-            Log.e("CloudflareResolver", "Failed to launch CloudflareActivity", e)
-            currentDeferred = null
+            Log.e("CloudflareResolver", "Failed to launch Cloudflare Activity for $host", e)
+            activeResolutions.remove(host)
             false
         }
     }
 
-    override fun getUserAgent(): String {
-        return sharedPrefs.getString("user_agent", "") ?: ""
+    override fun getUserAgent(url: String?): String {
+        val host = url?.toUri()?.host
+        if (host != null) {
+            val domainUa = sharedPrefs.getString("ua_$host", null)
+            if (!domainUa.isNullOrBlank()) return domainUa
+        }
+        return WebSettings.getDefaultUserAgent(context)
     }
 
-    fun saveUserAgent(userAgent: String) {
-        sharedPrefs.edit { putString("user_agent", userAgent) }
+    fun saveUserAgent(host: String, userAgent: String) {
+        sharedPrefs.edit {putString("ua_$host", userAgent)}
     }
 }

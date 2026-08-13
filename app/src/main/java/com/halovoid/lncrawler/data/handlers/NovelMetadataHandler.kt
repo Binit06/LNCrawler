@@ -3,6 +3,7 @@ package com.halovoid.lncrawler.data.handlers
 import android.net.Uri
 import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.scrapper.CloudflareBlockedException
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestType
@@ -68,6 +69,8 @@ class NovelMetadataHandler(
             // Metadata for totalProgressUpdate is not changed in this request
             // Currently user would need to manually do a full novel fetch
             JobResult.Success
+        } catch (e: CloudflareBlockedException) {
+            JobResult.Blocked
         } catch (e: Exception) {
             JobResult.Failure(e)
         }

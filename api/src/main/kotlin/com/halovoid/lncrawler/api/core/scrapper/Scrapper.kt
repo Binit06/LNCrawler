@@ -11,7 +11,10 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
+import java.io.IOException
 import java.util.concurrent.TimeUnit
+
+class CloudflareBlockedException(val url: String) : Exception("Cloudflare blocked the request to $url")
 
 /**
  * Interface for resolving Cloudflare challenges.
@@ -27,50 +30,32 @@ interface CloudflareResolver {
     /**
      * Returns the current User-Agent used by the resolver (e.g. from WebView).
      */
-    fun getUserAgent(): String
+    fun getUserAgent(url: String?): String
 }
 
 /**
  * Handles the generic mechanics of communicating with websites.
  * Responsible for HTTP requests, session management (cookies), and HTML parsing.
  */
-class Scrapper {
+class Scrapper(
+    private var client: OkHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
+) {
     companion object {
         var globalResolver: CloudflareResolver? = null
     }
 
     private var userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
-    private val cookieJar = object : CookieJar {
-        override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-            val manager = android.webkit.CookieManager.getInstance()
-            cookies.forEach { cookie ->
-                manager.setCookie(url.toString(), cookie.toString())
-            }
-        }
-
-        override fun loadForRequest(url: HttpUrl): List<Cookie> {
-            val cookieString = android.webkit.CookieManager.getInstance().getCookie(url.toString())
-            if (cookieString.isNullOrEmpty()) return emptyList()
-
-            return cookieString.split(";").mapNotNull {
-                Cookie.parse(url, it.trim())
-            }
-        }
-    }
-
-    private val client = OkHttpClient.Builder()
-        .cookieJar(cookieJar)
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
-        .build()
-
     /**
      * Fetches the content of a URL as a String.
      * @param url The target URL.
      * @param headers Optional headers to add to the request.
      * @param body Optional request body for POST requests.
-     * @param attempt Current attempt number for retries.
+     * @param attempt DEPRECATED: Retries are now handled by Interceptor.
+     * @param webviewNeeded DEPRECATED: Automatic detection handled by Interceptor.
      * @return The response body as a String, or null if the request fails.
      */
     suspend fun fetch(
@@ -83,7 +68,7 @@ class Scrapper {
         if (url.isEmpty()) return@withContext null
 
         // Sync with global resolver's User-Agent if available
-        globalResolver?.getUserAgent()?.let {
+        globalResolver?.getUserAgent(url)?.let {
             if (it.isNotEmpty()) userAgent = it
         }
 
@@ -99,16 +84,6 @@ class Scrapper {
 
         val request = builder.build()
 
-        if (webviewNeeded && attempt == 1) {
-            val resolved = globalResolver?.resolve(url) ?: false
-            if (resolved) {
-                return@withContext fetch(url, headers, body, attempt + 1, true)
-            } else {
-                Log.e("Scrapper", "Failed to bypass website protection")
-                return@withContext null
-            }
-        }
-
         try {
             client.newCall(request).execute().use { response ->
                 val responseBody = response.body?.string()
@@ -119,29 +94,16 @@ class Scrapper {
                     }
                     responseBody
                 } else {
-                    val isCloudflare = response.code == 403 || response.code == 503 || response.code == 429
-                    val serverHeader = response.header("Server") ?: ""
-                    val isCfHeader = serverHeader.contains("cloudflare", ignoreCase = true)
-                    val bodyHasCf = responseBody?.contains("cf-ray", ignoreCase = true) == true || 
-                                    responseBody?.contains("__cf_chl_opt", ignoreCase = true) == true
-
-                    if (isCloudflare && (isCfHeader || bodyHasCf)) {
-                        Log.w("Scrapper", "Cloudflare detected for $url (Attempt $attempt/3)")
-                        
-                        if (attempt < 3) {
-                            val resolved = globalResolver?.resolve(url) ?: false
-                            if (resolved) {
-                                // Recursive retry with incremented attempt
-                                return@withContext fetch(url, headers, body, attempt + 1, webviewNeeded)
-                            }
-                        }
-                        Log.e("Scrapper", "Cloudflare resolution failed after $attempt attempts for $url")
-                    }
-                    
                     Log.e("Scrapper", "HTTP Error ${response.code} for $url. Body: $responseBody")
                     null
                 }
             }
+        } catch (e: CloudflareBlockedException) {
+            throw e
+        } catch (e: IOException) {
+            if (e.cause is CloudflareBlockedException) throw e.cause as CloudflareBlockedException
+            Log.e("Scrapper", "IO Error fetching from $url", e)
+            null
         } catch (e: Exception) {
             Log.e("Scrapper", "Error fetching from $url", e)
             null

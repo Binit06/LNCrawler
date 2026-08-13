@@ -5,8 +5,10 @@ plugins {
 
 android {
     namespace = "com.halovoid.lncrawler.api"
-    compileSdk {
-        version = release(37)
+    compileSdk = 37
+
+    defaultConfig {
+        minSdk = 24
     }
 
     buildTypes {
@@ -32,6 +34,8 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     api(libs.jsoup)
     api(libs.okhttp)
+    api(libs.kotlinx.coroutines.core)
+    api(libs.kotlinx.coroutines.android)
 }
 
 afterEvaluate {

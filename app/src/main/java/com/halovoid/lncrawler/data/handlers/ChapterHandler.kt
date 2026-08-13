@@ -3,6 +3,7 @@ package com.halovoid.lncrawler.data.handlers
 import android.net.Uri
 import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.scrapper.CloudflareBlockedException
 import com.halovoid.lncrawler.api.core.scrapper.Scrapper
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
@@ -34,15 +35,21 @@ class ChapterHandler(
         val chapter = chapterRepository.getChapterById(metadata.chapterId)
 
         // 1. Load the Chapter and Save it
-        val fileLocation = loadAndSaveFile(request.url, crawler, chapter)
-            ?: return JobResult.Failure(Exception("Failed to Load Content"))
+        try {
+            val fileLocation = loadAndSaveFile(request.url, crawler, chapter)
+                ?: return JobResult.Failure(Exception("Failed to Load Content"))
 
-        // 2. Update the file Location in the Chapter Database
-        chapterRepository.updateChapter(chapter = chapter.copy(
-            fileLocation = fileLocation.toString()
-        ))
+            // 2. Update the file Location in the Chapter Database
+            chapterRepository.updateChapter(chapter = chapter.copy(
+                fileLocation = fileLocation.toString()
+            ))
 
-        return JobResult.Success
+            return JobResult.Success
+        } catch (e: CloudflareBlockedException) {
+            return JobResult.Blocked
+        } catch (e: Exception) {
+            return JobResult.Failure(e)
+        }
     }
 
     suspend fun loadAndSaveFile(url: String, crawler: Crawler, chapter: Chapter): Uri? {

@@ -63,6 +63,10 @@ class JobRunner(
                         markCancelled(latestRequest)
                         return
                     }
+                    is JobResult.Blocked -> {
+                        markBlocked(latestRequest)
+                        return
+                    }
                     is JobResult.Failure -> {
                         if (result.isRecoverable && retryCount < config.maxRetries) {
                             retryCount++
@@ -125,5 +129,14 @@ class JobRunner(
         ))
         // Request Progress Update Propagation - CANCELLED
         requestDao.propagateProgress(request.id)
+    }
+
+    private suspend fun markBlocked(request: RequestEntity) {
+        requestDao.updateRequest(request.copy(
+            status = RequestStatus.BLOCKED,
+            updatedAt = System.currentTimeMillis(),
+            error = "Security check required (Cloudflare)"
+        ))
+        // We don't propagate progress yet as it's not a final state (it's a wait state)
     }
 }

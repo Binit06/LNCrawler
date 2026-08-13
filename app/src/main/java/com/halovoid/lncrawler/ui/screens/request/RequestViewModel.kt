@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.scrapper.Scrapper
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
@@ -29,6 +30,21 @@ class RequestViewModel(
 
     private val _cancellingRequestIds = MutableStateFlow<Set<String>>(emptySet())
     val cancellingRequestIds: StateFlow<Set<String>> = _cancellingRequestIds.asStateFlow()
+
+    fun resolveCloudflare(requestId: String, url: String) {
+        viewModelScope.launch {
+            android.util.Log.i("RequestViewModel", "Starting Cloudflare resolution for $requestId at $url")
+            val success = Scrapper.globalResolver?.resolve(url) ?: false
+            android.util.Log.i("RequestViewModel", "Resolution result: $success")
+            if (success) {
+                // Reset status so scheduler can try again
+                android.util.Log.i("RequestViewModel", "Replaying request $requestId")
+                requestDao.replayRequest(requestId)
+                android.util.Log.i("RequestViewModel", "Starting SchedulerService")
+                SchedulerService.startService(getApplication())
+            }
+        }
+    }
 
     fun validateUrl(url: String): String? {
         val crawler = CrawlerFactory.getCrawlerByUrl(url)

@@ -20,6 +20,7 @@ appcompat = "1.6.1"
 material = "1.10.0"
 splashscreen = "1.0.1"
 kotlin-json = "1.9.0"
+kotlinx-coroutines = "1.10.1"
 foundationLayout = "1.11.4"
 
 [libraries]
@@ -53,6 +54,8 @@ androidx-datastore-preferences = { module = "androidx.datastore:datastore-prefer
 androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 androidx-compose-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
+kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "kotlinx-coroutines" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

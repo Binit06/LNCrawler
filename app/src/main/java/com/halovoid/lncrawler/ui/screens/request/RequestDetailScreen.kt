@@ -25,6 +25,8 @@ import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.ViewModelFactory
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
+import com.halovoid.lncrawler.ui.components.SecurityCheckDialog
+import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -51,6 +53,20 @@ fun RequestDetailScreen(
     val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
     val chapterMetadata by viewModel.chapterMetadata.collectAsState()
     val artifactMetadata by viewModel.artifactMetadata.collectAsState()
+
+    var securityDialogRequest by remember { mutableStateOf<Request?>(null) }
+
+    if (securityDialogRequest != null) {
+        SecurityCheckDialog(
+            novelName = securityDialogRequest!!.name,
+            onConfirm = {
+                val req = securityDialogRequest!!
+                securityDialogRequest = null
+                viewModel.resolveCloudflare(req.id, req.url ?: req.novelUrl)
+            },
+            onDismiss = { securityDialogRequest = null }
+        )
+    }
 
     val saveLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument(
@@ -129,7 +145,9 @@ fun RequestDetailScreen(
                         request = currentRecord,
                         onClick = { /* Already here */ },
                         onReplay = { viewModel.replayRequest(currentRecord.id) },
-                        onCancel = { viewModel.cancelRequest(currentRecord.id) }
+                        onCancel = { viewModel.cancelRequest(currentRecord.id) },
+                        onSecurityClick = { securityDialogRequest = currentRecord },
+                        isCancelling = cancellingRequestIds.contains(currentRecord.id)
                     )
                 }
 
@@ -185,6 +203,7 @@ fun RequestDetailScreen(
                             onClick = { onRequestClick(linked.id) },
                             onReplay = { viewModel.replayRequest(linked.id) },
                             onCancel = { viewModel.cancelRequest(linked.id) },
+                            onSecurityClick = { securityDialogRequest = linked },
                             isCancelling = cancellingRequestIds.contains(linked.id)
                         )
                     }

@@ -23,6 +23,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.components.RequestCard
+import com.halovoid.lncrawler.ui.components.SecurityCheckDialog
+import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -40,6 +42,20 @@ fun RequestScreen(
     var typeFilter by remember { mutableStateOf<RequestType?>(null) }
 
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+
+    var securityDialogRequest by remember { mutableStateOf<Request?>(null) }
+
+    if (securityDialogRequest != null) {
+        SecurityCheckDialog(
+            novelName = securityDialogRequest!!.name,
+            onConfirm = {
+                val req = securityDialogRequest!!
+                securityDialogRequest = null
+                viewModel.resolveCloudflare(req.id, req.url ?: req.novelUrl)
+            },
+            onDismiss = { securityDialogRequest = null }
+        )
+    }
 
     Scaffold(
         containerColor = DarkBackground,
@@ -167,6 +183,7 @@ fun RequestScreen(
                     onClick = { onRequestClick(request.id) },
                     onReplay = { viewModel.replayRequest(request.id) },
                     onCancel = { viewModel.cancelRequest(request.id) },
+                    onSecurityClick = { securityDialogRequest = request },
                     isCancelling = cancellingRequestIds.contains(request.id)
                 )
             }

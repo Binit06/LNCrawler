@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 object CrawlerFactory {
     private val staticCrawlers = listOf<Crawler>(
-//        NovelPhoenix()
+
     )
 
     private val disabledCrawlers = listOf<DisabledCrawler>(

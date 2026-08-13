@@ -19,7 +19,8 @@ enum class RequestStatus {
     SUCCESS,
     FAILED,
     CANCELLED,
-    PAUSED
+    PAUSED,
+    BLOCKED
 }
 
 @Entity(

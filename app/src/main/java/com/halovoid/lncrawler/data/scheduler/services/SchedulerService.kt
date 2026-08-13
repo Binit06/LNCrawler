@@ -12,6 +12,7 @@ import com.halovoid.lncrawler.data.artifact.ArtifactGenerator
 import com.halovoid.lncrawler.data.artifact.ArtifactGeneratorFactory
 import com.halovoid.lncrawler.data.artifact.generators.EpubGenerator
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.network.CloudflareInterceptor
 import com.halovoid.lncrawler.api.core.scrapper.Scrapper
 import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.db.dao.RequestDao
@@ -26,9 +27,12 @@ import com.halovoid.lncrawler.data.handlers.VolumeHandler
 import com.halovoid.lncrawler.data.repository.*
 import com.halovoid.lncrawler.data.scheduler.jobs.JobHandlerRegistry
 import com.halovoid.lncrawler.data.scheduler.jobs.JobScheduler
+import com.halovoid.lncrawler.ui.cloudflare.CloudflareResolverImpl
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 private data class NotificationConfig(
     val title: String,
@@ -121,7 +125,15 @@ class SchedulerService : Service() {
         // 3. Initialize Handler and Registry
         val registry = JobHandlerRegistry()
         val crawlerFactory = CrawlerFactory
-        val scrapper = Scrapper()
+        
+        // Initialize OkHttpClient with Cloudflare Interceptor
+        val okHttpClient = OkHttpClient.Builder()
+            .addInterceptor(CloudflareInterceptor(CloudflareResolverImpl.getInstance()))
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
+            .build()
+            
+        val scrapper = Scrapper(okHttpClient)
 
         // 4. Register Handlers
         registry.register(RequestType.FULL_NOVEL, NovelHandler(
