@@ -30,9 +30,7 @@ fun RequestCard(
     onReplay: () -> Unit,
     onCancel: () -> Unit,
     onSecurityClick: (() -> Unit)? = null,
-    allowReplay : Boolean? = true,
-    allowCancel : Boolean? = true,
-    showProgress: Boolean? = true,
+    allowAction: Boolean = true,
     isCancelling: Boolean = false,
 ) {
     val isWorkFinished = (request.progressSuccess + request.progressFailed + request.progressCancelled) == request.progressTotal
@@ -185,40 +183,42 @@ fun RequestCard(
             Spacer(modifier = Modifier.height(12.dp))
 
             // Actions
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (isCancelling) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = ErrorRed
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Cancelling...",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ErrorRed
-                    )
-                } else if (isProcessing) {
-                    TextButton(
-                        onClick = { showCancelDialog = true },
-                        colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
-                    ) {
-                        Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Cancel")
-                    }
-                } else {
-                    TextButton(
-                        onClick = onReplay,
-                        colors = ButtonDefaults.textButtonColors(contentColor = PrimaryAccent)
-                    ) {
-                        Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Replay")
+            if (allowAction) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (isCancelling) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = ErrorRed
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Cancelling...",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ErrorRed
+                        )
+                    } else if (isProcessing) {
+                        TextButton(
+                            onClick = { showCancelDialog = true },
+                            colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
+                        ) {
+                            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Cancel")
+                        }
+                    } else {
+                        TextButton(
+                            onClick = onReplay,
+                            colors = ButtonDefaults.textButtonColors(contentColor = PrimaryAccent)
+                        ) {
+                            Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Replay")
+                        }
                     }
                 }
             }

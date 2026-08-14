@@ -234,6 +234,14 @@ class EpubGenerator(
         metadata: RequestMetadata
     ): File = withContext(Dispatchers.IO) {
         val items = mutableListOf<EpubItem>()
+        val addedFileNames = mutableSetOf<String>()
+
+        fun addItem(item: EpubItem) {
+            if (addedFileNames.add(item.fileName)) {
+                items.add(item)
+            }
+        }
+
         // 0. Add Cover Image and Page
         novel.coverUrl?.let { url ->
             try {
@@ -244,8 +252,8 @@ class EpubGenerator(
                     val imageFileName = "cover.$extension"
                     val mediaType = if (extension == "png") "image/png" else "image/jpeg"
 
-                    items.add(EpubItem(imageFileName, bytes, mediaType, "cover-image"))
-                    items.add(EpubItem("cover.xhtml", buildCoverPage(imageFileName).toByteArray(), "application/xhtml+xml", "cover"))
+                    addItem(EpubItem(imageFileName, bytes, mediaType, "cover-image"))
+                    addItem(EpubItem("cover.xhtml", buildCoverPage(imageFileName).toByteArray(), "application/xhtml+xml", "cover"))
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -253,62 +261,75 @@ class EpubGenerator(
         }
 
         // 1. Add static assets
-        items.add(EpubItem(styleFileName, epubStyleCSS.toByteArray(), "text/css", "style"))
-        items.add(EpubItem("intro.xhtml", buildIntroPage(novel).toByteArray(), "application/xhtml+xml", "intro"))
+        addItem(EpubItem(styleFileName, epubStyleCSS.toByteArray(), "text/css", "style"))
+        addItem(EpubItem("intro.xhtml", buildIntroPage(novel).toByteArray(), "application/xhtml+xml", "intro"))
 
         // 2. Build Chapters and Volumes
-        // Group chapters by Volume to maintain the hierarchy
-        volumes.sortedBy { it.volumeIndex }.forEach { volume ->
-            items.add(EpubItem(
-                "volume_${volume.volumeIndex}.xhtml",
-                buildVolumePage(volume).toByteArray(),
-                "application/xhtml+xml",
-                "volume_${volume.volumeIndex}"
-            ))
+        if (volumes.isNotEmpty()) {
+            volumes.sortedBy { it.volumeIndex }.forEach { volume ->
+                addItem(EpubItem(
+                    "volume_${volume.volumeIndex}.xhtml",
+                    buildVolumePage(volume).toByteArray(),
+                    "application/xhtml+xml",
+                    "volume_${volume.volumeIndex}"
+                ))
 
-            chapters.filter { it.volumeId == volume.id }
-                .sortedBy { it.index }
-                .forEach { chapter ->
-                    ensureActive() // Checks if the user has canceled the operation or not
-                    val content = chapter.fileLocation?.let { loc ->
-                        storageRepository.readText(Uri.parse(loc))
-                    } ?: "<p><em>Content not available</em></p>"
+                chapters.filter { it.volumeId == volume.id }
+                    .sortedBy { it.index }
+                    .forEach { chapter ->
+                        ensureActive()
+                        val content = chapter.fileLocation?.let { loc ->
+                            storageRepository.readText(loc.toUri())
+                        } ?: "<p><em>Content not available</em></p>"
 
-                    items.add(EpubItem(
-                        "chapter_${chapter.index.toString().padStart(5, '0')}.xhtml",
-                        buildChapterPage(chapter, content).toByteArray(),
-                        "application/xhtml+xml",
-                        "chapter_${chapter.index}"
-                    ))
-                }
+                        addItem(EpubItem(
+                            "chapter_${chapter.id}_${chapter.index.toString().padStart(5, '0')}.xhtml",
+                            buildChapterPage(chapter, content).toByteArray(),
+                            "application/xhtml+xml",
+                            "chapter_${chapter.id}"
+                        ))
+                    }
+            }
+        } else {
+            // No volumes, just add chapters
+            chapters.sortedBy { it.index }.forEach { chapter ->
+                ensureActive()
+                val content = chapter.fileLocation?.let { loc ->
+                    storageRepository.readText(loc.toUri())
+                } ?: "<p><em>Content not available</em></p>"
+
+                addItem(EpubItem(
+                    "chapter_${chapter.id}_${chapter.index.toString().padStart(5, '0')}.xhtml",
+                    buildChapterPage(chapter, content).toByteArray(),
+                    "application/xhtml+xml",
+                    "chapter_${chapter.id}"
+                ))
+            }
         }
 
-        // 3. Generate nav item before adding to the list
+        // 3. Generate nav item
         val navItem = EpubItem(
             fileName = "nav.xhtml",
             content = generateNav(novel, items).toByteArray(),
             mediaType = "application/xhtml+xml",
             id = "nav"
         )
+        // nav.xhtml is added to orderedItems specifically, but it should also be in the items list for OPF/NCX generation
+        // But we must be careful not to add it twice to the zip.
+        // Actually, let's just make a clean ordered list.
 
-        // 4. Handles the Final reordering of items
         val orderedItems = mutableListOf<EpubItem>()
-
-        // 5. Put All items in order
         items.find { it.id == "style" }?.let { orderedItems.add(it) }
         items.find { it.id == "cover-image" }?.let { orderedItems.add(it) }
         items.find { it.id == "cover" }?.let { orderedItems.add(it) }
         items.find { it.id == "intro" }?.let { orderedItems.add(it) }
-
-        // Insert TOC here (after Synopsis/Intro)
         orderedItems.add(navItem)
-
-        // Add all volumes and chapters in their existing sequence
         items.filter { it.id.startsWith("volume_") || it.id.startsWith("chapter_") }
             .forEach { orderedItems.add(it) }
 
-        val opf = generateOpf(novel, items)
-        val ncx = generateNcx(novel, items)
+        // Final items for OPF and NCX should be the ordered ones
+        val opf = generateOpf(novel, orderedItems)
+        val ncx = generateNcx(novel, orderedItems)
 
         // Package into ZIP File
         val tempFile = File(storageRepository.getCacheDir(), "${novel.title.replace(" ", "_")}.epub")

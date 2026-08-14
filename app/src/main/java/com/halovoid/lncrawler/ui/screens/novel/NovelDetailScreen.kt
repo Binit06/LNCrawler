@@ -225,7 +225,8 @@ fun NovelDetailScreen(
                         request = request,
                         onClick = { onRequestClick(request.id) },
                         onReplay = { },
-                        onCancel = { }
+                        onCancel = { },
+                        allowAction = false
                     )
                 }
 
