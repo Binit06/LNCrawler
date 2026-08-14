@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Star
@@ -108,7 +109,20 @@ fun SupportScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
             
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Community Section
+            SectionHeader("Community")
+            
+            SupportCard(
+                title = "Join Discord",
+                description = "Get help, report bugs, suggest features, and talk directly with the developer and other users.",
+                icon = Icons.Default.Forum,
+                buttonText = "Join Discord",
+                onClick = { uriHandler.openUri("https://discord.gg/A6cY7pN6Y") }
+            )
+            
+            Spacer(modifier = Modifier.height(16.dp))
             
             SupportCard(
                 title = "Star on GitHub",
@@ -118,7 +132,10 @@ fun SupportScreen(
                 onClick = { uriHandler.openUri("https://github.com/Binit06/LNCrawler") }
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Support Section
+            SectionHeader("Support Development")
             
             SupportCard(
                 title = "Buy Me A Coffee",
@@ -128,7 +145,10 @@ fun SupportScreen(
                 onClick = { uriHandler.openUri("https://buymeacoffee.com/halovoid") }
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Development Section
+            SectionHeader("For Developers")
             
             SupportCard(
                 title = "Contribute Sources",
@@ -273,6 +293,23 @@ fun AppUpdateCard(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    ) {
+        Text(
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelMedium,
+            color = PrimaryAccent,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
     }
 }
 

@@ -17,6 +17,10 @@
 ![Forks](https://img.shields.io/github/forks/Binit06/LNCrawler?style=for-the-badge&labelColor=0d1117)
 ![Stars](https://img.shields.io/github/stars/Binit06/LNCrawler?style=for-the-badge&labelColor=0d1117)
 
+<br />
+
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white&labelColor=0d1117)](https://discord.gg/A6cY7pN6Y)
+
 </div>
 
 <br />
