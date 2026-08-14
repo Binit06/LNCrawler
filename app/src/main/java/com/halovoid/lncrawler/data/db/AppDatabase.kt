@@ -4,8 +4,6 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import androidx.room.migration.Migration
-import androidx.sqlite.db.SupportSQLiteDatabase
 import com.halovoid.lncrawler.data.db.dao.ArtifactDao
 import com.halovoid.lncrawler.data.db.dao.ChapterDao
 import com.halovoid.lncrawler.data.db.dao.NovelDao
@@ -25,7 +23,7 @@ import com.halovoid.lncrawler.data.db.migrations.DatabaseMigrations
  */
 @Database(
     entities = [NovelEntity::class, ChapterEntity::class, VolumeEntity::class, RequestEntity::class, ArtifactEntity::class],
-    version = 9,
+    version = 8,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -49,8 +47,7 @@ abstract class AppDatabase : RoomDatabase() {
                     .addMigrations(
                         DatabaseMigrations.MIGRATION_5_6,
                         DatabaseMigrations.MIGRATION_6_7,
-                        DatabaseMigrations.MIGRATION_7_8,
-                        DatabaseMigrations.MIGRATION_8_9
+                        DatabaseMigrations.MIGRATION_7_8
                     )
                     .fallbackToDestructiveMigration(true)
                     .build()
