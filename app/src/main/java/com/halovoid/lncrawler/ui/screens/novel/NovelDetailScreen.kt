@@ -474,16 +474,12 @@ fun ExpandableVolume(volume: Volume, chapters: List<Chapter>, onFetchVolume: () 
                             modifier = Modifier.weight(1f)
                         )
                         if (chapter.fileLocation?.contains("content://") == true) {
-                            Button(
-                                onClick = { /* Read chapter */ },
-                                contentPadding = PaddingValues(horizontal = 12.dp),
-                                modifier = Modifier.height(32.dp),
-                                shape = RoundedCornerShape(16.dp)
-                            ) {
-                                Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Read", fontSize = 12.sp)
-                            }
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Downloaded",
+                                tint = SuccessGreen,
+                                modifier = Modifier.size(24.dp)
+                            )
                         }
                     }
                 }

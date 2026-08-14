@@ -165,8 +165,18 @@ fun RequestScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        FilterDropdown("Status", RequestStatus.values().map { it.name }, { statusFilter = RequestStatus.valueOf(it) })
-                        FilterDropdown("Type", RequestType.values().map { it.name }, { typeFilter = RequestType.valueOf(it) })
+                        FilterDropdown(
+                            label = "Status",
+                            selectedOption = statusFilter?.name ?: "Any",
+                            options = RequestStatus.values().map { it.name },
+                            onSelected = { statusFilter = if (it == "Any") null else RequestStatus.valueOf(it) }
+                        )
+                        FilterDropdown(
+                            label = "Type",
+                            selectedOption = typeFilter?.name ?: "Any",
+                            options = RequestType.values().map { it.name },
+                            onSelected = { typeFilter = if (it == "Any") null else RequestType.valueOf(it) }
+                        )
                     }
                 }
             }
@@ -192,9 +202,8 @@ fun RequestScreen(
 }
 
 @Composable
-fun FilterDropdown(label: String, options: List<String>, onSelected: (String) -> Unit) {
+fun FilterDropdown(label: String, selectedOption: String, options: List<String>, onSelected: (String) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
-    var selectedOption by remember { mutableStateOf("Any") }
 
     Box {
         OutlinedButton(
@@ -214,18 +223,16 @@ fun FilterDropdown(label: String, options: List<String>, onSelected: (String) ->
             DropdownMenuItem(
                 text = { Text("Any", color = PrimaryText) },
                 onClick = {
-                    selectedOption = "Any"
+                    onSelected("Any")
                     expanded = false
-                    // Handle "Any" logic
                 }
             )
             options.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option, color = PrimaryText) },
                     onClick = {
-                        selectedOption = option
-                        expanded = false
                         onSelected(option)
+                        expanded = false
                     }
                 )
             }

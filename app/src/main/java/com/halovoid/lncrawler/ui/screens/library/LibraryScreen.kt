@@ -31,14 +31,14 @@ fun LibraryScreen(
 ) {
     val novels by viewModel.novels.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
-    var selectedDomain by remember { mutableStateOf("All Domains") }
+    var selectedDomain by remember { mutableStateOf("Any") }
 
     val filteredNovels = novels.filter { novel ->
-        (selectedDomain == "All Domains" || novel.crawlerName == selectedDomain) &&
+        (selectedDomain == "Any" || novel.crawlerName == selectedDomain) &&
         (novel.title.contains(searchQuery, ignoreCase = true))
     }
 
-    val domains = listOf("All Domains") + novels.map { it.crawlerName }.distinct()
+    val domains = listOf("Any") + novels.map { it.crawlerName }.distinct()
 
     Scaffold(
         containerColor = DarkBackground,

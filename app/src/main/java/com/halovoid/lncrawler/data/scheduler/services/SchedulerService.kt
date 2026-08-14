@@ -1,6 +1,5 @@
 package com.halovoid.lncrawler.data.scheduler.services
 
-import android.R
 import android.app.*
 import android.content.Context
 import android.content.Intent
@@ -8,6 +7,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import com.halovoid.lncrawler.MainActivity
+import com.halovoid.lncrawler.R
 import com.halovoid.lncrawler.data.artifact.ArtifactGenerator
 import com.halovoid.lncrawler.data.artifact.ArtifactGeneratorFactory
 import com.halovoid.lncrawler.data.artifact.generators.EpubGenerator
@@ -45,10 +45,10 @@ private data class NotificationConfig(
 
 private fun RequestEntity.toNotificationConfig(): NotificationConfig {
     val (title, icon) = when (this.type) {
-        RequestType.FULL_NOVEL -> "Crawling Novel" to R.drawable.stat_sys_download
-        RequestType.ARTIFACT -> "Creating Artifact" to R.drawable.stat_sys_upload
-        RequestType.NOVEL_METADATA -> "Refreshing Novel" to R.drawable.stat_notify_sync
-        else -> "LN Crawler Task" to R.drawable.stat_sys_download
+        RequestType.FULL_NOVEL -> "Crawling Novel" to R.mipmap.ic_launcher
+        RequestType.ARTIFACT -> "Creating Artifact" to R.mipmap.ic_launcher
+        RequestType.NOVEL_METADATA -> "Refreshing Novel" to R.mipmap.ic_launcher
+        else -> "LN Crawler Task" to R.mipmap.ic_launcher
     }
 
     return NotificationConfig(
@@ -167,7 +167,7 @@ class SchedulerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val initialConfig = NotificationConfig("Initializing...", "Starting scheduler", R.drawable.stat_sys_download, 0, 0, true)
+                val initialConfig = NotificationConfig("Initializing...", "Starting scheduler", R.mipmap.ic_launcher, 0, 0, true)
                 startForeground(NOTIFICATION_ID, createNotification(initialConfig, 0))
                 scheduler.start()
             }
