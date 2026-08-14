@@ -17,7 +17,8 @@ import androidx.room.PrimaryKey
         ForeignKey(
             entity = VolumeEntity::class,
             parentColumns = ["id"],
-            childColumns = ["volumeId"]
+            childColumns = ["volumeId"],
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [

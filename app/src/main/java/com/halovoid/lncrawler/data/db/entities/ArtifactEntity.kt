@@ -11,7 +11,8 @@ import androidx.room.PrimaryKey
         ForeignKey(
             entity = RequestEntity::class,
             parentColumns = ["id"],
-            childColumns = ["requestId"]
+            childColumns = ["requestId"],
+            onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [

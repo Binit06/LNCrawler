@@ -27,4 +27,48 @@ object DatabaseMigrations {
             db.execSQL("DELETE FROM requests WHERE type = 'EXPORT';")
         }
     }
+
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("PRAGMA foreign_keys = OFF")
+
+            // 1. Recreate artifacts table with CASCADE constraint
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS `artifacts_new` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                    `novelUrl` TEXT NOT NULL, 
+                    `requestId` TEXT NOT NULL, 
+                    `artifactDestination` TEXT NOT NULL, 
+                    `artifactName` TEXT NOT NULL, 
+                    FOREIGN KEY(`requestId`) REFERENCES `requests`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE 
+                )
+            """.trimIndent())
+            db.execSQL("INSERT INTO artifacts_new (id, novelUrl, requestId, artifactDestination, artifactName) SELECT id, novelUrl, requestId, artifactDestination, artifactName FROM artifacts")
+            db.execSQL("DROP TABLE artifacts")
+            db.execSQL("ALTER TABLE artifacts_new RENAME TO artifacts")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_artifacts_requestId` ON `artifacts` (`requestId`)")
+
+            // 2. Recreate chapters table with CASCADE constraint on volumeId
+            db.execSQL("""
+                CREATE TABLE IF NOT EXISTS `chapters_new` (
+                    `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, 
+                    `novelUrl` TEXT NOT NULL, 
+                    `volumeId` TEXT NOT NULL, 
+                    `url` TEXT NOT NULL, 
+                    `title` TEXT NOT NULL, 
+                    `index` INTEGER NOT NULL, 
+                    `fileLocation` TEXT, 
+                    FOREIGN KEY(`novelUrl`) REFERENCES `novels`(`url`) ON UPDATE NO ACTION ON DELETE CASCADE , 
+                    FOREIGN KEY(`volumeId`) REFERENCES `volumes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE 
+                )
+            """.trimIndent())
+            db.execSQL("INSERT INTO chapters_new (id, novelUrl, volumeId, url, title, `index`, fileLocation) SELECT id, novelUrl, volumeId, url, title, `index`, fileLocation FROM chapters")
+            db.execSQL("DROP TABLE chapters")
+            db.execSQL("ALTER TABLE chapters_new RENAME TO chapters")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_chapters_novelUrl` ON `chapters` (`novelUrl`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_chapters_volumeId` ON `chapters` (`volumeId`)")
+
+            db.execSQL("PRAGMA foreign_keys = ON")
+        }
+    }
 }
