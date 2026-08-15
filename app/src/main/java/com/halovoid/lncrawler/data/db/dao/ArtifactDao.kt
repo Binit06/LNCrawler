@@ -21,8 +21,8 @@ interface ArtifactDao {
     fun getArtifactsByNovelFlow(url: String): Flow<List<ArtifactEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertArtifact(artifact: ArtifactEntity)
+    suspend fun insertArtifact(artifact: ArtifactEntity)
 
     @Delete
-    fun removeArtifact(artifact: ArtifactEntity)
+    suspend fun removeArtifact(artifact: ArtifactEntity)
 }

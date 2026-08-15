@@ -286,7 +286,7 @@ class EpubGenerator(
                             "chapter_${chapter.id}_${chapter.index.toString().padStart(5, '0')}.xhtml",
                             buildChapterPage(chapter, content).toByteArray(),
                             "application/xhtml+xml",
-                            "chapter_${chapter.id}"
+                            "chapter_${chapter.index}"
                         ))
                     }
             }
@@ -302,7 +302,7 @@ class EpubGenerator(
                     "chapter_${chapter.id}_${chapter.index.toString().padStart(5, '0')}.xhtml",
                     buildChapterPage(chapter, content).toByteArray(),
                     "application/xhtml+xml",
-                    "chapter_${chapter.id}"
+                    "chapter_${chapter.index}"
                 ))
             }
         }

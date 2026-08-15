@@ -14,6 +14,7 @@ import com.halovoid.lncrawler.data.artifact.generators.EpubGenerator
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.api.core.network.CloudflareInterceptor
 import com.halovoid.lncrawler.api.core.scrapper.Scrapper
+import com.halovoid.lncrawler.api.loader.SourceLoader
 import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
@@ -161,6 +162,12 @@ class SchedulerService : Service() {
         }
 
         createNotificationChannel()
+        
+        // Ensure sources are loaded even if service starts independently
+        serviceScope.launch {
+            SourceLoader(this@SchedulerService).loadLocalSources()
+        }
+        
         observeProgress()
     }
 

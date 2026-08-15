@@ -61,11 +61,15 @@ class ArtifactRepository(private val context: Context) {
         }
     }
 
-    fun insertArtifacts(artifact: Artifact) {
-        artifactDao.insertArtifact(artifact.toEntity())
+    suspend fun insertArtifacts(artifact: Artifact) {
+        withContext(Dispatchers.IO) {
+            artifactDao.insertArtifact(artifact.toEntity())
+        }
     }
 
-    fun removeArtifact(artifact: Artifact) {
-        artifactDao.removeArtifact(artifact.toEntity())
+    suspend fun removeArtifact(artifact: Artifact) {
+        withContext(Dispatchers.IO) {
+            artifactDao.removeArtifact(artifact.toEntity())
+        }
     }
 }

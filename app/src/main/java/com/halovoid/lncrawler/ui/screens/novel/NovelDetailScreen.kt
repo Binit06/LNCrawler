@@ -419,6 +419,7 @@ fun ActionRow(icon: ImageVector, title: String, subtext: String, onClick: () -> 
 @Composable
 fun ExpandableVolume(volume: Volume, chapters: List<Chapter>, onFetchVolume: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     
     Column(
         modifier = Modifier
@@ -457,6 +458,13 @@ fun ExpandableVolume(volume: Volume, chapters: List<Chapter>, onFetchVolume: () 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .clickable(enabled = chapter.fileLocation?.startsWith("content://") == true) {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(chapter.fileLocation?.toUri(), "text/html")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                context.startActivity(Intent.createChooser(intent, "Open Chapter"))
+                            }
                             .padding(horizontal = 16.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {

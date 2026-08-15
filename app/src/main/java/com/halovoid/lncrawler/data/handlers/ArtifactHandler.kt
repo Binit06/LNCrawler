@@ -15,6 +15,7 @@ import com.halovoid.lncrawler.data.scheduler.jobs.JobResult
 import com.halovoid.lncrawler.domain.models.Artifact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
 
 class ArtifactHandler(
     private val novelRepository: NovelRepository,
@@ -45,7 +46,16 @@ class ArtifactHandler(
                 ?: return@withContext JobResult.Failure(Exception("Crawler '$crawlerName' not found"))
 
 
-            // 3. Save Permanenetly to the user's selected storage
+            // 3. Cleanup existing artifacts for this request to prevent duplicates
+            val existingArtifacts = artifactRepository.getArtifactForRequest(request.id)
+            existingArtifacts.forEach { existing ->
+                try {
+                    storageRepository.delete(existing.artifactDestination.toUri())
+                } catch (_: Exception) { }
+                artifactRepository.removeArtifact(existing)
+            }
+
+            // 4. Save Permanenetly to the user's selected storage
             val novelKey = crawler.getNovelKey(novel.title)
             val fileName = "${novelKey}_${System.currentTimeMillis()}.$format"
             val finalUri = storageRepository.saveFile(
@@ -55,7 +65,7 @@ class ArtifactHandler(
                 data = tempFile.readBytes()
             )
 
-            // 4. Insert New Artifact to Database
+            // 5. Insert New Artifact to Database
             val artifact = Artifact(
                 id = 0,
                 novelUrl = novel.url,
@@ -65,10 +75,10 @@ class ArtifactHandler(
             )
             artifactRepository.insertArtifacts(artifact)
 
-            // 5. Cleanup Temp File
+            // 6. Cleanup Temp File
             tempFile.delete()
 
-            // 6. Notify
+            // 7. Notify
             requestDao.propagateProgress(request.id)
             JobResult.Success
         } catch (e: Exception) {
