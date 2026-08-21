@@ -1,10 +1,12 @@
 package com.halovoid.lncrawler.ui.screens.crawler
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Sync
@@ -12,9 +14,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.ui.theme.*
@@ -160,6 +164,7 @@ fun CrawlerScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrawlerItem(crawler: Crawler) {
+    val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = DarkSurface),
@@ -183,15 +188,30 @@ fun CrawlerItem(crawler: Crawler) {
                     fontWeight = FontWeight.Bold
                 )
                 
-                Badge(
-                    containerColor = PrimaryAccent.copy(alpha = 0.1f),
-                    contentColor = PrimaryAccent
-                ) {
-                    Text(
-                        text = "Active",
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        fontSize = 10.sp
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW, crawler.baseUrl.toUri())
+                            context.startActivity(intent)
+                        }
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                            contentDescription = "Open in browser",
+                            tint = PrimaryAccent,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                    Badge(
+                        containerColor = PrimaryAccent.copy(alpha = 0.1f),
+                        contentColor = PrimaryAccent
+                    ) {
+                        Text(
+                            text = "Active",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            fontSize = 10.sp
+                        )
+                    }
                 }
             }
 
