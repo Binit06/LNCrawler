@@ -31,6 +31,7 @@ data class ChapterEntity(
     val novelUrl: String,
     val volumeId: String,
     val url: String,
+    val sourceUrl: String? = null,
     val title: String,
     val index: Int,
     val fileLocation: String?

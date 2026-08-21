@@ -6,11 +6,10 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 enum class RequestType {
-    FULL_NOVEL,
     NOVEL_METADATA,
-    VOLUME,
     CHAPTER,
-    ARTIFACT
+    ARTIFACT,
+    RANGE_DOWNLOAD
 }
 
 enum class RequestStatus {

@@ -67,9 +67,9 @@ class RequestViewModel(
 
             val request = RequestEntity(
                 id = "${url}_crawl",
-                type = RequestType.FULL_NOVEL,
+                type = RequestType.NOVEL_METADATA,
                 novelUrl = url,
-                name = "Crawl: $url",
+                name = "Metadata: $url",
                 metadata = metadata,
                 status = RequestStatus.PENDING,
                 dependsOn = null,

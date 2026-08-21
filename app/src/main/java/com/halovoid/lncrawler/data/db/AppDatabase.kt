@@ -23,7 +23,7 @@ import com.halovoid.lncrawler.data.db.migrations.DatabaseMigrations
  */
 @Database(
     entities = [NovelEntity::class, ChapterEntity::class, VolumeEntity::class, RequestEntity::class, ArtifactEntity::class],
-    version = 9,
+    version = 10,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

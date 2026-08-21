@@ -14,6 +14,7 @@ import com.halovoid.lncrawler.data.repository.NovelRepository
 import com.halovoid.lncrawler.data.repository.VolumeRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.domain.models.Artifact
+import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.toDomain
@@ -47,6 +48,9 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel.asStateFlow()
 
+    private val _chapterRange = MutableStateFlow<ClosedFloatingPointRange<Float>>(1f..1f)
+    val chapterRange: StateFlow<ClosedFloatingPointRange<Float>> = _chapterRange.asStateFlow()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val rootRequests: StateFlow<List<Request>> = novel
         .filterNotNull()
@@ -77,33 +81,46 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
             val details = novelRepository.getNovelDetails(novelUrl)
             val volumeDetails = volumeRepository.getVolumeByNovelUrl(novelUrl)
             val chapterDetails = chapterRepository.getChaptersByNovelUrl(novelUrl)
-            _novel.value = details?.copy(
+            val updatedNovel = details?.copy(
                 volumes = volumeDetails,
                 chapters = chapterDetails
             )
+            _novel.value = updatedNovel
+            if (updatedNovel != null && updatedNovel.chapters.isNotEmpty()) {
+                _chapterRange.value = 1f..updatedNovel.chapters.size.toFloat()
+            }
         }
+    }
+
+    fun updateChapterRange(range: ClosedFloatingPointRange<Float>) {
+        _chapterRange.value = range
     }
 
     fun startBackgroundExport(novel: Novel, format: ExportFormat) {
         viewModelScope.launch {
+            val start = _chapterRange.value.start.toInt()
+            val end = _chapterRange.value.endInclusive.toInt()
+
             val metadata = JSONObject().apply {
                 put("format", format.toString())
                 put("crawlerName", novel.crawlerName)
+                put("startIndex", start)
+                put("endIndex", end)
             }.toString()
 
             val request = RequestEntity(
-                id = "${novel.url}_export_$format",
+                id = "${novel.url}_export_${format}_${start}_${end}_${System.currentTimeMillis()}",
                 type = RequestType.ARTIFACT,
                 novelUrl = novel.url,
-                name = "Export: ${novel.title} ($format)",
+                name = "Export: ${novel.title} ($format) [$start-$end]",
                 metadata = metadata,
                 parentNovel = novel.url,
                 url = null,
+                dependsOn = null,
                 completedAt = null
             )
 
             requestDao.insertRequests(listOf(request))
-
             SchedulerService.startService(getApplication())
         }
     }
@@ -134,24 +151,127 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
         }
     }
 
-    // Replay full Novel Request from start to end
-    fun fetchFullNovel(novel: Novel) {
+    // Selective Novel Request for a range of chapters
+    fun fetchRange(novel: Novel) {
         viewModelScope.launch {
-            val requestId = "${novel.url}_crawl"
+            val start = _chapterRange.value.start.toInt()
+            val end = _chapterRange.value.endInclusive.toInt()
+            
+            val rangeChapters = novel.chapters.filter { it.index in start..end }
+            
+            val requestId = "${novel.url}_range_${start}_${end}"
+            val metadata = JSONObject().apply {
+                put("crawlerName", novel.crawlerName)
+                put("startIndex", start)
+                put("endIndex", end)
+            }.toString()
 
-            requestDao.replayRequest(requestId)
+            val request = RequestEntity(
+                id = requestId,
+                type = RequestType.RANGE_DOWNLOAD,
+                novelUrl = novel.url,
+                name = "Download: ${novel.title} ($start-$end)",
+                metadata = metadata,
+                parentNovel = novel.url,
+                url = novel.url,
+                completedAt = null,
+                progressTotal = rangeChapters.size
+            )
+
+            requestDao.insertRequests(listOf(request))
 
             SchedulerService.startService(getApplication())
         }
     }
 
-    // Replay Volume Request from Start to End
-    fun fetchVolume(novel: Novel, volumeIndex: Int) {
+    // Download all chapters in the novel
+    fun downloadAllChapters(novel: Novel) {
         viewModelScope.launch {
-            val requestId = "${novel.url}_vol_$volumeIndex"
+            if (novel.chapters.isEmpty()) return@launch
+            
+            val start = 1
+            val end = novel.chapters.size
+            
+            val requestId = "${novel.url}_full_download"
+            val metadata = JSONObject().apply {
+                put("crawlerName", novel.crawlerName)
+                put("startIndex", start)
+                put("endIndex", end)
+            }.toString()
 
-            requestDao.replayRequest(requestId)
+            val request = RequestEntity(
+                id = requestId,
+                type = RequestType.RANGE_DOWNLOAD,
+                novelUrl = novel.url,
+                name = "Download All: ${novel.title}",
+                metadata = metadata,
+                parentNovel = novel.url,
+                url = novel.url,
+                completedAt = null,
+                progressTotal = novel.chapters.size
+            )
 
+            requestDao.insertRequests(listOf(request))
+            SchedulerService.startService(getApplication())
+        }
+    }
+
+    // Download all chapters in a specific volume
+    fun downloadVolume(novel: Novel, volumeId: String, volumeIndex: Int) {
+        viewModelScope.launch {
+            val volumeChapters = novel.chapters.filter { it.volumeId == volumeId }
+            if (volumeChapters.isEmpty()) return@launch
+            
+            val start = volumeChapters.minOf { it.index }
+            val end = volumeChapters.maxOf { it.index }
+            
+            val requestId = "${novel.url}_vol_${volumeIndex}_download"
+            val metadata = JSONObject().apply {
+                put("crawlerName", novel.crawlerName)
+                put("startIndex", start)
+                put("endIndex", end)
+            }.toString()
+
+            val request = RequestEntity(
+                id = requestId,
+                type = RequestType.RANGE_DOWNLOAD,
+                novelUrl = novel.url,
+                name = "Download: ${novel.title} Vol $volumeIndex",
+                metadata = metadata,
+                parentNovel = novel.url,
+                url = novel.url,
+                completedAt = null,
+                progressTotal = volumeChapters.size
+            )
+
+            requestDao.insertRequests(listOf(request))
+            SchedulerService.startService(getApplication())
+        }
+    }
+
+    fun fetchChapter(novel: Novel, chapter: Chapter) {
+        viewModelScope.launch {
+            val chapterMetadata = JSONObject().apply {
+                put("chapterId", chapter.id)
+                put("crawlerName", novel.crawlerName)
+            }.toString()
+
+            val request = RequestEntity(
+                id = "${novel.url}_ch_${chapter.index}",
+                type = RequestType.CHAPTER,
+                parentNovel = novel.url,
+                dependsOn = null,
+                priority = 10, // Higher priority for manual single chapter fetch
+                name = "Chapter ${chapter.title} Download",
+                completedAt = null,
+                metadata = chapterMetadata,
+                url = chapter.url,
+                novelUrl = novel.url,
+                progressTotal = 1,
+                progressSuccess = 0,
+            )
+
+            requestDao.insertRequests(listOf(request))
             SchedulerService.startService(getApplication())
         }
     }

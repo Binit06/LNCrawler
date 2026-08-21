@@ -4,6 +4,7 @@ import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.ConcurrentHashMap
@@ -160,14 +161,20 @@ class JobScheduler(
         // Check if dependency is satisfied
         if (dependsOn != null) {
             val dependency = allRequests.find { it.id == dependsOn }
-            // If dependency is not found or not successful, this job is not runnable
-            if (dependency == null || dependency.status != RequestStatus.SUCCESS) {
-                return false
+            if (dependency == null) return false
+
+            // For most requests, just checking SUCCESS is enough to start sub-tasks
+            if (dependency.status != RequestStatus.SUCCESS) return false
+
+            // SPECIAL CASE: Artifact (Export) requests must wait for ALL chapters in the dependency to finish.
+            // Other types (like CHAPTER depending on RANGE_DOWNLOAD) should start as soon as the parent finishes spawning.
+            if (this.type == RequestType.ARTIFACT) {
+                val totalProgress = dependency.progressSuccess + dependency.progressFailed + dependency.progressCancelled
+                if (totalProgress < dependency.progressTotal) {
+                    return false
+                }
             }
         }
-        
-        // Parent-child: Currently, we don't block root jobs based on children, 
-        // but we could add logic here if children must finish first.
         
         return true
     }

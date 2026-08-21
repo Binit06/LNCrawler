@@ -55,9 +55,16 @@ class NovelMetadataHandler(
             val mergedChapters = updatedNovel.chapters.map { chapter ->
                 val existing = existingChapterMap[chapter.url]
                 if (existing != null) {
-                    chapter.copy(fileLocation = existing.fileLocation)
+                    chapter.copy(
+                        id = existing.id,
+                        fileLocation = existing.fileLocation
+                    ).apply {
+                        sourceUrl = existing.sourceUrl ?: chapter.url
+                    }
                 } else {
-                    chapter
+                    chapter.apply {
+                        sourceUrl = sourceUrl ?: url
+                    }
                 }
             }
 

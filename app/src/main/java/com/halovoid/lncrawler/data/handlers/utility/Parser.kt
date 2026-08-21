@@ -13,8 +13,10 @@ val RequestEntity.parsedMetadata: RequestMetadata
                 crawlerName = json.optString("crawlerName", null),
                 artifactFormat = json.optString("artifactFormat", null),
                 volumeId = json.optString("volumeId", null),
-                chapterId = json.optInt("chapterId", -1),
+                chapterId = json.optInt("chapterId", -1).takeIf { it != -1 },
                 format = json.optString("format", null),
+                startIndex = json.optInt("startIndex", -1).takeIf { it != -1 },
+                endIndex = json.optInt("endIndex", -1).takeIf { it != -1 },
             )
         } catch (e: Exception) {
             RequestMetadata()

@@ -40,11 +40,14 @@ fun ChapterEntity.toDomain(): Chapter = Chapter(
     novelUrl = novelUrl,
     volumeId = volumeId,
     fileLocation = fileLocation
-)
+).apply {
+    sourceUrl = this@toDomain.sourceUrl
+}
 
 fun Chapter.toEntity(): ChapterEntity = ChapterEntity(
     id = id,
     url = url,
+    sourceUrl = sourceUrl,
     title = title,
     index = index,
     novelUrl = novelUrl,

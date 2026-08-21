@@ -22,9 +22,8 @@ import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.data.handlers.ArtifactHandler
 import com.halovoid.lncrawler.data.handlers.ChapterHandler
-import com.halovoid.lncrawler.data.handlers.NovelHandler
 import com.halovoid.lncrawler.data.handlers.NovelMetadataHandler
-import com.halovoid.lncrawler.data.handlers.VolumeHandler
+import com.halovoid.lncrawler.data.handlers.RangeDownloadHandler
 import com.halovoid.lncrawler.data.repository.*
 import com.halovoid.lncrawler.data.scheduler.jobs.JobHandlerRegistry
 import com.halovoid.lncrawler.data.scheduler.jobs.JobScheduler
@@ -46,7 +45,7 @@ private data class NotificationConfig(
 
 private fun RequestEntity.toNotificationConfig(): NotificationConfig {
     val (title, icon) = when (this.type) {
-        RequestType.FULL_NOVEL -> "Crawling Novel" to R.mipmap.ic_launcher
+        RequestType.RANGE_DOWNLOAD -> "Downloading Chapters" to R.mipmap.ic_launcher
         RequestType.ARTIFACT -> "Creating Artifact" to R.mipmap.ic_launcher
         RequestType.NOVEL_METADATA -> "Refreshing Novel" to R.mipmap.ic_launcher
         else -> "LN Crawler Task" to R.mipmap.ic_launcher
@@ -137,12 +136,6 @@ class SchedulerService : Service() {
         val scrapper = Scrapper(okHttpClient)
 
         // 4. Register Handlers
-        registry.register(RequestType.FULL_NOVEL, NovelHandler(
-            crawlerFactory, novelRepository, chapterRepository, volumeRepository, storageRepository, requestDao
-        ))
-        registry.register(RequestType.VOLUME, VolumeHandler(
-            chapterDao, requestDao
-        ))
         registry.register(RequestType.CHAPTER, ChapterHandler(
             requestDao, scrapper, chapterRepository, storageRepository, crawlerFactory
         ))
@@ -153,6 +146,9 @@ class SchedulerService : Service() {
             novelRepository, chapterRepository, volumeRepository,
             crawlerFactory, storageRepository, generatorFactory, artifactRepository,
             requestDao
+        ))
+        registry.register(RequestType.RANGE_DOWNLOAD, RangeDownloadHandler(
+            chapterRepository, requestDao
         ))
 
         // 5. Set Up Scheduler

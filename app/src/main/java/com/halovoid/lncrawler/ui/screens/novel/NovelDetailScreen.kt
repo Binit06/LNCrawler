@@ -39,6 +39,8 @@ import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Volume
 import com.halovoid.lncrawler.ui.ViewModelFactory
 import com.halovoid.lncrawler.ui.components.ConfirmDeleteDialog
+import com.halovoid.lncrawler.ui.components.DownloadRangeDialog
+import com.halovoid.lncrawler.ui.components.ExportWarningDialog
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactExportButton
@@ -60,6 +62,7 @@ fun NovelDetailScreen(
     val viewModel: NovelDetailViewModel = viewModel(factory = factory)
     
     val novel by viewModel.novel.collectAsState()
+    val chapterRange by viewModel.chapterRange.collectAsState()
     var descriptionExpanded by remember { mutableStateOf(false) }
 
     val requestHistory by viewModel.rootRequests.collectAsStateWithLifecycle()
@@ -67,6 +70,9 @@ fun NovelDetailScreen(
     var selectedArtifact by remember { mutableStateOf<Artifact?>(null) }
 
     var showDeleteConfirmation by remember { mutableStateOf(false) }
+    var showDownloadDialog by remember { mutableStateOf(false) }
+    var showExportWarning by remember { mutableStateOf(false) }
+    var pendingExportFormat by remember { mutableStateOf<ExportFormat?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/epub+zip")
@@ -256,9 +262,20 @@ fun NovelDetailScreen(
                 item {
                     ActionsSection(
                         onFetchMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
-                        onFetchFull = { viewModel.fetchFullNovel(currentNovel) },
+                        onDownloadAll = { viewModel.downloadAllChapters(currentNovel) },
+                        onShowDownloadRange = { showDownloadDialog = true },
                         onExport = { format ->
-                            viewModel.startBackgroundExport(currentNovel, format)
+                            val start = chapterRange.start.toInt()
+                            val end = chapterRange.endInclusive.toInt()
+                            val rangeChapters = currentNovel.chapters.filter { it.index in start..end }
+                            val downloaded = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
+
+                            if (downloaded < rangeChapters.size) {
+                                pendingExportFormat = format
+                                showExportWarning = true
+                            } else {
+                                viewModel.startBackgroundExport(currentNovel, format)
+                            }
                         },
                         onDelete = {
                             showDeleteConfirmation = true
@@ -282,7 +299,8 @@ fun NovelDetailScreen(
                     ExpandableVolume(
                         volume = volume,
                         chapters = volumeChapters,
-                        onFetchVolume = { viewModel.fetchVolume(currentNovel, volume.volumeIndex) }
+                        onFetchVolume = { viewModel.downloadVolume(currentNovel, volume.id, volume.volumeIndex) },
+                        onFetchChapter = { viewModel.fetchChapter(currentNovel, it) }
                     )
                 }
             }
@@ -297,6 +315,42 @@ fun NovelDetailScreen(
                         onBack()
                     },
                     onDismiss = { showDeleteConfirmation = false }
+                )
+            }
+
+            if (showDownloadDialog) {
+                DownloadRangeDialog(
+                    initialRange = chapterRange,
+                    totalChapters = currentNovel.chapters.size,
+                    onConfirm = { range ->
+                        viewModel.updateChapterRange(range)
+                        viewModel.fetchRange(currentNovel)
+                        showDownloadDialog = false
+                    },
+                    onDismiss = { showDownloadDialog = false }
+                )
+            }
+
+            if (showExportWarning && pendingExportFormat != null) {
+                val start = chapterRange.start.toInt()
+                val end = chapterRange.endInclusive.toInt()
+                val rangeChapters = currentNovel.chapters.filter { it.index in start..end }
+                val downloadedCount = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
+
+                ExportWarningDialog(
+                    totalSelected = rangeChapters.size,
+                    downloadedCount = downloadedCount,
+                    onDownloadFirst = {
+                        showExportWarning = false
+                        viewModel.fetchRange(currentNovel)
+                    },
+                    onExportAnyway = {
+                        showExportWarning = false
+                        viewModel.startBackgroundExport(currentNovel, pendingExportFormat!!)
+                    },
+                    onDismiss = {
+                        showExportWarning = false
+                    }
                 )
             }
         }
@@ -332,7 +386,8 @@ fun MetadataSection(data: Map<String, String>) {
 @Composable
 fun ActionsSection(
     onFetchMetadata: () -> Unit,
-    onFetchFull: () -> Unit,
+    onDownloadAll: () -> Unit,
+    onShowDownloadRange: () -> Unit,
     onExport: (ExportFormat) -> Unit,
     onDelete: () -> Unit
 ) {
@@ -364,10 +419,19 @@ fun ActionsSection(
         HorizontalDivider(color = BorderColor)
 
         ActionRow(
+            icon = Icons.Default.Download,
+            title = "Download Range",
+            subtext = "Select chapter range to download",
+            onClick = onShowDownloadRange
+        )
+
+        HorizontalDivider(color = BorderColor)
+
+        ActionRow(
             icon = Icons.Default.DownloadForOffline,
-            title = "Fetch Full Novel",
-            subtext = "Download all volumes and chapters",
-            onClick = onFetchFull
+            title = "Download All Chapters",
+            subtext = "Fetch all volumes and chapters",
+            onClick = onDownloadAll
         )
 
         HorizontalDivider(color = BorderColor)
@@ -417,7 +481,12 @@ fun ActionRow(icon: ImageVector, title: String, subtext: String, onClick: () -> 
 }
 
 @Composable
-fun ExpandableVolume(volume: Volume, chapters: List<Chapter>, onFetchVolume: () -> Unit) {
+fun ExpandableVolume(
+    volume: Volume,
+    chapters: List<Chapter>,
+    onFetchVolume: () -> Unit,
+    onFetchChapter: (Chapter) -> Unit
+) {
     var expanded by remember { mutableStateOf(false) }
     val context = LocalContext.current
     
@@ -474,14 +543,24 @@ fun ExpandableVolume(volume: Volume, chapters: List<Chapter>, onFetchVolume: () 
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.width(32.dp)
                         )
-                        Text(
-                            text = chapter.title,
-                            color = SecondaryText,
-                            fontSize = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = chapter.title,
+                                color = SecondaryText,
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (chapter.sourceUrl != null) {
+                                Text(
+                                    text = chapter.sourceUrl!!,
+                                    color = SecondaryText.copy(alpha = 0.5f),
+                                    fontSize = 10.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                         if (chapter.fileLocation?.contains("content://") == true) {
                             Icon(
                                 imageVector = Icons.Default.Check,
@@ -489,6 +568,15 @@ fun ExpandableVolume(volume: Volume, chapters: List<Chapter>, onFetchVolume: () 
                                 tint = SuccessGreen,
                                 modifier = Modifier.size(24.dp)
                             )
+                        } else {
+                            IconButton(onClick = { onFetchChapter(chapter) }) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "Download Chapter",
+                                    tint = PrimaryAccent,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                         }
                     }
                 }

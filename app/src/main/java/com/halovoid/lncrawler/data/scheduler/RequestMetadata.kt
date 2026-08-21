@@ -6,4 +6,6 @@ data class RequestMetadata(
     val volumeId: String? = null,
     val chapterId: Int? = null,
     val format: String? = null,
+    val startIndex: Int? = null,
+    val endIndex: Int? = null,
 )

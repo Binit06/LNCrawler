@@ -131,7 +131,9 @@ abstract class Crawler {
                 title = formatTitle(chapter.title).ifBlank { "Chapter ${index + 1}" },
                 index = index + 1,
                 volumeId = "${novel.url}_vol_${volumeIndex}"
-            )
+            ).apply {
+                sourceUrl = chapter.sourceUrl ?: chapter.url
+            }
         }
 
         return novel.copy(
