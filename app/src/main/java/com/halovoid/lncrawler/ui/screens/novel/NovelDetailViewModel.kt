@@ -65,6 +65,18 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)
+    val chapters: StateFlow<List<Chapter>> = novel
+        .filterNotNull()
+        .flatMapLatest { nov ->
+            chapterRepository.getChaptersFlow(nov.url)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     val artifacts: StateFlow<List<Artifact>> = novel
         .filterNotNull()
         .flatMapLatest { nov ->
@@ -187,10 +199,11 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
     // Download all chapters in the novel
     fun downloadAllChapters(novel: Novel) {
         viewModelScope.launch {
-            if (novel.chapters.isEmpty()) return@launch
+            val allChapters = chapterRepository.getChaptersByNovelUrl(novel.url)
+            if (allChapters.isEmpty()) return@launch
             
             val start = 1
-            val end = novel.chapters.size
+            val end = allChapters.size
             
             val requestId = "${novel.url}_full_download"
             val metadata = JSONObject().apply {
@@ -208,7 +221,7 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
                 parentNovel = novel.url,
                 url = novel.url,
                 completedAt = null,
-                progressTotal = novel.chapters.size
+                progressTotal = allChapters.size
             )
 
             requestDao.insertRequests(listOf(request))
@@ -219,7 +232,8 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
     // Download all chapters in a specific volume
     fun downloadVolume(novel: Novel, volumeId: String, volumeIndex: Int) {
         viewModelScope.launch {
-            val volumeChapters = novel.chapters.filter { it.volumeId == volumeId }
+            val allChapters = chapterRepository.getChaptersByNovelUrl(novel.url)
+            val volumeChapters = allChapters.filter { it.volumeId == volumeId }
             if (volumeChapters.isEmpty()) return@launch
             
             val start = volumeChapters.minOf { it.index }

@@ -18,12 +18,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import com.halovoid.lncrawler.ui.ViewModelFactory
+import com.halovoid.lncrawler.ui.screens.novel.GroupedRequestsScreen
+import com.halovoid.lncrawler.data.db.entities.RequestType
+import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.ui.screens.novel.NovelDetailScreen
+import com.halovoid.lncrawler.ui.screens.novel.NovelDetailViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestScreen
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailScreen
 import com.halovoid.lncrawler.ui.screens.library.LibraryScreen
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderScreen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel
 import androidx.compose.runtime.rememberCoroutineScope
 import com.halovoid.lncrawler.ui.screens.onboarding.PermissionScreen
@@ -54,6 +59,9 @@ sealed class Screen(val route: String) {
     }
     object NovelDetail : Screen("novel_detail/{crawlerName}/{novelUrl}") {
         fun createRoute(crawlerName: String, novelUrl: String) = "novel_detail/$crawlerName/${URLEncoder.encode(novelUrl, "UTF-8")}"
+    }
+    object GroupedRequests : Screen("grouped_requests/{novelUrl}/{type}") {
+        fun createRoute(novelUrl: String, type: String) = "grouped_requests/${URLEncoder.encode(novelUrl, "UTF-8")}/$type"
     }
 }
 
@@ -161,6 +169,9 @@ fun NavGraph(navController: NavHostController) {
                     viewModel = requestViewModel,
                     onRequestClick = { requestId ->
                         navController.navigate(Screen.RequestDetail.createRoute(requestId))
+                    },
+                    onGroupClick = { type ->
+                        navController.navigate(Screen.GroupedRequests.createRoute("all", type.name))
                     }
                 )
             }
@@ -212,7 +223,59 @@ fun NavGraph(navController: NavHostController) {
                     },
                     onBack = {
                         navController.popBackStack()
-                    })
+                    },
+                    onGroupClick = { type ->
+                        navController.navigate(Screen.GroupedRequests.createRoute(novelUrl, type.name))
+                    }
+                )
+            }
+            composable(Screen.GroupedRequests.route) { backStackEntry ->
+                val novelUrl = URLDecoder.decode(
+                    backStackEntry.arguments?.getString("novelUrl") ?: "",
+                    "UTF-8"
+                )
+                val typeName = backStackEntry.arguments?.getString("type") ?: ""
+                val type = RequestType.valueOf(typeName)
+
+                val requests: List<Request>
+                val cancellingRequestIds: Set<String>
+                val allowAction: Boolean
+
+                if (novelUrl == "all") {
+                    requests = requestViewModel.requestHistory.collectAsStateWithLifecycle().value
+                    cancellingRequestIds = requestViewModel.cancellingRequestIds.collectAsStateWithLifecycle().value
+                    allowAction = true
+                } else {
+                    val viewModel: NovelDetailViewModel = viewModel(
+                        factory = remember { ViewModelFactory(application) }
+                    )
+                    LaunchedEffect(novelUrl) {
+                        viewModel.loadNovel(novelUrl)
+                    }
+                    requests = viewModel.rootRequests.collectAsStateWithLifecycle().value
+                    cancellingRequestIds = emptySet()
+                    allowAction = false
+                }
+
+                GroupedRequestsScreen(
+                    type = type,
+                    requests = requests,
+                    onBack = { navController.popBackStack() },
+                    onRequestClick = { requestId ->
+                        navController.navigate(Screen.RequestDetail.createRoute(requestId))
+                    },
+                    onReplay = { requestId ->
+                        if (novelUrl == "all") requestViewModel.replayRequest(requestId)
+                    },
+                    onCancel = { requestId ->
+                        if (novelUrl == "all") requestViewModel.cancelRequest(requestId)
+                    },
+                    onResolveCloudflare = { requestId, url ->
+                        if (novelUrl == "all") requestViewModel.resolveCloudflare(requestId, url)
+                    },
+                    cancellingRequestIds = cancellingRequestIds,
+                    allowAction = allowAction
+                )
             }
         }
     }

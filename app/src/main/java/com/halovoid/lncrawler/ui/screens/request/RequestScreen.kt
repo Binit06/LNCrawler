@@ -24,6 +24,7 @@ import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.components.SecurityCheckDialog
+import com.halovoid.lncrawler.ui.components.requestHistorySection
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.ui.theme.*
 
@@ -31,6 +32,7 @@ import com.halovoid.lncrawler.ui.theme.*
 @Composable
 fun RequestScreen(
     onRequestClick: (String) -> Unit,
+    onGroupClick: (RequestType) -> Unit,
     viewModel: RequestViewModel,
 ) {
     var urlInput by remember { mutableStateOf("") }
@@ -187,16 +189,16 @@ fun RequestScreen(
                 (typeFilter == null || it.type == typeFilter)
             }
 
-            items(filteredHistory) { request ->
-                RequestCard(
-                    request = request,
-                    onClick = { onRequestClick(request.id) },
-                    onReplay = { viewModel.replayRequest(request.id) },
-                    onCancel = { viewModel.cancelRequest(request.id) },
-                    onSecurityClick = { securityDialogRequest = request },
-                    isCancelling = cancellingRequestIds.contains(request.id)
-                )
-            }
+            requestHistorySection(
+                requestHistory = filteredHistory,
+                onRequestClick = onRequestClick,
+                onGroupClick = onGroupClick,
+                onReplay = { viewModel.replayRequest(it) },
+                onCancel = { viewModel.cancelRequest(it) },
+                onSecurityClick = { securityDialogRequest = it },
+                cancellingRequestIds = cancellingRequestIds,
+                allowAction = true
+            )
         }
     }
 }

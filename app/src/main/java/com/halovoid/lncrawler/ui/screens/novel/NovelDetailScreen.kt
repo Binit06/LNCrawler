@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,9 +35,13 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
+import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.Volume
+import com.halovoid.lncrawler.data.handlers.utility.parsedMetadata
 import com.halovoid.lncrawler.ui.ViewModelFactory
 import com.halovoid.lncrawler.ui.components.ConfirmDeleteDialog
 import com.halovoid.lncrawler.ui.components.DownloadRangeDialog
@@ -45,14 +50,16 @@ import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactExportButton
 import com.halovoid.lncrawler.ui.components.artifact.ExportFormat
+import com.halovoid.lncrawler.ui.components.requestHistorySection
 import com.halovoid.lncrawler.ui.theme.*
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun NovelDetailScreen(
     novelUrl: String,
     onRequestClick: (String) -> Unit,
+    onGroupClick: (RequestType) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -62,10 +69,31 @@ fun NovelDetailScreen(
     val viewModel: NovelDetailViewModel = viewModel(factory = factory)
     
     val novel by viewModel.novel.collectAsState()
+    val chapters by viewModel.chapters.collectAsStateWithLifecycle()
     val chapterRange by viewModel.chapterRange.collectAsState()
     var descriptionExpanded by remember { mutableStateOf(false) }
 
     val requestHistory by viewModel.rootRequests.collectAsStateWithLifecycle()
+    
+    val downloadingChapters = remember(requestHistory) {
+        val ids = mutableSetOf<Int>()
+        val ranges = mutableListOf<ClosedRange<Int>>()
+        
+        requestHistory.filter { it.status == RequestStatus.RUNNING || it.status == RequestStatus.PENDING }.forEach { req ->
+            val meta = req.parsedMetadata
+            if (req.type == RequestType.CHAPTER) {
+                meta.chapterId?.let { ids.add(it) }
+            } else if (req.type == RequestType.RANGE_DOWNLOAD) {
+                val start = meta.startIndex
+                val end = meta.endIndex
+                if (start != null && end != null) {
+                    ranges.add(start..end)
+                }
+            }
+        }
+        Pair(ids, ranges)
+    }
+
     val artifacts by viewModel.artifacts.collectAsStateWithLifecycle()
     var selectedArtifact by remember { mutableStateOf<Artifact?>(null) }
 
@@ -147,16 +175,16 @@ fun NovelDetailScreen(
         } else {
             val currentNovel = novel!!
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(top = innerPadding.calculateTopPadding(), bottom = 24.dp),
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(top = innerPadding.calculateTopPadding(), bottom = 24.dp)
             ) {
                 // Hero Section
                 item {
                     Column(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         AsyncImage(
@@ -187,19 +215,26 @@ fun NovelDetailScreen(
 
                 // Metadata Table
                 item {
-                    MetadataSection(
-                        mapOf(
-                            "Author" to (currentNovel.author ?: "Unknown"),
-                            "Volumes" to currentNovel.volumes.size.toString(),
-                            "Chapters" to currentNovel.chapters.size.toString(),
-                            "Source" to currentNovel.crawlerName
+                    Box(modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 24.dp)) {
+                        MetadataSection(
+                            mapOf(
+                                "Author" to (currentNovel.author ?: "Unknown"),
+                                "Volumes" to currentNovel.volumes.size.toString(),
+                                "Chapters" to currentNovel.chapters.size.toString(),
+                                "Source" to currentNovel.crawlerName
+                            )
                         )
-                    )
+                    }
                 }
 
                 // Synopsis
                 item {
-                    Column(modifier = Modifier.animateContentSize()) {
+                    Column(modifier = Modifier
+                        .animateContentSize()
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 24.dp)) {
                         Text(
                             "Synopsis",
                             style = MaterialTheme.typography.titleMedium,
@@ -226,15 +261,14 @@ fun NovelDetailScreen(
                 }
 
                 // Request History Section
-                items(requestHistory) { request ->
-                    RequestCard(
-                        request = request,
-                        onClick = { onRequestClick(request.id) },
-                        onReplay = { },
-                        onCancel = { },
-                        allowAction = false
-                    )
-                }
+                requestHistorySection(
+                    requestHistory = requestHistory,
+                    onRequestClick = onRequestClick,
+                    onGroupClick = onGroupClick,
+                    horizontalPadding = 16.dp
+                )
+
+                item { Spacer(modifier = Modifier.height(12.dp)) }
 
                 // Artifacts Section
                 if (artifacts.isNotEmpty()) {
@@ -244,64 +278,110 @@ fun NovelDetailScreen(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = PrimaryText,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            modifier = Modifier
+                                .padding(horizontal = 16.dp)
+                                .padding(bottom = 8.dp)
                         )
                     }
                     items(artifacts) { artifact ->
-                        ArtifactCard (
-                            artifact = artifact,
-                            onDownload = {
-                                selectedArtifact = it
-                                exportLauncher.launch(it.artifactName)
-                            }
-                        )
+                        Box(modifier = Modifier
+                            .padding(horizontal = 16.dp)
+                            .padding(bottom = 8.dp)) {
+                            ArtifactCard (
+                                artifact = artifact,
+                                onDownload = {
+                                    selectedArtifact = it
+                                    exportLauncher.launch(it.artifactName)
+                                }
+                            )
+                        }
                     }
+                    item { Spacer(modifier = Modifier.height(16.dp)) }
                 }
 
                 // Actions Section (FETCH only)
                 item {
-                    ActionsSection(
-                        onFetchMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
-                        onDownloadAll = { viewModel.downloadAllChapters(currentNovel) },
-                        onShowDownloadRange = { showDownloadDialog = true },
-                        onExport = { format ->
-                            val start = chapterRange.start.toInt()
-                            val end = chapterRange.endInclusive.toInt()
-                            val rangeChapters = currentNovel.chapters.filter { it.index in start..end }
-                            val downloaded = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
+                    Box(modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .padding(bottom = 24.dp)) {
+                        ActionsSection(
+                            onFetchMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
+                            onDownloadAll = { viewModel.downloadAllChapters(currentNovel) },
+                            onShowDownloadRange = { showDownloadDialog = true },
+                            onExport = { format ->
+                                val start = chapterRange.start.toInt()
+                                val end = chapterRange.endInclusive.toInt()
+                                val rangeChapters = chapters.filter { it.index in start..end }
+                                val downloaded = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
 
-                            if (downloaded < rangeChapters.size) {
-                                pendingExportFormat = format
-                                showExportWarning = true
-                            } else {
-                                viewModel.startBackgroundExport(currentNovel, format)
+                                if (downloaded < rangeChapters.size) {
+                                    pendingExportFormat = format
+                                    showExportWarning = true
+                                } else {
+                                    viewModel.startBackgroundExport(currentNovel, format)
+                                }
+                            },
+                            onDelete = {
+                                showDeleteConfirmation = true
                             }
-                        },
-                        onDelete = {
-                            showDeleteConfirmation = true
-                        }
-                    )
+                        )
+                    }
                 }
 
                 // Table of Contents
                 item {
-                    Text(
-                        "Table of Contents",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryText,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .padding(top = 12.dp, bottom = 8.dp)
+                    ) {
+                        Text(
+                            "Table of Contents",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryText,
+                            modifier = Modifier.padding(bottom = 4.dp)
+                        )
+                        Text(
+                            text = "${chapters.size} Chapters",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SecondaryText
+                        )
+                    }
                 }
 
-                items(currentNovel.volumes) { volume ->
-                    val volumeChapters = currentNovel.chapters.filter { it.volumeId == volume.id }
-                    ExpandableVolume(
-                        volume = volume,
-                        chapters = volumeChapters,
-                        onFetchVolume = { viewModel.downloadVolume(currentNovel, volume.id, volume.volumeIndex) },
-                        onFetchChapter = { viewModel.fetchChapter(currentNovel, it) }
-                    )
+                currentNovel.volumes.forEach { volume ->
+                    item(key = "vol_${volume.id}") {
+                        Text(
+                            text = "Volume ${volume.volumeIndex}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = PrimaryAccent,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(DarkBackground)
+                                .padding(horizontal = 16.dp)
+                                .padding(top = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    
+                    val volumeChapters = chapters.filter { it.volumeId == volume.id }
+                    items(volumeChapters, key = { it.id }) { chapter ->
+                        val isDownloading = remember(downloadingChapters, chapter.id, chapter.index) {
+                            downloadingChapters.first.contains(chapter.id) || 
+                            downloadingChapters.second.any { it.contains(chapter.index) }
+                        }
+                        ChapterRow(
+                            chapter = chapter,
+                            onFetchChapter = { viewModel.fetchChapter(currentNovel, it) },
+                            isDownloading = isDownloading
+                        )
+                        HorizontalDivider(
+                            color = BorderColor.copy(alpha = 0.2f), 
+                            thickness = 0.5.dp,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
                 }
             }
             if (showDeleteConfirmation) {
@@ -334,7 +414,7 @@ fun NovelDetailScreen(
             if (showExportWarning && pendingExportFormat != null) {
                 val start = chapterRange.start.toInt()
                 val end = chapterRange.endInclusive.toInt()
-                val rangeChapters = currentNovel.chapters.filter { it.index in start..end }
+                val rangeChapters = chapters.filter { it.index in start..end }
                 val downloadedCount = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
 
                 ExportWarningDialog(
@@ -351,6 +431,73 @@ fun NovelDetailScreen(
                     onDismiss = {
                         showExportWarning = false
                     }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ChapterRow(
+    chapter: Chapter,
+    onFetchChapter: (Chapter) -> Unit,
+    isDownloading: Boolean
+) {
+    val context = LocalContext.current
+    
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(DarkBackground)
+            .clickable(enabled = chapter.fileLocation?.startsWith("content://") == true) {
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(chapter.fileLocation?.toUri(), "text/html")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, "Open Chapter"))
+            }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "Chapter ${chapter.index}",
+                color = PrimaryText,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = chapter.title.ifBlank { "Unknown" },
+                color = SecondaryText,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        
+        if (chapter.fileLocation?.contains("content://") == true) {
+            Icon(
+                imageVector = Icons.Default.CheckCircle,
+                contentDescription = "Downloaded",
+                tint = SuccessGreen,
+                modifier = Modifier.size(28.dp)
+            )
+        } else if (isDownloading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(24.dp),
+                strokeWidth = 2.dp,
+                color = PrimaryAccent
+            )
+        } else {
+            IconButton(
+                onClick = { onFetchChapter(chapter) },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DownloadForOffline,
+                    contentDescription = "Download Chapter",
+                    tint = PrimaryAccent,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -480,107 +627,3 @@ fun ActionRow(icon: ImageVector, title: String, subtext: String, onClick: () -> 
     }
 }
 
-@Composable
-fun ExpandableVolume(
-    volume: Volume,
-    chapters: List<Chapter>,
-    onFetchVolume: () -> Unit,
-    onFetchChapter: (Chapter) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val context = LocalContext.current
-    
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(DarkSurface)
-            .padding(bottom = if (expanded) 8.dp else 0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { expanded = !expanded }
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text("Volume ${volume.volumeIndex}", color = PrimaryText, fontWeight = FontWeight.Bold)
-                Text("${chapters.size} Chapters", color = SecondaryText, fontSize = 12.sp)
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onFetchVolume) {
-                    Icon(Icons.Default.Download, contentDescription = "Fetch Volume", tint = PrimaryAccent)
-                }
-                Icon(
-                    if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                    contentDescription = null,
-                    tint = SecondaryText
-                )
-            }
-        }
-        
-        AnimatedVisibility(visible = expanded) {
-            Column {
-                chapters.forEach { chapter ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable(enabled = chapter.fileLocation?.startsWith("content://") == true) {
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(chapter.fileLocation?.toUri(), "text/html")
-                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                                }
-                                context.startActivity(Intent.createChooser(intent, "Open Chapter"))
-                            }
-                            .padding(horizontal = 16.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "${chapter.index}",
-                            color = PrimaryAccent,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.width(32.dp)
-                        )
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = chapter.title,
-                                color = SecondaryText,
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            if (chapter.sourceUrl != null) {
-                                Text(
-                                    text = chapter.sourceUrl!!,
-                                    color = SecondaryText.copy(alpha = 0.5f),
-                                    fontSize = 10.sp,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
-                        if (chapter.fileLocation?.contains("content://") == true) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = "Downloaded",
-                                tint = SuccessGreen,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        } else {
-                            IconButton(onClick = { onFetchChapter(chapter) }) {
-                                Icon(
-                                    imageVector = Icons.Default.Download,
-                                    contentDescription = "Download Chapter",
-                                    tint = PrimaryAccent,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}

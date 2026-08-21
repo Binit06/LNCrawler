@@ -8,6 +8,7 @@ import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.domain.models.toEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class ChapterRepository(context: Context) {
     private val db = AppDatabase.getDatabase(context)
@@ -15,6 +16,10 @@ class ChapterRepository(context: Context) {
 
     fun getChaptersByNovelUrl(url: String): List<Chapter> {
         return chapterDao.getChapterFromNovel(url).map { it -> it.toDomain() }
+    }
+
+    fun getChaptersFlow(url: String): Flow<List<Chapter>> {
+        return chapterDao.getChaptersFlow(url).map { list -> list.map { it.toDomain() } }
     }
 
     suspend fun insertChapters(chapters : List<Chapter>) {
