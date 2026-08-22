@@ -2,6 +2,7 @@ package com.halovoid.lncrawler.data.handlers
 
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
+import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.data.handlers.utility.parsedMetadata
 import com.halovoid.lncrawler.data.repository.ChapterRepository
@@ -39,6 +40,14 @@ class RangeDownloadHandler(
         // 3. Create CHAPTER requests directly under this range request
         val chapterRequests = chapters.map { chapter ->
             currentCoroutineContext().ensureActive()
+
+            val requestId = "${request.id}_ch_${chapter.index}"
+            val existing = requestDao.getRequestById(requestId)
+            
+            // If it already exists and is finished, don't recreate it
+            if (existing != null && (existing.status == RequestStatus.SUCCESS || existing.status == RequestStatus.RUNNING || existing.status == RequestStatus.PENDING)) {
+                return@map null
+            }
             
             val chapterMetadata = JSONObject().apply {
                 put("chapterId", chapter.id)
@@ -46,7 +55,7 @@ class RangeDownloadHandler(
             }.toString()
 
             RequestEntity(
-                id = "${request.id}_ch_${chapter.index}", // Use range request ID as prefix for uniqueness
+                id = requestId,
                 type = RequestType.CHAPTER,
                 parentNovel = request.novelUrl,
                 dependsOn = request.id,
@@ -59,11 +68,16 @@ class RangeDownloadHandler(
                 progressTotal = 1,
                 progressSuccess = 0,
             )
-        }
+        }.filterNotNull()
 
         // 4. Batch insert and start tracking progress
-        requestDao.insertRequests(chapterRequests)
-        requestDao.propagateProgress(chapterRequests.first().id)
+        if (chapterRequests.isNotEmpty()) {
+            requestDao.insertRequests(chapterRequests)
+        }
+        
+        // Force a progress sync to ensure the parent reflects any existing successful chapters
+        requestDao.syncProgress(request.id)
+        requestDao.propagateProgress(request.id)
 
         return JobResult.Success
     }

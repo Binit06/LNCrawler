@@ -47,6 +47,7 @@ fun RequestScreen(
     val error by viewModel.error.collectAsState()
     val requestHistory by viewModel.requestHistory.collectAsStateWithLifecycle()
     val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
+    val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
 
     var statusFilter by remember { mutableStateOf<RequestStatus?>(null) }
     var typeFilter by remember { mutableStateOf<RequestType?>(null) }
@@ -203,8 +204,10 @@ fun RequestScreen(
                 onGroupClick = onGroupClick,
                 onReplay = { viewModel.replayRequest(it) },
                 onCancel = { viewModel.cancelRequest(it) },
+                onContinue = { viewModel.resumeRequest(it) },
                 onSecurityClick = { securityDialogRequest = it },
                 cancellingRequestIds = cancellingRequestIds,
+                activeActionIds = activeActionIds,
                 allowAction = true
             )
         }

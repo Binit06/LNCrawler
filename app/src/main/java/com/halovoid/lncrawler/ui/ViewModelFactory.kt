@@ -3,8 +3,9 @@ package com.halovoid.lncrawler.ui
 import android.app.Application
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
-import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
+import com.halovoid.lncrawler.data.repository.RequestRepository
+import com.halovoid.lncrawler.ui.screens.novel.GroupedRequestsViewModel
 import com.halovoid.lncrawler.ui.screens.novel.NovelDetailViewModel
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
@@ -17,19 +18,19 @@ import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
 class ViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
-        val db = AppDatabase.getDatabase(application)
+        val requestRepository = RequestRepository.getInstance(application)
         return when {
             modelClass.isAssignableFrom(RequestViewModel::class.java) -> {
-                RequestViewModel(application, db.requestDao()) as T
+                RequestViewModel(application, requestRepository) as T
             }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(application) as T
             }
             modelClass.isAssignableFrom(RequestDetailViewModel::class.java) -> {
-                RequestDetailViewModel(application, db.requestDao()) as T
+                RequestDetailViewModel(application, requestRepository) as T
             }
             modelClass.isAssignableFrom(NovelDetailViewModel::class.java) -> {
-                NovelDetailViewModel(application) as T
+                NovelDetailViewModel(application, requestRepository) as T
             }
             modelClass.isAssignableFrom(FolderViewModel::class.java) -> {
                 FolderViewModel(application, PreferenceRepository(application)) as T
@@ -42,6 +43,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(SupportViewModel::class.java) -> {
                 SupportViewModel(application) as T
+            }
+            modelClass.isAssignableFrom(GroupedRequestsViewModel::class.java) -> {
+                GroupedRequestsViewModel(application, requestRepository) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }

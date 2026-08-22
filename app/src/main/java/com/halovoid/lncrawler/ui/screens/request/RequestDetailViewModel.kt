@@ -8,7 +8,7 @@ import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.repository.ArtifactRepository
 import com.halovoid.lncrawler.data.repository.ChapterRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
-import com.halovoid.lncrawler.api.core.scrapper.Scrapper
+import com.halovoid.lncrawler.data.repository.RequestRepository
 import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Request
@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
  */
 class RequestDetailViewModel(
     application: Application,
-    private val requestDao: RequestDao
+    private val requestRepository: RequestRepository
 ) : AndroidViewModel(application) {
     private val chapterRepository = ChapterRepository(application)
     private val artifactRepository = ArtifactRepository(application)
@@ -33,20 +33,18 @@ class RequestDetailViewModel(
         _requestId.value = id
     }
 
-    private val _cancellingRequestIds = MutableStateFlow<Set<String>>(emptySet())
-    val cancellingRequestIds: StateFlow<Set<String>> = _cancellingRequestIds.asStateFlow()
+    val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
+    val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
 
     fun resolveCloudflare(requestId: String, url: String) {
         viewModelScope.launch {
             android.util.Log.i("RequestDetailViewModel", "Starting Cloudflare resolution for $requestId at $url")
-            val success = Scrapper.globalResolver?.resolve(url) ?: false
+            val success = com.halovoid.lncrawler.api.core.scrapper.Scrapper.globalResolver?.resolve(url) ?: false
             android.util.Log.i("RequestDetailViewModel", "Resolution result: $success")
             if (success) {
                 // Reset status so scheduler can try again
                 android.util.Log.i("RequestDetailViewModel", "Replaying request $requestId")
-                requestDao.replayRequest(requestId)
-                android.util.Log.i("RequestDetailViewModel", "Starting SchedulerService")
-                SchedulerService.startService(getApplication())
+                requestRepository.replayRequest(requestId)
             }
         }
     }
@@ -55,8 +53,7 @@ class RequestDetailViewModel(
     val linkedRequests: StateFlow<List<Request>> = _requestId
         .filterNotNull()
         .flatMapLatest { id ->
-            requestDao.getRequestsByDependenceFlow(id)
-                .map { entities -> entities.map { it.toDomain() } }
+            requestRepository.getRequestsByDependenceFlow(id)
         }
         .stateIn(
             scope = viewModelScope,
@@ -68,7 +65,7 @@ class RequestDetailViewModel(
     val chapterMetadata: StateFlow<Chapter?> = _requestId
         .filterNotNull()
         .flatMapLatest { id ->
-            requestDao.getRequestByIdFlow(id)
+            requestRepository.requestDao.getRequestByIdFlow(id)
         }
         .filterNotNull()
         .map { request ->
@@ -87,7 +84,7 @@ class RequestDetailViewModel(
     val artifactMetadata: StateFlow<Artifact?> = _requestId
         .filterNotNull()
         .flatMapLatest { id ->
-            requestDao.getRequestByIdFlow(id)
+            requestRepository.requestDao.getRequestByIdFlow(id)
         }
         .filterNotNull()
         .map { request ->
@@ -101,27 +98,24 @@ class RequestDetailViewModel(
             initialValue = null
         )
     fun getRequest(requestId: String): Flow<Request?> {
-        return requestDao.getRequestByIdFlow(requestId)
-            .map { it?.toDomain() }
+        return requestRepository.getRequestByIdFlow(requestId)
     }
 
     fun replayRequest(requestId: String) {
         viewModelScope.launch {
-            requestDao.replayRequest(requestId)
+            requestRepository.replayRequest(requestId)
+        }
+    }
 
-            SchedulerService.startService(getApplication())
+    fun resumeRequest(requestId: String) {
+        viewModelScope.launch {
+            requestRepository.resumeRequest(requestId)
         }
     }
 
     fun cancelRequest(requestId: String) {
         viewModelScope.launch {
-            _cancellingRequestIds.update { it + requestId }
-            try {
-                requestDao.cancelRequest(requestId)
-                SchedulerService.cancelJob(getApplication(), requestId)
-            } finally {
-                _cancellingRequestIds.update { it - requestId }
-            }
+            requestRepository.cancelRequest(requestId)
         }
     }
     fun copyArtifactToUri(artifact: Artifact, destinationUri: Uri, onComplete: (Uri?) -> Unit, onFileMissing: () -> Unit) {

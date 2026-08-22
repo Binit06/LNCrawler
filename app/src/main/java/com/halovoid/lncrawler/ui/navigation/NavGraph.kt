@@ -39,6 +39,7 @@ import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.search.SearchScreen
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
+import com.halovoid.lncrawler.ui.screens.novel.GroupedRequestsViewModel
 import com.halovoid.lncrawler.ui.screens.support.SupportScreen
 import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
 import kotlinx.coroutines.flow.first
@@ -63,8 +64,9 @@ sealed class Screen(val route: String) {
     object NovelDetail : Screen("novel_detail/{crawlerName}/{novelUrl}") {
         fun createRoute(crawlerName: String, novelUrl: String) = "novel_detail/$crawlerName/${URLEncoder.encode(novelUrl, "UTF-8")}"
     }
-    object GroupedRequests : Screen("grouped_requests/{novelUrl}/{type}") {
-        fun createRoute(novelUrl: String, type: String) = "grouped_requests/${URLEncoder.encode(novelUrl, "UTF-8")}/$type"
+    object GroupedRequests : Screen("grouped_requests/{contextType}/{contextValue}/{type}") {
+        fun createRoute(contextType: String, contextValue: String, type: String) = 
+            "grouped_requests/$contextType/${URLEncoder.encode(contextValue, "UTF-8")}/$type"
     }
 }
 
@@ -179,7 +181,7 @@ fun NavGraph(navController: NavHostController) {
                         navController.navigate(Screen.RequestDetail.createRoute(requestId))
                     },
                     onGroupClick = { type ->
-                        navController.navigate(Screen.GroupedRequests.createRoute("all", type.name))
+                        navController.navigate(Screen.GroupedRequests.createRoute("ALL", "all", type.name))
                     },
                     searchUrl = searchUrl
                 )
@@ -226,10 +228,14 @@ fun NavGraph(navController: NavHostController) {
             composable(Screen.RequestDetail.route) { backStackEntry ->
                 val encodedId = backStackEntry.arguments?.getString("requestId") ?: ""
                 val requestId = URLDecoder.decode(encodedId, "UTF-8")
+
                 RequestDetailScreen(
                     requestId = requestId,
                     onBackClick = {
                         navController.popBackStack()
+                    },
+                    onGroupClick = { type ->
+                        navController.navigate(Screen.GroupedRequests.createRoute("DEPENDENCY", requestId, type.name))
                     },
                     onRequestClick = { requestId ->
                         navController.navigate(Screen.RequestDetail.createRoute(requestId))
@@ -251,37 +257,30 @@ fun NavGraph(navController: NavHostController) {
                         navController.popBackStack()
                     },
                     onGroupClick = { type ->
-                        navController.navigate(Screen.GroupedRequests.createRoute(novelUrl, type.name))
+                        navController.navigate(Screen.GroupedRequests.createRoute("NOVEL", novelUrl, type.name))
                     }
                 )
             }
             composable(Screen.GroupedRequests.route) { backStackEntry ->
-                val novelUrl = URLDecoder.decode(
-                    backStackEntry.arguments?.getString("novelUrl") ?: "",
+                val contextType = backStackEntry.arguments?.getString("contextType") ?: ""
+                val contextValue = URLDecoder.decode(
+                    backStackEntry.arguments?.getString("contextValue") ?: "",
                     "UTF-8"
                 )
                 val typeName = backStackEntry.arguments?.getString("type") ?: ""
                 val type = RequestType.valueOf(typeName)
 
-                val requests: List<Request>
-                val cancellingRequestIds: Set<String>
-                val allowAction: Boolean
+                val viewModel: GroupedRequestsViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
 
-                if (novelUrl == "all") {
-                    requests = requestViewModel.requestHistory.collectAsStateWithLifecycle().value
-                    cancellingRequestIds = requestViewModel.cancellingRequestIds.collectAsStateWithLifecycle().value
-                    allowAction = true
-                } else {
-                    val viewModel: NovelDetailViewModel = viewModel(
-                        factory = remember { ViewModelFactory(application) }
-                    )
-                    LaunchedEffect(novelUrl) {
-                        viewModel.loadNovel(novelUrl)
-                    }
-                    requests = viewModel.rootRequests.collectAsStateWithLifecycle().value
-                    cancellingRequestIds = emptySet()
-                    allowAction = false
+                LaunchedEffect(contextType, contextValue) {
+                    viewModel.loadRequests(contextType, contextValue)
                 }
+
+                val requests by viewModel.requests.collectAsStateWithLifecycle()
+                val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
+                val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
 
                 GroupedRequestsScreen(
                     type = type,
@@ -290,17 +289,15 @@ fun NavGraph(navController: NavHostController) {
                     onRequestClick = { requestId ->
                         navController.navigate(Screen.RequestDetail.createRoute(requestId))
                     },
-                    onReplay = { requestId ->
-                        if (novelUrl == "all") requestViewModel.replayRequest(requestId)
-                    },
-                    onCancel = { requestId ->
-                        if (novelUrl == "all") requestViewModel.cancelRequest(requestId)
-                    },
+                    onReplay = { viewModel.replayRequest(it) },
+                    onCancel = { viewModel.cancelRequest(it) },
+                    onContinue = { viewModel.resumeRequest(it) },
                     onResolveCloudflare = { requestId, url ->
-                        if (novelUrl == "all") requestViewModel.resolveCloudflare(requestId, url)
+                        viewModel.resolveCloudflare(requestId, url)
                     },
                     cancellingRequestIds = cancellingRequestIds,
-                    allowAction = allowAction
+                    activeActionIds = activeActionIds,
+                    allowAction = contextType == "ALL" || contextType == "DEPENDENCY"
                 )
             }
         }

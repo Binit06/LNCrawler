@@ -33,8 +33,10 @@ fun LazyListScope.requestHistorySection(
     onGroupClick: (RequestType) -> Unit,
     onReplay: (String) -> Unit = {},
     onCancel: (String) -> Unit = {},
+    onContinue: (String) -> Unit = {},
     onSecurityClick: (Request) -> Unit = {},
     cancellingRequestIds: Set<String> = emptySet(),
+    activeActionIds: Set<String> = emptySet(),
     horizontalPadding: androidx.compose.ui.unit.Dp = 0.dp,
     allowAction: Boolean = false
 ) {
@@ -61,8 +63,10 @@ fun LazyListScope.requestHistorySection(
                         onClick = { onRequestClick(request.id) },
                         onReplay = { onReplay(request.id) },
                         onCancel = { onCancel(request.id) },
+                        onContinue = { onContinue(request.id) },
                         onSecurityClick = { onSecurityClick(request) },
                         isCancelling = cancellingRequestIds.contains(request.id),
+                        isActionPending = activeActionIds.contains(request.id),
                         allowAction = allowAction
                     )
                 }

@@ -26,8 +26,10 @@ fun GroupedRequestsScreen(
     onRequestClick: (String) -> Unit,
     onReplay: (String) -> Unit = {},
     onCancel: (String) -> Unit = {},
+    onContinue: (String) -> Unit = {},
     onResolveCloudflare: (String, String) -> Unit = { _, _ -> },
     cancellingRequestIds: Set<String> = emptySet(),
+    activeActionIds: Set<String> = emptySet(),
     allowAction: Boolean = false
 ) {
     val filteredRequests = requests.filter { it.type == type }
@@ -79,8 +81,10 @@ fun GroupedRequestsScreen(
                     onClick = { onRequestClick(request.id) },
                     onReplay = { onReplay(request.id) },
                     onCancel = { onCancel(request.id) },
+                    onContinue = { onContinue(request.id) },
                     onSecurityClick = { securityDialogRequest = request },
                     isCancelling = cancellingRequestIds.contains(request.id),
+                    isActionPending = activeActionIds.contains(request.id),
                     allowAction = allowAction
                 )
             }

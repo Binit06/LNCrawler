@@ -13,11 +13,11 @@ import com.halovoid.lncrawler.data.repository.ChapterRepository
 import com.halovoid.lncrawler.data.repository.NovelRepository
 import com.halovoid.lncrawler.data.repository.VolumeRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
+import com.halovoid.lncrawler.data.repository.RequestRepository
 import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.Request
-import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.ui.components.artifact.ExportFormat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -35,7 +35,10 @@ import org.json.JSONObject
 /**
  * ViewModel for the [NovelDetailScreen].
  */
-class NovelDetailViewModel(application: Application) : AndroidViewModel(application) {
+class NovelDetailViewModel(
+    application: Application,
+    private val requestRepository: RequestRepository
+) : AndroidViewModel(application) {
     private val novelRepository = NovelRepository(application)
     private val volumeRepository = VolumeRepository(application)
 
@@ -43,20 +46,20 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
     private val chapterRepository = ChapterRepository(application)
     private val database = AppDatabase.getDatabase(application)
 
-    private val requestDao = database.requestDao()
-
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel.asStateFlow()
 
     private val _chapterRange = MutableStateFlow<ClosedFloatingPointRange<Float>>(1f..1f)
     val chapterRange: StateFlow<ClosedFloatingPointRange<Float>> = _chapterRange.asStateFlow()
 
+    val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
+    val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val rootRequests: StateFlow<List<Request>> = novel
         .filterNotNull()
         .flatMapLatest { nov ->
-            requestDao.getRootRequestByNovelFlow(nov.url)
-                .map { entities -> entities.map { it.toDomain() } }
+            requestRepository.getRootRequestByNovelFlow(nov.url)
         }
         .stateIn(
             scope = viewModelScope,
@@ -132,7 +135,7 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
                 completedAt = null
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
             SchedulerService.startService(getApplication())
         }
     }
@@ -157,7 +160,7 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
                 parentNovel = novel.url
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
 
             SchedulerService.startService(getApplication())
         }
@@ -190,7 +193,7 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
                 progressTotal = rangeChapters.size
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
 
             SchedulerService.startService(getApplication())
         }
@@ -224,7 +227,7 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
                 progressTotal = allChapters.size
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
             SchedulerService.startService(getApplication())
         }
     }
@@ -258,7 +261,7 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
                 progressTotal = volumeChapters.size
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
             SchedulerService.startService(getApplication())
         }
     }
@@ -285,7 +288,7 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
                 progressSuccess = 0,
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
             SchedulerService.startService(getApplication())
         }
     }
@@ -305,6 +308,24 @@ class NovelDetailViewModel(application: Application) : AndroidViewModel(applicat
     fun deleteNovelPermanently(novel: Novel) {
         viewModelScope.launch {
             novelRepository.deleteNovel(novel)
+        }
+    }
+
+    fun replayRequest(requestId: String) {
+        viewModelScope.launch {
+            requestRepository.replayRequest(requestId)
+        }
+    }
+
+    fun resumeRequest(requestId: String) {
+        viewModelScope.launch {
+            requestRepository.resumeRequest(requestId)
+        }
+    }
+
+    fun cancelRequest(requestId: String) {
+        viewModelScope.launch {
+            requestRepository.cancelRequest(requestId)
         }
     }
 }

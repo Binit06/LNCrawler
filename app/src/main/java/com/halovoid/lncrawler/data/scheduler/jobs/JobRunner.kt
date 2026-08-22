@@ -4,151 +4,103 @@ import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
-import com.halovoid.lncrawler.data.db.entities.RequestType
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.ensureActive
-import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.time.Duration.Companion.milliseconds
 
-/**
- * Responsible for executing a single [RequestEntity].
- * Handles claiming, execution via [JobHandler], and retry logic.
- */
 class JobRunner(
     private val requestDao: RequestDao,
     private val handlerRegistry: JobHandlerRegistry,
     private val retryPolicy: RetryPolicy,
     private val config: SchedulerConfig
 ) {
-    private val isRunning = AtomicBoolean(false)
-
-    /**
-     * Runs the job.
-     * @param request The request to execute.
-     * @param onComplete Callback invoked when the runner is finished (success, failure, or cancellation).
-     */
     suspend fun run(request: RequestEntity, onComplete: suspend () -> Unit) {
-        if (!isRunning.compareAndSet(false, true)) return
-
+        var currRequest = request
         try {
-            var currentRequest = request
-            
-            // 1. Claim the request
-            // Note: In a multi-worker environment, this should ideally be an atomic DB operation.
-            currentRequest = currentRequest.copy(
-                status = RequestStatus.RUNNING,
-                updatedAt = System.currentTimeMillis()
-            )
-            requestDao.updateRequest(currentRequest)
+            val preClaimStatus = requestDao.getRequestById(currRequest.id)?.status
+            if (preClaimStatus == RequestStatus.CANCELLED) return
 
-            // Using crawlerName as the handler key since RequestType is not a field in RequestEntity
-            val handler = handlerRegistry.getHandler(currentRequest.type)
+            currRequest = applyEvent(currRequest, JobEvent.CLAIMED)
+            requestDao.updateRequest(currRequest)
+
+            val handler = handlerRegistry.getHandler(currRequest.type)
             if (handler == null) {
-                fail(currentRequest, "No handler found for: ${currentRequest.type}")
+                fail(currRequest, "No handler found for ${currRequest.type}")
                 return
             }
 
-            var retryCount = 0
-            var success = false
+            val result = handler.handle(currRequest)
 
-            while (retryCount <= config.maxRetries && !success) {
-                var result = handler.handle(currentRequest)
-                
-                // CRITICAL: Check if the request was cancelled in the DB while we were working
-                val latestStatus = requestDao.getRequestById(currentRequest.id)?.status
-                if (latestStatus == RequestStatus.CANCELLED) {
-                    return // Exit immediately without overwriting the DB
+            when (result) {
+                is JobResult.Success -> {
+                    markSuccess(currRequest)
+                    return
                 }
-
-                val latestRequest = requestDao.getRequestById(currentRequest.id) ?: currentRequest
-                when (result) {
-                    is JobResult.Success -> {
-                        markSuccess(latestRequest)
-                        success = true
-                    }
-                    is JobResult.Cancelled -> {
-                        markCancelled(latestRequest)
-                        return
-                    }
-                    is JobResult.Blocked -> {
-                        markBlocked(latestRequest)
-                        return
-                    }
-                    is JobResult.Failure -> {
-                        if (result.isRecoverable && retryCount < config.maxRetries) {
-                            retryCount++
-                            val delayMs = retryPolicy.getNextDelay(retryCount)
-                            
-                            // Update request with current error but keep RUNNING
-                            currentRequest = currentRequest.copy(
-                                error = "Retry $retryCount/${config.maxRetries}: ${result.error.message}",
-                                updatedAt = System.currentTimeMillis()
-                            )
-                            requestDao.updateRequest(currentRequest)
-                            
-                            delay(delayMs)
-                        } else {
-                            fail(currentRequest, result.error.message ?: "Execution failed")
-                            return
-                        }
-                    }
+                is JobResult.Cancelled -> {
+                    markCancelled(currRequest)
+                    return
+                }
+                is JobResult.Blocked -> {
+                    markBlocked(currRequest)
+                    return
+                }
+                is JobResult.Failure -> {
+                    fail(currRequest, result.error.message ?: "Execution Failed")
+                    return
                 }
             }
-        } catch (e: CancellationException) {
-            // If a request is canceled first update on the DB
-            markCancelled(request)
-            throw e
         } catch (e: Exception) {
             fail(request, e.message ?: "Unexpected error during execution")
         } finally {
-            isRunning.set(false)
             onComplete()
         }
     }
 
+    private fun applyEvent(request: RequestEntity, event: JobEvent): RequestEntity =
+        request.copy(
+            status = JobStateMachine.transition(request.status, event),
+            updatedAt = System.currentTimeMillis()
+        )
+
     private suspend fun markSuccess(request: RequestEntity) {
         val hasChildren = requestDao.hasChildren(request.id)
-        requestDao.updateRequest(request.copy(
-            status = RequestStatus.SUCCESS,
+        val updated = applyEvent(request, JobEvent.HANDLER_SUCCESS).copy(
+            rstatus = if (!hasChildren) RequestStatus.SUCCESS else request.rstatus,
             completedAt = System.currentTimeMillis(),
             progressSuccess = if (hasChildren) request.progressSuccess else request.progressTotal,
-            updatedAt = System.currentTimeMillis(),
             error = null
-        ))
-        // Request Progress Update Propagation - SUCCESS
+        )
+
+        requestDao.updateRequest(updated)
         requestDao.propagateProgress(request.id)
     }
 
     private suspend fun fail(request: RequestEntity, errorMessage: String) {
         val hasChildren = requestDao.hasChildren(request.id)
-        requestDao.updateRequest(request.copy(
-            status = RequestStatus.FAILED,
-            updatedAt = System.currentTimeMillis(),
+        val updated = applyEvent(request, JobEvent.HANDLER_FAILURE_FINAL).copy(
+            rstatus = if (!hasChildren) RequestStatus.FAILED else request.status,
             progressFailed = if (hasChildren) request.progressFailed else request.progressTotal,
             error = errorMessage
-        ))
-        // Request Progress Update Propagation - FAILED
+        )
+
+        requestDao.updateRequest(updated)
         requestDao.propagateProgress(request.id)
     }
 
     private suspend fun markCancelled(request: RequestEntity) {
         val hasChildren = requestDao.hasChildren(request.id)
-        requestDao.updateRequest(request.copy(
-            status = RequestStatus.CANCELLED,
-            updatedAt = System.currentTimeMillis(),
-            progressCancelled = if (hasChildren) request.progressCancelled else request.progressTotal,
-        ))
-        // Request Progress Update Propagation - CANCELLED
+        val updated = applyEvent(request, JobEvent.CANCEL_REQUESTED).copy(
+            rstatus = if (hasChildren) RequestStatus.CANCELLING else RequestStatus.CANCELLED,
+            progressCancelled = if (hasChildren) request.progressCancelled else request.progressTotal
+        )
+        requestDao.updateRequest(updated)
         requestDao.propagateProgress(request.id)
     }
 
     private suspend fun markBlocked(request: RequestEntity) {
-        requestDao.updateRequest(request.copy(
-            status = RequestStatus.BLOCKED,
-            updatedAt = System.currentTimeMillis(),
-            error = "Security check required (Cloudflare)"
-        ))
-        // We don't propagate progress yet as it's not a final state (it's a wait state)
+        val updated = applyEvent(request, JobEvent.BLOCKED_BY_PROTECTION)
+            .copy(error = "Security check required")
+
+        requestDao.updateRequest(updated)
     }
 }

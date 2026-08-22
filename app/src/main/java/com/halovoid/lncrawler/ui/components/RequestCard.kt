@@ -29,17 +29,21 @@ fun RequestCard(
     onClick: () -> Unit,
     onReplay: () -> Unit,
     onCancel: () -> Unit,
+    onContinue: (() -> Unit)? = null,
     onSecurityClick: (() -> Unit)? = null,
     allowAction: Boolean = true,
     isCancelling: Boolean = false,
+    isActionPending: Boolean = false,
 ) {
     val isWorkFinished = (request.progressSuccess + request.progressFailed + request.progressCancelled) == request.progressTotal
 
     val isProcessing = when (request.status) {
         RequestStatus.RUNNING, RequestStatus.PENDING, RequestStatus.BLOCKED -> true
         RequestStatus.SUCCESS -> !isWorkFinished
-        else -> false // FAILED, CANCELLED
+        else -> isActionPending
     }
+    
+    val canContinue = (request.status == RequestStatus.CANCELLED || request.status == RequestStatus.FAILED) && (request.progressSuccess < request.progressTotal)
 
     val displayStatus = if (isProcessing) {
         RequestStatus.RUNNING
@@ -213,11 +217,23 @@ fun RequestCard(
                     } else {
                         TextButton(
                             onClick = onReplay,
-                            colors = ButtonDefaults.textButtonColors(contentColor = PrimaryAccent)
+                            colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
                         ) {
-                            Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("Replay")
+                        }
+
+                        if (canContinue && onContinue != null) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            TextButton(
+                                onClick = onContinue,
+                                colors = ButtonDefaults.textButtonColors(contentColor = PrimaryAccent)
+                            ) {
+                                Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Resume")
+                            }
                         }
                     }
                 }

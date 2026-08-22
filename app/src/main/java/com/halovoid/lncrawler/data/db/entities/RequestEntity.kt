@@ -18,6 +18,7 @@ enum class RequestStatus {
     SUCCESS,
     FAILED,
     CANCELLED,
+    CANCELLING,
     PAUSED,
     BLOCKED
 }
@@ -62,6 +63,7 @@ data class RequestEntity(
     val progressFailed: Int = 0,
     val progressCancelled: Int = 0,
     val status: RequestStatus = RequestStatus.PENDING,
+    val rstatus: RequestStatus = RequestStatus.PENDING,
     val metadata: String? = null, //JSON String for containing extra data
     val error: String? = null
 )

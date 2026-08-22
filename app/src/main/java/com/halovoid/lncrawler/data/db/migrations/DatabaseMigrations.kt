@@ -71,4 +71,11 @@ object DatabaseMigrations {
             db.execSQL("PRAGMA foreign_keys = ON")
         }
     }
+
+    val MIGRATION_10_11 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE requests ADD COLUMN rstatus TEXT NOT NULL DEFAULT 'PENDING'")
+            db.execSQL("UPDATE requests SET rstatus = status")
+        }
+    }
 }

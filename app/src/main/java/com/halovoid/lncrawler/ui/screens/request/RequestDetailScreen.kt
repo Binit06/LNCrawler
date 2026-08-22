@@ -27,6 +27,7 @@ import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.components.RequestCard
 import com.halovoid.lncrawler.ui.components.SecurityCheckDialog
 import com.halovoid.lncrawler.domain.models.Request
+import com.halovoid.lncrawler.ui.components.requestHistorySection
 import com.halovoid.lncrawler.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -35,6 +36,7 @@ import kotlinx.coroutines.launch
 fun RequestDetailScreen(
     requestId: String?,
     onBackClick: () -> Unit,
+    onGroupClick: (RequestType) -> Unit,
     onRequestClick: (String) -> Unit
 ) {
     if (requestId == null) {
@@ -51,6 +53,7 @@ fun RequestDetailScreen(
     val record by viewModel.getRequest(requestId).collectAsState(initial = null)
     val linkedRequests by viewModel.linkedRequests.collectAsStateWithLifecycle()
     val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
+    val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
     val chapterMetadata by viewModel.chapterMetadata.collectAsState()
     val artifactMetadata by viewModel.artifactMetadata.collectAsState()
 
@@ -146,8 +149,10 @@ fun RequestDetailScreen(
                         onClick = { /* Already here */ },
                         onReplay = { viewModel.replayRequest(currentRecord.id) },
                         onCancel = { viewModel.cancelRequest(currentRecord.id) },
+                        onContinue = { viewModel.resumeRequest(currentRecord.id) },
                         onSecurityClick = { securityDialogRequest = currentRecord },
-                        isCancelling = cancellingRequestIds.contains(currentRecord.id)
+                        isCancelling = cancellingRequestIds.contains(currentRecord.id),
+                        isActionPending = activeActionIds.contains(currentRecord.id)
                     )
                 }
 
@@ -197,16 +202,18 @@ fun RequestDetailScreen(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
-                    items(linkedRequests) { linked ->
-                        RequestCard(
-                            request = linked,
-                            onClick = { onRequestClick(linked.id) },
-                            onReplay = { viewModel.replayRequest(linked.id) },
-                            onCancel = { viewModel.cancelRequest(linked.id) },
-                            onSecurityClick = { securityDialogRequest = linked },
-                            isCancelling = cancellingRequestIds.contains(linked.id)
-                        )
-                    }
+                    requestHistorySection(
+                        requestHistory = linkedRequests,
+                        onRequestClick = onRequestClick,
+                        onGroupClick = onGroupClick,
+                        onReplay = { viewModel.replayRequest(it) },
+                        onCancel = { viewModel.cancelRequest(it) },
+                        onContinue = { viewModel.resumeRequest(it) },
+                        onSecurityClick = { securityDialogRequest = it },
+                        cancellingRequestIds = cancellingRequestIds,
+                        activeActionIds = activeActionIds,
+                        allowAction = true
+                    )
                 }
             }
         }

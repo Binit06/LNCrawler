@@ -23,7 +23,7 @@ import com.halovoid.lncrawler.data.db.migrations.DatabaseMigrations
  */
 @Database(
     entities = [NovelEntity::class, ChapterEntity::class, VolumeEntity::class, RequestEntity::class, ArtifactEntity::class],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -48,7 +48,8 @@ abstract class AppDatabase : RoomDatabase() {
                         DatabaseMigrations.MIGRATION_5_6,
                         DatabaseMigrations.MIGRATION_6_7,
                         DatabaseMigrations.MIGRATION_7_8,
-                        DatabaseMigrations.MIGRATION_8_9
+                        DatabaseMigrations.MIGRATION_8_9,
+                        DatabaseMigrations.MIGRATION_10_11
                     )
                     .fallbackToDestructiveMigration(true)
                     .build()

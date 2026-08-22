@@ -94,6 +94,9 @@ fun NovelDetailScreen(
         Pair(ids, ranges)
     }
 
+    val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
+    val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
+
     val artifacts by viewModel.artifacts.collectAsStateWithLifecycle()
     var selectedArtifact by remember { mutableStateOf<Artifact?>(null) }
 
@@ -265,7 +268,12 @@ fun NovelDetailScreen(
                     requestHistory = requestHistory,
                     onRequestClick = onRequestClick,
                     onGroupClick = onGroupClick,
-                    horizontalPadding = 16.dp
+                    onReplay = { viewModel.replayRequest(it) },
+                    onContinue = { viewModel.resumeRequest(it) },
+                    cancellingRequestIds = cancellingRequestIds,
+                    activeActionIds = activeActionIds,
+                    horizontalPadding = 16.dp,
+                    allowAction = true
                 )
 
                 item { Spacer(modifier = Modifier.height(12.dp)) }

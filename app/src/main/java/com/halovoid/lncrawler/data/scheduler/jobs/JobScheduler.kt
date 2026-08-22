@@ -2,9 +2,7 @@ package com.halovoid.lncrawler.data.scheduler.jobs
 
 import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
-import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
-import com.halovoid.lncrawler.data.db.entities.RequestType
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.ConcurrentHashMap
@@ -23,18 +21,14 @@ class JobScheduler(
 ) {
     private var pollingJob: Job? = null
     private val activeJobs = ConcurrentHashMap<String, Job>()
+    private val workerPool = WorkerPool(config.maxConcurrentJobs)
+    private val leaseMonitor = LeaseMonitor(config.abandonedTimeoutMs)
     private var onEmptyListener: (() -> Unit)? = null
 
-    /**
-     * Sets a listener to be called when the scheduler has no more active or runnable jobs.
-     */
     fun setOnEmptyListener(listener: () -> Unit) {
         this.onEmptyListener = listener
     }
 
-    /**
-     * Starts the scheduler's polling loop.
-     */
     fun start() {
         if (pollingJob?.isActive == true) return
         pollingJob = scope.launch {
@@ -44,7 +38,6 @@ class JobScheduler(
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    // In a real app, use a logger here
                     e.printStackTrace()
                 }
                 delay(config.pollingIntervalMs.milliseconds)
@@ -52,63 +45,41 @@ class JobScheduler(
         }
     }
 
-    /**
-     * Stops the scheduler. In-flight jobs will continue until finished or the scope is cancelled.
-     */
     fun stop() {
         pollingJob?.cancel()
         pollingJob = null
     }
 
     fun cancelActiveJob(requestId: String) {
-        // removed manual removal since AbandonedJobRecovery was picking up creating a race condition
         activeJobs[requestId]?.cancel()
-        
-        // Also cancel any active children/dependents
-        activeJobs.forEach { (id, job) ->
-            scope.launch {
-                val req = requestDao.getRequestById(id)
-                if (req?.dependsOn == requestId || isDescendant(id, requestId)) {
-                    job.cancel()
-                }
+        scope.launch {
+            val graph = JobGraph.build(requestDao.getAllRequests().first())
+            graph.subtreeOf(requestId).forEach { descendant ->
+                if (descendant.id != requestId) activeJobs[descendant.id]?.cancel()
             }
         }
     }
 
-    private suspend fun isDescendant(childId: String, potentialParentId: String): Boolean {
-        var current = requestDao.getRequestById(childId)
-        while (current?.dependsOn != null) {
-            if (current.dependsOn == potentialParentId) return true
-            current = requestDao.getRequestById(current.dependsOn!!)
-        }
-        return false
-    }
-
-    /**
-     * Main scheduling cycle: recovers abandoned jobs and launches new ones.
-     */
     private suspend fun schedule() {
-        // 1. Recover jobs that were marked as RUNNING but are no longer active
-        recoverAbandoned()
+        val graph = JobGraph.build(requestDao.getAllRequests().first())
+        recoverAbandoned(graph)
+        cancelChildrenOfCancelledParents(graph)
 
-        // 2. Fetch all requests to evaluate dependencies
-        // DAO returns Flow, we take the current snapshot
-        val allRequests = requestDao.getAllRequests().first()
-
-        // 3. Filter and prioritize runnable requests
-        val runnableRequests = allRequests.filter { it.isRunnable(allRequests) }
-            .sortedWith(compareByDescending<RequestEntity> { it.priority }.thenBy { it.createdAt })
-
-        // 4. If no jobs are active and no jobs are runnable, notify listener
-        if (activeJobs.isEmpty() && runnableRequests.isEmpty()) {
+        val readyQueue = ReadyQueue()
+        readyQueue.pushAll(graph.runnableJobs())
+        if (activeJobs.isEmpty() && readyQueue.isEmpty()) {
             onEmptyListener?.invoke()
             return
         }
+        launchReadyJobs(readyQueue)
+    }
 
-        // 5. Launch new runners for eligible requests
-        for (request in runnableRequests) {
-            if (activeJobs.size >= config.maxConcurrentJobs) break
+    private fun launchReadyJobs(readyQueue: ReadyQueue) {
+        while (true) {
+            val request = readyQueue.pop() ?: break
             if (activeJobs.containsKey(request.id)) continue
+
+            if (!workerPool.tryAcquire()) break
 
             val job = scope.launch {
                 try {
@@ -118,64 +89,115 @@ class JobScheduler(
                     }
                 } catch (e: Exception) {
                     activeJobs.remove(request.id)
+                } finally {
+                    workerPool.release()
                 }
             }
             activeJobs[request.id] = job
         }
     }
 
-    /**
-     * Identifies jobs stuck in RUNNING state (e.g., due to process crash) and resets them to PENDING.
-     */
-    private suspend fun recoverAbandoned() {
-        val allRequests = requestDao.getAllRequests().first()
+    private suspend fun recoverAbandoned(graph: JobGraph) {
         val now = System.currentTimeMillis()
-        
-        val abandoned = allRequests.filter { 
-            it.status == RequestStatus.RUNNING && 
-            (now - it.updatedAt) > config.abandonedTimeoutMs &&
-            !activeJobs.containsKey(it.id)
+        val abandoned = graph.runningJobs().filter {
+            leaseMonitor.isExpired(it, now) && !activeJobs.containsKey(it.id)
         }
 
         for (request in abandoned) {
-            // Automatically cancel jobs that were interrupted by a crash/restart
-            requestDao.cancelRequest(request.id)
-            
-            // Add a note to the error field explaining why it was cancelled
-            val updated = requestDao.getRequestById(request.id)
-            if (updated != null) {
-                requestDao.updateRequest(updated.copy(
-                    error = "Interrupted by unexpected app termination or restart."
-                ))
+            val parentCancelled = graph.parentOf(request)?.status == RequestStatus.CANCELLED
+            if (parentCancelled) {
+                requestDao.cancelRequest(request.id)
+            } else {
+                requestDao.resetStatus(request.id, RequestStatus.PENDING, RequestStatus.RUNNING)
             }
         }
     }
 
-    /**
-     * Checks if a request is eligible for execution.
-     */
-    private fun RequestEntity.isRunnable(allRequests: List<RequestEntity>): Boolean {
-        // Only PENDING jobs can be started
-        if (status != RequestStatus.PENDING) return false
-        
-        // Check if dependency is satisfied
-        if (dependsOn != null) {
-            val dependency = allRequests.find { it.id == dependsOn }
-            if (dependency == null) return false
-
-            // For most requests, just checking SUCCESS is enough to start sub-tasks
-            if (dependency.status != RequestStatus.SUCCESS) return false
-
-            // SPECIAL CASE: Artifact (Export) requests must wait for ALL chapters in the dependency to finish.
-            // Other types (like CHAPTER depending on RANGE_DOWNLOAD) should start as soon as the parent finishes spawning.
-            if (this.type == RequestType.ARTIFACT) {
-                val totalProgress = dependency.progressSuccess + dependency.progressFailed + dependency.progressCancelled
-                if (totalProgress < dependency.progressTotal) {
-                    return false
+    private fun cancelChildrenOfCancelledParents(graph: JobGraph) {
+        graph.allNodes()
+            .filter { it.status == RequestStatus.PENDING && it.dependsOn != null }
+            .forEach { req ->
+                val parentCancelled = graph.parentOf(req)?.status == RequestStatus.CANCELLED
+                if (parentCancelled) {
+                    scope.launch { requestDao.cancelRequest(req.id) }
                 }
             }
+    }
+
+
+}
+
+internal class WorkerPool(maxConcurrent: Int) {
+    private val semaphore = kotlinx.coroutines.sync.Semaphore(maxConcurrent)
+    fun tryAcquire(): Boolean = semaphore.tryAcquire()
+    fun release() = semaphore.release()
+}
+
+internal class LeaseMonitor(private val leaseDurationMs: Long) {
+    fun isExpired(request: com.halovoid.lncrawler.data.db.entities.RequestEntity, now: Long = System.currentTimeMillis()): Boolean =
+        request.status == com.halovoid.lncrawler.data.db.entities.RequestStatus.RUNNING &&
+                (now - request.updatedAt) > leaseDurationMs
+}
+
+internal class ReadyQueue(
+    comparator: Comparator<com.halovoid.lncrawler.data.db.entities.RequestEntity> =
+        compareByDescending<com.halovoid.lncrawler.data.db.entities.RequestEntity> { it.priority }
+            .thenBy { it.createdAt }
+) {
+    private val heap = java.util.PriorityQueue(comparator)
+    fun pushAll(jobs: Collection<com.halovoid.lncrawler.data.db.entities.RequestEntity>) { heap.addAll(jobs) }
+    fun pop(): com.halovoid.lncrawler.data.db.entities.RequestEntity? = heap.poll()
+    fun isEmpty() = heap.isEmpty()
+}
+
+internal class JobGraph private constructor(
+    private val nodes: Map<String, com.halovoid.lncrawler.data.db.entities.RequestEntity>,
+    private val childrenOf: Map<String, List<String>>
+) {
+    fun get(id: String): com.halovoid.lncrawler.data.db.entities.RequestEntity? = nodes[id]
+    fun allNodes(): Collection<com.halovoid.lncrawler.data.db.entities.RequestEntity> = nodes.values
+    fun childrenOf(id: String): List<com.halovoid.lncrawler.data.db.entities.RequestEntity> =
+        childrenOf[id]?.mapNotNull { nodes[it] } ?: emptyList()
+
+    fun parentOf(entity: com.halovoid.lncrawler.data.db.entities.RequestEntity): com.halovoid.lncrawler.data.db.entities.RequestEntity? =
+        entity.dependsOn?.let { nodes[it] }
+
+    fun subtreeOf(rootId: String): List<com.halovoid.lncrawler.data.db.entities.RequestEntity> {
+        val visited = LinkedHashSet<String>()
+        val stack = ArrayDeque<String>()
+        stack.addLast(rootId)
+        while (stack.isNotEmpty()) {
+            val currId = stack.removeLast()
+            if (!visited.add(currId)) continue
+            childrenOf[currId]?.forEach { stack.addLast(it) }
         }
-        
+        return visited.mapNotNull { nodes[it] }
+    }
+
+    fun runnableJobs(): List<com.halovoid.lncrawler.data.db.entities.RequestEntity> =
+        nodes.values.filter { it.isRunnable() }
+
+    fun runningJobs(): List<com.halovoid.lncrawler.data.db.entities.RequestEntity> =
+        nodes.values.filter { it.status == com.halovoid.lncrawler.data.db.entities.RequestStatus.RUNNING }
+
+    private fun com.halovoid.lncrawler.data.db.entities.RequestEntity.isRunnable(): Boolean {
+        if (status != com.halovoid.lncrawler.data.db.entities.RequestStatus.PENDING) return false
+        if (dependsOn != null) {
+            val dependency = nodes[dependsOn] ?: return false
+            if (dependency.status == com.halovoid.lncrawler.data.db.entities.RequestStatus.CANCELLED) return false
+            if (dependency.status != com.halovoid.lncrawler.data.db.entities.RequestStatus.SUCCESS) return false
+        }
         return true
+    }
+
+    companion object {
+        fun build(allRequests: List<com.halovoid.lncrawler.data.db.entities.RequestEntity>): JobGraph {
+            val byId = allRequests.associateBy { it.id }
+            val children = allRequests
+                .filter { it.dependsOn != null }
+                .groupBy { it.dependsOn!! }
+                .mapValues { (_, kids) -> kids.map { it.id } }
+            return JobGraph(byId, children)
+        }
     }
 }

@@ -11,6 +11,7 @@ import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.data.redis.RedisManager
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
+import com.halovoid.lncrawler.data.repository.RequestRepository
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.toDomain
 import kotlinx.coroutines.flow.*
@@ -19,7 +20,7 @@ import org.json.JSONObject
 
 class RequestViewModel(
     application: Application,
-    private val requestDao: RequestDao
+    private val requestRepository: RequestRepository
 ) : AndroidViewModel(application) {
 
     /** Tracks validation errors for the URL input field. */
@@ -29,8 +30,8 @@ class RequestViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    private val _cancellingRequestIds = MutableStateFlow<Set<String>>(emptySet())
-    val cancellingRequestIds: StateFlow<Set<String>> = _cancellingRequestIds.asStateFlow()
+    val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
+    val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
 
     fun resolveCloudflare(requestId: String, url: String) {
         viewModelScope.launch {
@@ -40,9 +41,7 @@ class RequestViewModel(
             if (success) {
                 // Reset status so scheduler can try again
                 android.util.Log.i("RequestViewModel", "Replaying request $requestId")
-                requestDao.replayRequest(requestId)
-                android.util.Log.i("RequestViewModel", "Starting SchedulerService")
-                SchedulerService.startService(getApplication())
+                requestRepository.replayRequest(requestId)
             }
         }
     }
@@ -80,7 +79,7 @@ class RequestViewModel(
                 parentNovel = null
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
 
             RedisManager.pushUrl(url)
 
@@ -92,27 +91,24 @@ class RequestViewModel(
 
     fun cancelRequest(requestId: String) {
         viewModelScope.launch {
-            _cancellingRequestIds.update { it + requestId }
-            try {
-                requestDao.cancelRequest(requestId)
-                SchedulerService.cancelJob(getApplication(), requestId)
-            } finally {
-                _cancellingRequestIds.update { it - requestId }
-            }
+            requestRepository.cancelRequest(requestId)
         }
     }
 
     fun replayRequest(requestId: String) {
         viewModelScope.launch {
-            requestDao.replayRequest(requestId)
+            requestRepository.replayRequest(requestId)
+        }
+    }
 
-            SchedulerService.startService(getApplication())
+    fun resumeRequest(requestId: String) {
+        viewModelScope.launch {
+            requestRepository.resumeRequest(requestId)
         }
     }
 
     // Since use of FLOW Progress Data for all request is emitted as the records are updated
-    val requestHistory: StateFlow<List<Request>> = requestDao.getRootRequests()
-        .map { entities -> entities.map { it.toDomain() } }
+    val requestHistory: StateFlow<List<Request>> = requestRepository.getRootRequests()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -121,7 +117,7 @@ class RequestViewModel(
 
     fun deleteRequestRecord(id: String, requestId: Int) {
         viewModelScope.launch {
-            requestDao.deleteById(id)
+            requestRepository.requestDao.deleteById(id)
         }
     }
 }
