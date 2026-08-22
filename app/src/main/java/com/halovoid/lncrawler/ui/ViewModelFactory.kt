@@ -12,6 +12,7 @@ import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel
 import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
+import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
 
 class ViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -20,6 +21,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
         return when {
             modelClass.isAssignableFrom(RequestViewModel::class.java) -> {
                 RequestViewModel(application, db.requestDao()) as T
+            }
+            modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
+                SearchViewModel(application) as T
             }
             modelClass.isAssignableFrom(RequestDetailViewModel::class.java) -> {
                 RequestDetailViewModel(application, db.requestDao()) as T

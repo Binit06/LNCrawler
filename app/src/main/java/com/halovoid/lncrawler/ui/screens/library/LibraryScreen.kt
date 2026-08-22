@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +27,7 @@ import com.halovoid.lncrawler.ui.theme.*
 @Composable
 fun LibraryScreen(
     onNovelClick: (String, String) -> Unit,
+    onSearchClick: () -> Unit,
     onBackClick: () -> Unit, // Still keeping for navigation if needed
     viewModel: LibraryViewModel
 ) {
@@ -81,6 +83,14 @@ fun LibraryScreen(
                     shape = RoundedCornerShape(8.dp),
                     singleLine = true
                 )
+
+                IconButton(onClick = onSearchClick) {
+                    Icon(
+                        imageVector = Icons.Default.Language,
+                        contentDescription = "Global Search",
+                        tint = PrimaryAccent
+                    )
+                }
             }
 
             if (filteredNovels.isEmpty()) {

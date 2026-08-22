@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -34,8 +35,15 @@ fun RequestScreen(
     onRequestClick: (String) -> Unit,
     onGroupClick: (RequestType) -> Unit,
     viewModel: RequestViewModel,
+    searchUrl: String? = null
 ) {
     var urlInput by remember { mutableStateOf("") }
+    
+    LaunchedEffect(searchUrl) {
+        if (searchUrl != null) {
+            urlInput = searchUrl
+        }
+    }
     val error by viewModel.error.collectAsState()
     val requestHistory by viewModel.requestHistory.collectAsStateWithLifecycle()
     val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
