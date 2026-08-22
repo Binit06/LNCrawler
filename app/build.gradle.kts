@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -11,6 +14,21 @@ android {
         version = release(37)
     }
 
+    val redisUrl: String = System.getenv("REDIS_URL")
+        ?: project.findProperty("REDIS_URL")?.toString()
+        ?: try {
+            val properties = Properties()
+            val propertiesFile = project.rootProject.file("local.properties")
+            if (propertiesFile.exists()) {
+                properties.load(FileInputStream(propertiesFile))
+                properties.getProperty("REDIS_URL") ?: ""
+            } else {
+                ""
+            }
+        } catch (_: Exception) {
+            ""
+        }
+
     defaultConfig {
         applicationId = "com.halovoid.lncrawler"
         minSdk = 26
@@ -19,6 +37,8 @@ android {
         versionName = "1.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        buildConfigField("String", "REDIS_URL", "\"$redisUrl\"")
     }
 
     buildTypes {
@@ -63,6 +83,7 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.jedis)
     implementation(project(":api"))
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)

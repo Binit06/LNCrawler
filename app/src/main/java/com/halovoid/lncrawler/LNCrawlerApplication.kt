@@ -5,6 +5,7 @@ import com.halovoid.lncrawler.api.core.scrapper.Scrapper
 import com.halovoid.lncrawler.crash.CrashActivity
 import com.halovoid.lncrawler.crash.GlobalExceptionHandler
 import com.halovoid.lncrawler.api.loader.SourceLoader
+import com.halovoid.lncrawler.data.redis.RedisManager
 import com.halovoid.lncrawler.ui.cloudflare.CloudflareResolverImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,6 +22,11 @@ class LNCrawlerApplication : Application() {
         // Initialize Cloudflare Resolver
         CloudflareResolverImpl.initialize(this)
         Scrapper.globalResolver = CloudflareResolverImpl.getInstance()
+
+        // Initialize Redis in the background (wrapped in launch to avoid class loading on main thread)
+         applicationScope.launch {
+            RedisManager.initialize()
+         }
 
         // Load local sources as early as possible
         applicationScope.launch {

@@ -104,6 +104,8 @@ jobs:
 
       - name: Build Release APK
         run: ./gradlew :app:assembleRelease
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
 
       - name: Sign APK
         run: |

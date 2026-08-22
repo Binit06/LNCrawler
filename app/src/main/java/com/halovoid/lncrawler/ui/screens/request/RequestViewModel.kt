@@ -9,6 +9,7 @@ import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
+import com.halovoid.lncrawler.data.redis.RedisManager
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.toDomain
@@ -80,6 +81,8 @@ class RequestViewModel(
             )
 
             requestDao.insertRequests(listOf(request))
+
+            RedisManager.pushUrl(url)
 
             SchedulerService.startService(getApplication())
 
