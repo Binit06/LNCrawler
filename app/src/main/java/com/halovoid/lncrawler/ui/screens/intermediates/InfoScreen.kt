@@ -35,8 +35,8 @@ fun InfoScreen(
     icon: ImageVector,
     headingText: String,
     subtitleText: String,
-    acceptText: String,
-    onAcceptClick: () -> Unit,
+    acceptText: String? = null,
+    onAcceptClick: (() -> Unit)? = null,
     canAccept: Boolean = true,
     rejectText: String? = null,
     onRejectClick: (() -> Unit)? = null,
@@ -46,36 +46,40 @@ fun InfoScreen(
         bottomBar = {
             val strokeWidth = Dp.Hairline
             val borderColor = MaterialTheme.colorScheme.outline
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background)
-                    .drawBehind {
-                        drawLine(
-                            borderColor,
-                            Offset(0f, 0f),
-                            Offset(size.width, 0f),
-                            strokeWidth.value,
-                        )
-                    }
-                    .windowInsetsPadding(NavigationBarDefaults.windowInsets)
-                    .padding(
-                        horizontal = 10.dp,
-                        vertical = 10.dp,
-                    ),
-            ) {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = canAccept,
-                    onClick = onAcceptClick,
+            if (acceptText != null || rejectText != null) {
+                Column(
+                    modifier = Modifier
+                        .background(MaterialTheme.colorScheme.background)
+                        .drawBehind {
+                            drawLine(
+                                borderColor,
+                                Offset(0f, 0f),
+                                Offset(size.width, 0f),
+                                strokeWidth.value,
+                            )
+                        }
+                        .windowInsetsPadding(NavigationBarDefaults.windowInsets)
+                        .padding(
+                            horizontal = 10.dp,
+                            vertical = 10.dp,
+                        ),
                 ) {
-                    Text(text = acceptText)
-                }
-                if (rejectText != null && onRejectClick != null) {
-                    OutlinedButton(
-                        modifier = Modifier.fillMaxWidth(),
-                        onClick = onRejectClick,
-                    ) {
-                        Text(text = rejectText)
+                    if (acceptText != null && onAcceptClick != null) {
+                        Button(
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = canAccept,
+                            onClick = onAcceptClick,
+                        ) {
+                            Text(text = acceptText)
+                        }
+                    }
+                    if (rejectText != null && onRejectClick != null) {
+                        OutlinedButton(
+                            modifier = Modifier.fillMaxWidth(),
+                            onClick = onRejectClick,
+                        ) {
+                            Text(text = rejectText)
+                        }
                     }
                 }
             }

@@ -25,13 +25,7 @@ class CrashLogUtil(
             try {
                 val cacheDir = storageRepository.getCacheDir()
                 val file = File(cacheDir, "lncrawler_crash_logs.txt")
-                val logContent = StringBuilder().apply {
-                    append(getDebugInfo()).append("\n\n")
-                    append("--- RECENT ACTIVITY (BREADCRUMBS) ---\n")
-                    append(Logger.getLogs())
-                    append("--- STACK TRACE ---\n")
-                    exception?.let { append(it.stackTraceToString()) }
-                }.toString()
+                val logContent = getFullLog(exception)
 
                 file.writeText(logContent)
 
@@ -54,6 +48,16 @@ class CrashLogUtil(
                 }
             }
         }
+    }
+
+    fun getFullLog(exception: Throwable?): String {
+        return StringBuilder().apply {
+            append(getDebugInfo()).append("\n\n")
+            append("--- RECENT ACTIVITY (BREADCRUMBS) ---\n")
+            append(Logger.getLogs())
+            append("\n--- STACK TRACE ---\n")
+            exception?.let { append(it.stackTraceToString()) }
+        }.toString()
     }
 
     fun getDebugInfo(): String {
