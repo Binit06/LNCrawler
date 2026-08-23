@@ -135,14 +135,6 @@ class RequestViewModel(
         }
     }
 
-    // Since use of FLOW Progress Data for all request is emitted as the records are updated
-    val requestHistory: StateFlow<List<Request>> = requestRepository.getRootRequests()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
-
     fun deleteRequestRecord(id: String, requestId: Int) {
         viewModelScope.launch {
             requestRepository.requestDao.deleteById(id)

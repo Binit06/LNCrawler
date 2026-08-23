@@ -17,12 +17,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.halovoid.lncrawler.ui.theme.*
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.domain.models.Request
-import com.halovoid.lncrawler.ui.theme.DarkSurface
-import com.halovoid.lncrawler.ui.theme.PrimaryAccent
-import com.halovoid.lncrawler.ui.theme.PrimaryText
-import com.halovoid.lncrawler.ui.theme.SecondaryText
 
 /**
  * Extension for LazyListScope to provide a grouped or ungrouped request history section.
@@ -126,6 +123,8 @@ fun RequestGroupCard(
     val totalFailed = requests.sumOf { it.progressFailed }
     val totalCancelled = requests.sumOf { it.progressCancelled }
     val totalProgress = requests.sumOf { it.progressTotal }
+    
+    val latestUpdate = requests.maxOfOrNull { it.updatedAt } ?: 0L
 
     val typeName = when (type) {
         RequestType.NOVEL_METADATA -> "Metadata"
@@ -139,7 +138,8 @@ fun RequestGroupCard(
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -160,22 +160,27 @@ fun RequestGroupCard(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            contentColor = MaterialTheme.colorScheme.primary
+                        Surface(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(4.dp)
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     Icons.Default.Folder,
                                     contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
+                                    modifier = Modifier.size(10.dp),
                                     tint = MaterialTheme.colorScheme.primary
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text(type.name, fontSize = 10.sp)
+                                Text(
+                                    text = type.name, 
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
                         }
                         Spacer(modifier = Modifier.width(8.dp))
@@ -187,14 +192,25 @@ fun RequestGroupCard(
                     }
                 }
 
-                Icon(
-                    Icons.Default.ChevronRight,
-                    contentDescription = null,
-                    tint = SecondaryText
-                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = SecondaryText
+                    )
+                    if (latestUpdate > 0) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = android.text.format.DateUtils.getRelativeTimeSpanString(latestUpdate).toString(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryText.copy(alpha = 0.7f),
+                            fontSize = 10.sp
+                        )
+                    }
+                }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Progress Section
             val progress = if (totalProgress > 0) {
@@ -208,16 +224,26 @@ fun RequestGroupCard(
                     cancelled = totalCancelled,
                     total = totalProgress,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "${(progress * 100).toInt()}% average completed",
+                        text = "${(progress * 100).toInt()}% completed",
                         style = MaterialTheme.typography.labelSmall,
-                        color = SecondaryText
+                        color = if (progress == 1f) SuccessGreen else PrimaryAccent,
+                        fontWeight = FontWeight.Bold
                     )
+                    
+                    if (totalFailed > 0) {
+                        Text(
+                            text = "$totalFailed failed",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ErrorRed
+                        )
+                    }
                 }
             }
         }

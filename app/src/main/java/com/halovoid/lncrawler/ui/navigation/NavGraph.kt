@@ -27,6 +27,8 @@ import com.halovoid.lncrawler.ui.screens.request.RequestScreen
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailScreen
 import com.halovoid.lncrawler.ui.screens.request.NovelPreviewScreen
+import com.halovoid.lncrawler.ui.screens.download.DownloadScreen
+import com.halovoid.lncrawler.ui.screens.download.DownloadViewModel
 import com.halovoid.lncrawler.ui.screens.library.LibraryScreen
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -38,7 +40,6 @@ import com.halovoid.lncrawler.ui.screens.crawler.CrawlerScreen
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
-import com.halovoid.lncrawler.ui.screens.search.SearchScreen
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
 import com.halovoid.lncrawler.ui.screens.reader.ReaderScreen
 import com.halovoid.lncrawler.ui.screens.reader.ReaderViewModel
@@ -58,9 +59,9 @@ sealed class Screen(val route: String) {
     object SourceSync: Screen("source_sync")
     object Request : Screen("request")
     object Library : Screen("library")
+    object Downloads : Screen("downloads")
     object Crawlers : Screen("crawlers")
     object Support : Screen("support")
-    object GlobalSearch : Screen("global_search")
     object RequestDetail : Screen("request_detail/{requestId}") {
         fun createRoute(requestId: String) = "request_detail/${URLEncoder.encode(requestId, "UTF-8")}"
     }
@@ -87,30 +88,6 @@ fun NavGraph(navController: NavHostController) {
     val preferenceRepository = remember { PreferenceRepository(application) }
     val scope = rememberCoroutineScope()
     
-    val requestViewModel: RequestViewModel = viewModel(
-        factory = remember { ViewModelFactory(application) }
-    )
-
-    val libraryViewModel: LibraryViewModel = viewModel(
-        factory = remember { ViewModelFactory(application) }
-    )
-
-    val folderViewModel: FolderViewModel = viewModel(
-        factory = remember { ViewModelFactory(application) }
-    )
-
-    val crawlerViewModel: CrawlerViewModel = viewModel(
-        factory = remember { ViewModelFactory(application) }
-    )
-
-    val supportViewModel: SupportViewModel = viewModel(
-        factory = remember { ViewModelFactory(application) }
-    )
-
-    val searchViewModel: SearchViewModel = viewModel(
-        factory = remember { ViewModelFactory(application) }
-    )
-
     var startRoute by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
@@ -128,31 +105,22 @@ fun NavGraph(navController: NavHostController) {
             navController = navController,
             startDestination = route,
             enterTransition = {
-                fadeIn(animationSpec = tween(400)) + slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Start,
-                    tween(400)
-                )
+                fadeIn(animationSpec = tween(400))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(400)) + slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.Start,
-                    tween(400)
-                )
+                fadeOut(animationSpec = tween(400))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(400)) + slideIntoContainer(
-                    AnimatedContentTransitionScope.SlideDirection.End,
-                    tween(400)
-                )
+                fadeIn(animationSpec = tween(400))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(400)) + slideOutOfContainer(
-                    AnimatedContentTransitionScope.SlideDirection.End,
-                    tween(400)
-                )
+                fadeOut(animationSpec = tween(400))
             }
         ) {
             composable(Screen.FolderSelection.route) {
+                val folderViewModel: FolderViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
                 FolderScreen(
                     folderViewModel,
                     onNext = {
@@ -181,7 +149,15 @@ fun NavGraph(navController: NavHostController) {
                     }
                 )
             }
-            composable(Screen.NovelPreview.route) {
+            composable(Screen.NovelPreview.route) { backStackEntry ->
+                // Shared with Request screen
+                val requestEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Screen.Request.route)
+                }
+                val requestViewModel: RequestViewModel = viewModel(
+                    viewModelStoreOwner = requestEntry,
+                    factory = remember { ViewModelFactory(application) }
+                )
                 NovelPreviewScreen(
                     viewModel = requestViewModel,
                     onBack = {
@@ -197,21 +173,28 @@ fun NavGraph(navController: NavHostController) {
             }
             composable(Screen.Request.route) { backStackEntry ->
                 val searchUrl = backStackEntry.savedStateHandle.get<String>("search_url")
+                val requestViewModel: RequestViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                val searchViewModel: SearchViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
                 RequestScreen(
                     viewModel = requestViewModel,
-                    onRequestClick = { requestId ->
-                        navController.navigate(Screen.RequestDetail.createRoute(requestId))
-                    },
-                    onGroupClick = { type ->
-                        navController.navigate(Screen.GroupedRequests.createRoute("ALL", "all", type.name))
-                    },
+                    searchViewModel = searchViewModel,
                     onNavigateToPreview = {
                         navController.navigate(Screen.NovelPreview.route)
+                    },
+                    onCrawlerClick = {
+                        navController.navigate(Screen.Crawlers.route)
                     },
                     searchUrl = searchUrl
                 )
             }
             composable(Screen.Library.route) {
+                val libraryViewModel: LibraryViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
                 LibraryScreen(
                     viewModel = libraryViewModel,
                     onNovelClick = { crawlerName, novelUrl ->
@@ -222,29 +205,36 @@ fun NavGraph(navController: NavHostController) {
                             )
                         )
                     },
-                    onSearchClick = {
-                        navController.navigate(Screen.GlobalSearch.route)
-                    },
                     onBackClick = {
                         navController.popBackStack()
                     }
                 )
             }
             composable(Screen.Crawlers.route) {
+                val crawlerViewModel: CrawlerViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
                 CrawlerScreen(viewModel = crawlerViewModel)
             }
-            composable(Screen.Support.route) {
-                SupportScreen(viewModel = supportViewModel)
-            }
-            composable(Screen.GlobalSearch.route) {
-                SearchScreen(
-                    viewModel = searchViewModel,
-                    requestViewModel = requestViewModel,
-                    onBack = { navController.popBackStack() },
-                    onNavigateToPreview = {
-                        navController.navigate(Screen.NovelPreview.route)
+            composable(Screen.Downloads.route) {
+                val downloadViewModel: DownloadViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                DownloadScreen(
+                    viewModel = downloadViewModel,
+                    onRequestClick = { requestId ->
+                        navController.navigate(Screen.RequestDetail.createRoute(requestId))
+                    },
+                    onGroupClick = { type ->
+                        navController.navigate(Screen.GroupedRequests.createRoute("ALL", "all", type.name))
                     }
                 )
+            }
+            composable(Screen.Support.route) {
+                val supportViewModel: SupportViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                SupportScreen(viewModel = supportViewModel)
             }
             composable(Screen.RequestDetail.route) { backStackEntry ->
                 val encodedId = backStackEntry.arguments?.getString("requestId") ?: ""

@@ -7,6 +7,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
@@ -20,6 +22,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.ui.components.NovelCard
+import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.theme.*
 
@@ -27,71 +30,78 @@ import com.halovoid.lncrawler.ui.theme.*
 @Composable
 fun LibraryScreen(
     onNovelClick: (String, String) -> Unit,
-    onSearchClick: () -> Unit,
     onBackClick: () -> Unit, // Still keeping for navigation if needed
     viewModel: LibraryViewModel
 ) {
     val novels by viewModel.novels.collectAsStateWithLifecycle()
     var searchQuery by remember { mutableStateOf("") }
     var selectedDomain by remember { mutableStateOf("Any") }
+    
+    var isSearching by remember { mutableStateOf(false) }
 
-    val filteredNovels = novels.filter { novel ->
-        (selectedDomain == "Any" || novel.crawlerName == selectedDomain) &&
-        (novel.title.contains(searchQuery, ignoreCase = true))
+    val filteredNovels by remember(novels, searchQuery, selectedDomain) {
+        derivedStateOf {
+            novels.filter {
+                (selectedDomain == "Any" || it.crawlerName == selectedDomain) &&
+                        it.title.contains(searchQuery, ignoreCase = true)
+            }
+        }
     }
 
     val domains = listOf("Any") + novels.map { it.crawlerName }.distinct()
 
     Scaffold(
-        containerColor = DarkBackground,
-        topBar = {
-            TopAppBar(
-                title = { Text("Novels", fontWeight = FontWeight.Bold, color = PrimaryText) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
-            )
-        }
+        containerColor = DarkBackground
     ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
-            // Search and Filter Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                DomainFilter(selectedDomain, domains) { selectedDomain = it }
-
-                TextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    modifier = Modifier.weight(1f),
-                    placeholder = { Text("Search...", fontSize = 14.sp) },
-                    leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
-                    colors = TextFieldDefaults.colors(
-                        focusedContainerColor = DarkSurface,
-                        unfocusedContainerColor = DarkSurface,
-                        focusedIndicatorColor = Color.Transparent,
-                        unfocusedIndicatorColor = Color.Transparent,
-                        focusedTextColor = PrimaryText,
-                        unfocusedTextColor = PrimaryText
-                    ),
-                    shape = RoundedCornerShape(8.dp),
-                    singleLine = true
-                )
-
-                IconButton(onClick = onSearchClick) {
-                    Icon(
-                        imageVector = Icons.Default.Language,
-                        contentDescription = "Global Search",
-                        tint = PrimaryAccent
+            ScreenHeader(
+                title = "Novels",
+                subtitle = if (novels.isNotEmpty()) "${filteredNovels.size} novels" else null,
+                isExpanded = isSearching,
+                expandedContent = {
+                    TextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text("Search library...", fontSize = 14.sp) },
+                        leadingIcon = { 
+                            IconButton(onClick = { 
+                                isSearching = false
+                                searchQuery = ""
+                            }) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = "Clear")
+                                }
+                            }
+                        },
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = Color.Transparent,
+                            unfocusedIndicatorColor = Color.Transparent,
+                            focusedTextColor = PrimaryText,
+                            unfocusedTextColor = PrimaryText
+                        ),
+                        singleLine = true
                     )
+                },
+                actions = {
+                    IconButton(onClick = { isSearching = true }) {
+                        Icon(Icons.Default.Search, contentDescription = "Search", tint = PrimaryText)
+                    }
+                    
+                    DomainFilter(selectedDomain, domains) { selectedDomain = it }
                 }
-            }
+            )
 
             if (filteredNovels.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

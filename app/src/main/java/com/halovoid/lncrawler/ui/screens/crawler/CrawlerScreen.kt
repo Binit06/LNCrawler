@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.api.core.crawler.Crawler
+import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,10 +51,16 @@ fun CrawlerScreen(
 
     Scaffold(
         containerColor = DarkBackground,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Crawlers", fontWeight = FontWeight.Bold, color = PrimaryText) },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = innerPadding.calculateBottomPadding())
+        ) {
+            ScreenHeader(
+// ...
+                title = "Crawlers",
                 actions = {
                     if (syncState is SyncState.Loading) {
                         CircularProgressIndicator(
@@ -61,22 +68,14 @@ fun CrawlerScreen(
                             color = PrimaryAccent,
                             strokeWidth = 2.dp
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
                     } else if (showSyncOption) {
                         IconButton(onClick = { viewModel.syncCrawlers() }) {
                             Icon(Icons.Default.Sync, contentDescription = "Sync Crawlers", tint = PrimaryAccent)
                         }
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                }
             )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+
             if (syncState is SyncState.Incompatible) {
                 Card(
                     modifier = Modifier
