@@ -1,9 +1,8 @@
 package com.halovoid.lncrawler.ui.navigation
 
-import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import android.app.Application
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -85,7 +84,7 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(navController: NavHostController) {
     val application = LocalContext.current.applicationContext as Application
-    val preferenceRepository = remember { PreferenceRepository(application) }
+    val preferenceRepository = remember { PreferenceRepository.getInstance(application) }
     val scope = rememberCoroutineScope()
     
     var startRoute by remember { mutableStateOf<String?>(null) }
@@ -105,16 +104,16 @@ fun NavGraph(navController: NavHostController) {
             navController = navController,
             startDestination = route,
             enterTransition = {
-                fadeIn(animationSpec = tween(400))
+                fadeIn(animationSpec = tween(200))
             },
             exitTransition = {
-                fadeOut(animationSpec = tween(400))
+                fadeOut(animationSpec = tween(200))
             },
             popEnterTransition = {
-                fadeIn(animationSpec = tween(400))
+                fadeIn(animationSpec = tween(200))
             },
             popExitTransition = {
-                fadeOut(animationSpec = tween(400))
+                fadeOut(animationSpec = tween(200))
             }
         ) {
             composable(Screen.FolderSelection.route) {

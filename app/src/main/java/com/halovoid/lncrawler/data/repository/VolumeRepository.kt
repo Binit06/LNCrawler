@@ -9,10 +9,21 @@ import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.domain.models.toEntity
 import kotlinx.coroutines.flow.Flow
 
-class VolumeRepository(context: Context) {
+class VolumeRepository private constructor(context: Context) {
     private val db = AppDatabase.getDatabase(context)
 
     private val volumeDao = db.volumeDao()
+
+    companion object {
+        @Volatile
+        private var INSTANCE: VolumeRepository? = null
+
+        fun getInstance(context: Context): VolumeRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: VolumeRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
 
     fun getVolumeByNovelUrl(url: String): List<Volume> {
         return volumeDao.getVolumesForNovel(url).map { it -> it.toDomain() }

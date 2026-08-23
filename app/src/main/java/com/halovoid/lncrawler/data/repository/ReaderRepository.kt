@@ -1,5 +1,6 @@
 package com.halovoid.lncrawler.data.repository
 
+import android.annotation.SuppressLint
 import android.content.Context
 import androidx.core.net.toUri
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
@@ -8,9 +9,20 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jsoup.Jsoup
 
-class ReaderRepository(
+class ReaderRepository private constructor(
     private val context: Context
 ) {
+    companion object {
+        @SuppressLint("StaticFieldLeak")
+        @Volatile
+        private var INSTANCE: ReaderRepository? = null
+
+        fun getInstance(context: Context): ReaderRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: ReaderRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
     suspend fun getChapterContent(chapter: Chapter, crawlerName: String): List<String> =
         withContext(Dispatchers.IO) {
             val html = readDownloaded(chapter.fileLocation) ?: fetchLive(chapter, crawlerName)

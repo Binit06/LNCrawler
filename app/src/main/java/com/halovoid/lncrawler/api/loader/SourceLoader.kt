@@ -19,7 +19,7 @@ import java.io.FileOutputStream
  */
 class SourceLoader(private val context: Context) {
     private val dexLoader = DexLoader(context)
-    private val preferenceRepository = PreferenceRepository(context)
+    private val preferenceRepository = PreferenceRepository.getInstance(context)
     private val client = OkHttpClient()
 
     private val GITHUB_API_URL = "https://api.github.com/repos/Binit06/LNCrawlerSources/releases/latest"

@@ -39,12 +39,11 @@ class NovelDetailViewModel(
     application: Application,
     private val requestRepository: RequestRepository
 ) : AndroidViewModel(application) {
-    private val novelRepository = NovelRepository(application)
-    private val volumeRepository = VolumeRepository(application)
+    private val novelRepository = NovelRepository.getInstance(application)
+    private val volumeRepository = VolumeRepository.getInstance(application)
 
-    private val artifactRepository = ArtifactRepository(application)
-    private val chapterRepository = ChapterRepository(application)
-    private val database = AppDatabase.getDatabase(application)
+    private val artifactRepository = ArtifactRepository.getInstance(application)
+    private val chapterRepository = ChapterRepository.getInstance(application)
 
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel.asStateFlow()

@@ -18,7 +18,7 @@ class CrashActivity : ComponentActivity() {
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val exception = GlobalExceptionHandler.getThrowableFromIntent(intent)
-        val storageRepository = StorageRepositoryImpl(applicationContext, PreferenceRepository(applicationContext))
+        val storageRepository = StorageRepositoryImpl(applicationContext, PreferenceRepository.getInstance(applicationContext))
 
         setContent {
             LNCrawlerTheme {

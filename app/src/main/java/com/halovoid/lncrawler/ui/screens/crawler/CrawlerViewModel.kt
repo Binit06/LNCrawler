@@ -25,9 +25,11 @@ sealed class SyncState {
     data class Error(val error: String) : SyncState()
 }
 
-class CrawlerViewModel(application: Application) : AndroidViewModel(application) {
+class CrawlerViewModel(
+    application: Application,
+    private val preferenceRepository: PreferenceRepository
+) : AndroidViewModel(application) {
     private val sourceLoader = SourceLoader(application)
-    private val preferenceRepository = PreferenceRepository(application)
     
     val crawlers: StateFlow<List<Crawler>> = CrawlerFactory.crawlersFlow
 

@@ -110,12 +110,12 @@ class SchedulerService : Service() {
         val chapterDao = db.chapterDao()
 
         // 1. Initializing Repositories
-        val novelRepository = NovelRepository(this)
-        val chapterRepository = ChapterRepository(this)
-        val volumeRepository = VolumeRepository(this)
-        val preferenceRepository = PreferenceRepository(this)
+        val novelRepository = NovelRepository.getInstance(this)
+        val chapterRepository = ChapterRepository.getInstance(this)
+        val volumeRepository = VolumeRepository.getInstance(this)
+        val preferenceRepository = PreferenceRepository.getInstance(this)
         val storageRepository = StorageRepositoryImpl(this, preferenceRepository)
-        val artifactRepository = ArtifactRepository(this)
+        val artifactRepository = ArtifactRepository.getInstance(this)
 
         // 2. Initialize Artifact System
         val epubGenerator = EpubGenerator(storageRepository)

@@ -25,8 +25,8 @@ class RequestDetailViewModel(
     application: Application,
     private val requestRepository: RequestRepository
 ) : AndroidViewModel(application) {
-    private val chapterRepository = ChapterRepository(application)
-    private val artifactRepository = ArtifactRepository(application)
+    private val chapterRepository = ChapterRepository.getInstance(application)
+    private val artifactRepository = ArtifactRepository.getInstance(application)
 
     private val _requestId = MutableStateFlow<String?>(null)
     fun setRequestId(id: String) {

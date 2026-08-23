@@ -10,9 +10,20 @@ import com.halovoid.lncrawler.domain.models.toEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
-class ChapterRepository(context: Context) {
+class ChapterRepository private constructor(context: Context) {
     private val db = AppDatabase.getDatabase(context)
     private val chapterDao = db.chapterDao()
+
+    companion object {
+        @Volatile
+        private var INSTANCE: ChapterRepository? = null
+
+        fun getInstance(context: Context): ChapterRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: ChapterRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
 
     fun getChaptersByNovelUrl(url: String): List<Chapter> {
         return chapterDao.getChapterFromNovel(url).map { it -> it.toDomain() }

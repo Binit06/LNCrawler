@@ -10,9 +10,9 @@ import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.data.repository.NovelRepository
 
 class LibraryViewModel(
-    application: Application
+    application: Application,
+    private val novelRepository: NovelRepository
 ) : AndroidViewModel(application) {
-    private val novelRepository = NovelRepository(application)
     val novels: StateFlow<List<Novel>> = novelRepository.getAllNovels()
         .stateIn(
             scope = viewModelScope,

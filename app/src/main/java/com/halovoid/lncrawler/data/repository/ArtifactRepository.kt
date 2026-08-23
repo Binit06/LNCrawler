@@ -1,5 +1,6 @@
 package com.halovoid.lncrawler.data.repository
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import com.halovoid.lncrawler.data.db.AppDatabase
@@ -12,11 +13,23 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import androidx.core.net.toUri
 
-class ArtifactRepository(private val context: Context) {
+class ArtifactRepository private constructor(private val context: Context) {
 
     private val db = AppDatabase.getDatabase(context)
 
     private val artifactDao = db.artifactDao()
+
+    companion object {
+        @SuppressLint("StaticFieldLeak")
+        @Volatile
+        private var INSTANCE: ArtifactRepository? = null
+
+        fun getInstance(context: Context): ArtifactRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: ArtifactRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
 
     fun getArtifactById(id: Int): Artifact {
         return artifactDao.getArtifactById(id).toDomain()

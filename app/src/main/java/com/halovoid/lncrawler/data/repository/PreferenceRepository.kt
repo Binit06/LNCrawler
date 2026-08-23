@@ -1,5 +1,6 @@
 package com.halovoid.lncrawler.data.repository
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import androidx.datastore.preferences.core.edit
@@ -13,9 +14,20 @@ private val ONBOARDING_COMPLETED = stringPreferencesKey("onboarding_completed")
 private val LAST_SYNC_TIME = stringPreferencesKey("last_sync_time")
 private val CURRENT_DEX_TAG = stringPreferencesKey("current_dex_tag")
 
-class PreferenceRepository(
+class PreferenceRepository private constructor(
     private val context: Context
 ) {
+    companion object {
+        @SuppressLint("StaticFieldLeak")
+        @Volatile
+        private var INSTANCE: PreferenceRepository? = null
+
+        fun getInstance(context: Context): PreferenceRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: PreferenceRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
 
     val exportFolderUri: Flow<Uri?> =
         context.appDataStore.data.map { preferences ->

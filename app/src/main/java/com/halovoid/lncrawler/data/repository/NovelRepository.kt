@@ -13,11 +13,22 @@ import kotlinx.coroutines.flow.map
  * Coordinates between the [com.halovoid.lncrawler.api.core.crawler.Crawler]s (Network)
  * and [com.halovoid.lncrawler.data.db.AppDatabase] (Local Storage).
  */
-class NovelRepository(context: Context) {
+class NovelRepository private constructor(context: Context) {
     /** Access to the Room database instance. */
     private val db = AppDatabase.getDatabase(context)
     /** Data Access Object for novel-related database operations. */
     private val novelDao = db.novelDao()
+
+    companion object {
+        @Volatile
+        private var INSTANCE: NovelRepository? = null
+
+        fun getInstance(context: Context): NovelRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: NovelRepository(context.applicationContext).also { INSTANCE = it }
+            }
+        }
+    }
 
     /**
      * Retrieves all novels saved in the local database.

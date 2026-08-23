@@ -20,10 +20,12 @@ data class LoadedChapter(
     val paragraph: List<String>
 )
 
-class ReaderViewModel(application: Application) : AndroidViewModel(application) {
-    private val chapterRepository = ChapterRepository(application)
-    private val novelRepository = NovelRepository(application)
-    private val readerRepository = ReaderRepository(application)
+class ReaderViewModel(
+    application: Application,
+    private val chapterRepository: ChapterRepository,
+    private val novelRepository: NovelRepository,
+    private val readerRepository: ReaderRepository
+) : AndroidViewModel(application) {
 
     private var allChapters: List<Chapter> = emptyList()
     private var crawlerName: String = ""
