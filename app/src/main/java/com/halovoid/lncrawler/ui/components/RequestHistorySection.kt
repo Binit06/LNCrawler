@@ -25,7 +25,7 @@ import com.halovoid.lncrawler.ui.theme.PrimaryText
 import com.halovoid.lncrawler.ui.theme.SecondaryText
 
 /**
- * Extension for LazyListScope to provide a grouped request history section.
+ * Extension for LazyListScope to provide a grouped or ungrouped request history section.
  */
 fun LazyListScope.requestHistorySection(
     requestHistory: List<Request>,
@@ -38,41 +38,82 @@ fun LazyListScope.requestHistorySection(
     cancellingRequestIds: Set<String> = emptySet(),
     activeActionIds: Set<String> = emptySet(),
     horizontalPadding: androidx.compose.ui.unit.Dp = 0.dp,
-    allowAction: Boolean = false
+    allowAction: Boolean = false,
+    forceUngrouped: Boolean = false
 ) {
     if (requestHistory.isEmpty()) return
 
-    val groupedRequests = requestHistory.groupBy { it.type }
-
-    groupedRequests.forEach { (type, requests) ->
-        if (requests.size > 1) {
-            item(key = "group_$type") {
-                Box(modifier = Modifier.padding(horizontal = horizontalPadding).padding(bottom = 12.dp)) {
-                    RequestGroupCard(
-                        type = type,
-                        requests = requests,
-                        onClick = { onGroupClick(type) }
-                    )
-                }
+    if (forceUngrouped) {
+        items(requestHistory, key = { it.id }) { request ->
+            Box(modifier = Modifier.padding(horizontal = horizontalPadding).padding(bottom = 12.dp)) {
+                RequestCard(
+                    request = request,
+                    onClick = { onRequestClick(request.id) },
+                    onReplay = { onReplay(request.id) },
+                    onCancel = { onCancel(request.id) },
+                    onContinue = { onContinue(request.id) },
+                    onSecurityClick = { onSecurityClick(request) },
+                    isCancelling = cancellingRequestIds.contains(request.id),
+                    isActionPending = activeActionIds.contains(request.id),
+                    allowAction = allowAction
+                )
             }
-        } else {
-            items(requests, key = { it.id }) { request ->
-                Box(modifier = Modifier.padding(horizontal = horizontalPadding).padding(bottom = 12.dp)) {
-                    RequestCard(
-                        request = request,
-                        onClick = { onRequestClick(request.id) },
-                        onReplay = { onReplay(request.id) },
-                        onCancel = { onCancel(request.id) },
-                        onContinue = { onContinue(request.id) },
-                        onSecurityClick = { onSecurityClick(request) },
-                        isCancelling = cancellingRequestIds.contains(request.id),
-                        isActionPending = activeActionIds.contains(request.id),
-                        allowAction = allowAction
-                    )
+        }
+    } else {
+        val groupedRequests = requestHistory.groupBy { it.type }
+
+        groupedRequests.forEach { (type, requests) ->
+            if (requests.size > 1) {
+                item(key = "group_$type") {
+                    Box(modifier = Modifier.padding(horizontal = horizontalPadding).padding(bottom = 12.dp)) {
+                        RequestGroupCard(
+                            type = type,
+                            requests = requests,
+                            onClick = { onGroupClick(type) }
+                        )
+                    }
+                }
+            } else {
+                items(requests, key = { it.id }) { request ->
+                    Box(modifier = Modifier.padding(horizontal = horizontalPadding).padding(bottom = 12.dp)) {
+                        RequestCard(
+                            request = request,
+                            onClick = { onRequestClick(request.id) },
+                            onReplay = { onReplay(request.id) },
+                            onCancel = { onCancel(request.id) },
+                            onContinue = { onContinue(request.id) },
+                            onSecurityClick = { onSecurityClick(request) },
+                            isCancelling = cancellingRequestIds.contains(request.id),
+                            isActionPending = activeActionIds.contains(request.id),
+                            allowAction = allowAction
+                        )
+                    }
                 }
             }
         }
     }
+}
+
+@Composable
+fun RequestActionHandler(
+    onResolveCloudflare: (String, String) -> Unit,
+    content: @Composable (onSecurityClick: (Request) -> Unit) -> Unit
+) {
+    var securityDialogRequest by remember { mutableStateOf<Request?>(null) }
+
+    if (securityDialogRequest != null) {
+        SecurityCheckDialog(
+            novelName = securityDialogRequest!!.name,
+            onConfirm = {
+                val req = securityDialogRequest!!
+                securityDialogRequest = null
+                onResolveCloudflare(req.id, req.url ?: req.novelUrl)
+            },
+            onDismiss = { securityDialogRequest = null }
+        )
+    }
+
+    content { securityDialogRequest = it }
 }
 
 @Composable
@@ -87,10 +128,10 @@ fun RequestGroupCard(
     val totalProgress = requests.sumOf { it.progressTotal }
 
     val typeName = when (type) {
-        RequestType.NOVEL_METADATA -> "Metadata Refreshes"
-        RequestType.CHAPTER -> "Single Chapters"
+        RequestType.NOVEL_METADATA -> "Metadata"
+        RequestType.CHAPTER -> "Chapters"
         RequestType.ARTIFACT -> "Exports"
-        RequestType.RANGE_DOWNLOAD -> "Range Downloads"
+        RequestType.RANGE_DOWNLOAD -> "Downloads"
     }
 
     Card(

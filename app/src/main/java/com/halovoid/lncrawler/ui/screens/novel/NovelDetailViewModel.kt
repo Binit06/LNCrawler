@@ -147,10 +147,10 @@ class NovelDetailViewModel(
             }.toString()
 
             val request = RequestEntity(
-                id = "${novel.url}_metadata",
+                id = "${novel.url}_crawl",
                 type = RequestType.NOVEL_METADATA,
                 novelUrl = novel.url,
-                name = "Metadata: ${novel.url}",
+                name = "Metadata: ${novel.title}",
                 metadata = metadata,
                 status = RequestStatus.PENDING,
                 dependsOn = null,

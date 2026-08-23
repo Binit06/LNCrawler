@@ -60,6 +60,7 @@ fun NovelDetailScreen(
     novelUrl: String,
     onRequestClick: (String) -> Unit,
     onGroupClick: (RequestType) -> Unit,
+    onChapterClick: (String, Int) -> Unit,
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
@@ -314,7 +315,6 @@ fun NovelDetailScreen(
                         .padding(bottom = 24.dp)) {
                         ActionsSection(
                             onFetchMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
-                            onDownloadAll = { viewModel.downloadAllChapters(currentNovel) },
                             onShowDownloadRange = { showDownloadDialog = true },
                             onExport = { format ->
                                 val start = chapterRange.start.toInt()
@@ -382,6 +382,7 @@ fun NovelDetailScreen(
                         ChapterRow(
                             chapter = chapter,
                             onFetchChapter = { viewModel.fetchChapter(currentNovel, it) },
+                            onChapterClick = { onChapterClick(currentNovel.url, it.id) },
                             isDownloading = isDownloading
                         )
                         HorizontalDivider(
@@ -449,21 +450,14 @@ fun NovelDetailScreen(
 fun ChapterRow(
     chapter: Chapter,
     onFetchChapter: (Chapter) -> Unit,
+    onChapterClick: (Chapter) -> Unit,
     isDownloading: Boolean
 ) {
-    val context = LocalContext.current
-    
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(DarkBackground)
-            .clickable(enabled = chapter.fileLocation?.startsWith("content://") == true) {
-                val intent = Intent(Intent.ACTION_VIEW).apply {
-                    setDataAndType(chapter.fileLocation?.toUri(), "text/html")
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                context.startActivity(Intent.createChooser(intent, "Open Chapter"))
-            }
+            .clickable { onChapterClick(chapter) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -541,7 +535,6 @@ fun MetadataSection(data: Map<String, String>) {
 @Composable
 fun ActionsSection(
     onFetchMetadata: () -> Unit,
-    onDownloadAll: () -> Unit,
     onShowDownloadRange: () -> Unit,
     onExport: (ExportFormat) -> Unit,
     onDelete: () -> Unit
@@ -578,15 +571,6 @@ fun ActionsSection(
             title = "Download Range",
             subtext = "Select chapter range to download",
             onClick = onShowDownloadRange
-        )
-
-        HorizontalDivider(color = BorderColor)
-
-        ActionRow(
-            icon = Icons.Default.DownloadForOffline,
-            title = "Download All Chapters",
-            subtext = "Fetch all volumes and chapters",
-            onClick = onDownloadAll
         )
 
         HorizontalDivider(color = BorderColor)

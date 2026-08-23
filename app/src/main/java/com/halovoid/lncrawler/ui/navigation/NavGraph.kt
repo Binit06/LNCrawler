@@ -39,6 +39,8 @@ import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.search.SearchScreen
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
+import com.halovoid.lncrawler.ui.screens.reader.ReaderScreen
+import com.halovoid.lncrawler.ui.screens.reader.ReaderViewModel
 import com.halovoid.lncrawler.ui.screens.novel.GroupedRequestsViewModel
 import com.halovoid.lncrawler.ui.screens.support.SupportScreen
 import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
@@ -67,6 +69,10 @@ sealed class Screen(val route: String) {
     object GroupedRequests : Screen("grouped_requests/{contextType}/{contextValue}/{type}") {
         fun createRoute(contextType: String, contextValue: String, type: String) = 
             "grouped_requests/$contextType/${URLEncoder.encode(contextValue, "UTF-8")}/$type"
+    }
+    object Reader : Screen("reader/{novelUrl}/{initialChapterId}") {
+        fun createRoute(novelUrl: String, initialChapterId: Int) = 
+            "reader/${URLEncoder.encode(novelUrl, "UTF-8")}/$initialChapterId"
     }
 }
 
@@ -258,6 +264,9 @@ fun NavGraph(navController: NavHostController) {
                     },
                     onGroupClick = { type ->
                         navController.navigate(Screen.GroupedRequests.createRoute("NOVEL", novelUrl, type.name))
+                    },
+                    onChapterClick = { url, chapterId ->
+                        navController.navigate(Screen.Reader.createRoute(url, chapterId))
                     }
                 )
             }
@@ -298,6 +307,24 @@ fun NavGraph(navController: NavHostController) {
                     cancellingRequestIds = cancellingRequestIds,
                     activeActionIds = activeActionIds,
                     allowAction = contextType == "ALL" || contextType == "DEPENDENCY"
+                )
+            }
+            composable(Screen.Reader.route) { backStackEntry ->
+                val novelUrl = URLDecoder.decode(
+                    backStackEntry.arguments?.getString("novelUrl") ?: "",
+                    "UTF-8"
+                )
+                val initialChapterId = backStackEntry.arguments?.getString("initialChapterId")?.toIntOrNull() ?: -1
+
+                val viewModel: ReaderViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+
+                ReaderScreen(
+                    novelUrl = novelUrl,
+                    initialChapterId = initialChapterId,
+                    onBack = { navController.popBackStack() },
+                    viewModel = viewModel
                 )
             }
         }

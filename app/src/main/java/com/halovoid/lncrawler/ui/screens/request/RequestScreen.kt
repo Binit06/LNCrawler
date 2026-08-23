@@ -3,14 +3,11 @@ package com.halovoid.lncrawler.ui.screens.request
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.FilterList
-import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,7 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.components.RequestCard
-import com.halovoid.lncrawler.ui.components.SecurityCheckDialog
+import com.halovoid.lncrawler.ui.components.RequestActionHandler
 import com.halovoid.lncrawler.ui.components.requestHistorySection
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.ui.theme.*
@@ -54,162 +51,152 @@ fun RequestScreen(
 
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
-    var securityDialogRequest by remember { mutableStateOf<Request?>(null) }
-
-    if (securityDialogRequest != null) {
-        SecurityCheckDialog(
-            novelName = securityDialogRequest!!.name,
-            onConfirm = {
-                val req = securityDialogRequest!!
-                securityDialogRequest = null
-                viewModel.resolveCloudflare(req.id, req.url ?: req.novelUrl)
-            },
-            onDismiss = { securityDialogRequest = null }
-        )
-    }
-
-    Scaffold(
-        containerColor = DarkBackground,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text("Request Novels", fontWeight = FontWeight.Bold, color = PrimaryText)
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
-            )
-        }
-    ) { innerPadding ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Request Novel Section
-            item {
-                Column {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(28.dp))
-                            .background(DarkSurface)
-                            .padding(start = 16.dp, end = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextField(
-                            value = urlInput,
-                            onValueChange = { urlInput = it },
-                            modifier = Modifier.weight(1f),
-                            placeholder = { Text("Enter novel page URL", color = SecondaryText) },
-                            colors = TextFieldDefaults.colors(
-                                focusedContainerColor = Color.Transparent,
-                                unfocusedContainerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent,
-                                focusedIndicatorColor = Color.Transparent,
-                                unfocusedIndicatorColor = Color.Transparent,
-                                cursorColor = PrimaryAccent,
-                                focusedTextColor = PrimaryText,
-                                unfocusedTextColor = PrimaryText
-                            ),
-                            singleLine = true
-                        )
-
-                        FilledIconButton(
-                            onClick = {
-                                if (!isLoading) {
-                                    val crawlerName = viewModel.validateUrl(urlInput)
-                                    if (crawlerName != null) {
-                                        viewModel.startNovelCrawl(crawlerName, urlInput)
-                                    }
-                                }
-                            },
-                            enabled = !isLoading,
-                            modifier = Modifier.size(48.dp),
-                            shape = CircleShape,
-                            colors = IconButtonDefaults.filledIconButtonColors(
-                                containerColor = SuccessGreen,
-                                contentColor = Color.White
-                            )
+    RequestActionHandler(
+        onResolveCloudflare = { id, url -> viewModel.resolveCloudflare(id, url) }
+    ) { onSecurityClick ->
+        Scaffold(
+            containerColor = DarkBackground,
+            topBar = {
+                TopAppBar(
+                    title = {
+                        Text("Request Novels", fontWeight = FontWeight.Bold, color = PrimaryText)
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+                )
+            }
+        ) { innerPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Request Novel Section
+                item {
+                    Column {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(28.dp))
+                                .background(DarkSurface)
+                                .padding(start = 16.dp, end = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (isLoading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp
+                            TextField(
+                                value = urlInput,
+                                onValueChange = { urlInput = it },
+                                modifier = Modifier.weight(1f),
+                                placeholder = { Text("Enter novel page URL", color = SecondaryText) },
+                                colors = TextFieldDefaults.colors(
+                                    focusedContainerColor = Color.Transparent,
+                                    unfocusedContainerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent,
+                                    focusedIndicatorColor = Color.Transparent,
+                                    unfocusedIndicatorColor = Color.Transparent,
+                                    cursorColor = PrimaryAccent,
+                                    focusedTextColor = PrimaryText,
+                                    unfocusedTextColor = PrimaryText
+                                ),
+                                singleLine = true
+                            )
+
+                            FilledIconButton(
+                                onClick = {
+                                    if (!isLoading) {
+                                        val crawlerName = viewModel.validateUrl(urlInput)
+                                        if (crawlerName != null) {
+                                            viewModel.startNovelCrawl(crawlerName, urlInput)
+                                        }
+                                    }
+                                },
+                                enabled = !isLoading,
+                                modifier = Modifier.size(48.dp),
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledIconButtonColors(
+                                    containerColor = SuccessGreen,
+                                    contentColor = Color.White
                                 )
-                            } else {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Submit",
-                                    modifier = Modifier.size(24.dp)
-                                )
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = Color.White,
+                                        strokeWidth = 2.dp
+                                    )
+                                } else {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Submit",
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
                             }
                         }
-                    }
 
-                    if (error != null) {
+                        if (error != null) {
+                            Text(
+                                text = error ?: "",
+                                color = ErrorRed,
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = error ?: "",
-                            color = ErrorRed,
+                            "Enter the full URL of Novel Page. It should start with 'http://' or 'https://' and should lead to the page containing all the novel details. URL not satisfying these condition will result in failure.",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(top = 4.dp, start = 4.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        "Enter the full URL of Novel Page. It should start with 'http://' or 'https://' and should lead to the page containing all the novel details. URL not satisfying these condition will result in failure.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = SecondaryText,
-                        modifier = Modifier.padding(horizontal = 4.dp)
-                    )
-                }
-            }
-
-            // Filters Section
-            if (requestHistory.isNotEmpty()) {
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FilterDropdown(
-                            label = "Status",
-                            selectedOption = statusFilter?.name ?: "Any",
-                            options = RequestStatus.values().map { it.name },
-                            onSelected = { statusFilter = if (it == "Any") null else RequestStatus.valueOf(it) }
-                        )
-                        FilterDropdown(
-                            label = "Type",
-                            selectedOption = typeFilter?.name ?: "Any",
-                            options = RequestType.values().map { it.name },
-                            onSelected = { typeFilter = if (it == "Any") null else RequestType.valueOf(it) }
+                            color = SecondaryText,
+                            modifier = Modifier.padding(horizontal = 4.dp)
                         )
                     }
                 }
-            }
 
-            // Request List
-            val filteredHistory = requestHistory.filter { 
-                (statusFilter == null || it.status == statusFilter) &&
-                (typeFilter == null || it.type == typeFilter)
-            }
+                // Filters Section
+                if (requestHistory.isNotEmpty()) {
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            FilterDropdown(
+                                label = "Status",
+                                selectedOption = statusFilter?.name ?: "Any",
+                                options = RequestStatus.values().map { it.name },
+                                onSelected = { statusFilter = if (it == "Any") null else RequestStatus.valueOf(it) }
+                            )
+                            FilterDropdown(
+                                label = "Type",
+                                selectedOption = typeFilter?.name ?: "Any",
+                                options = RequestType.values().map { it.name },
+                                onSelected = { typeFilter = if (it == "Any") null else RequestType.valueOf(it) }
+                            )
+                        }
+                    }
+                }
 
-            requestHistorySection(
-                requestHistory = filteredHistory,
-                onRequestClick = onRequestClick,
-                onGroupClick = onGroupClick,
-                onReplay = { viewModel.replayRequest(it) },
-                onCancel = { viewModel.cancelRequest(it) },
-                onContinue = { viewModel.resumeRequest(it) },
-                onSecurityClick = { securityDialogRequest = it },
-                cancellingRequestIds = cancellingRequestIds,
-                activeActionIds = activeActionIds,
-                allowAction = true
-            )
+                // Request List
+                val filteredHistory = requestHistory.filter { 
+                    (statusFilter == null || it.status == statusFilter) &&
+                    (typeFilter == null || it.type == typeFilter)
+                }
+
+                requestHistorySection(
+                    requestHistory = filteredHistory,
+                    onRequestClick = onRequestClick,
+                    onGroupClick = onGroupClick,
+                    onReplay = { viewModel.replayRequest(it) },
+                    onCancel = { viewModel.cancelRequest(it) },
+                    onContinue = { viewModel.resumeRequest(it) },
+                    onSecurityClick = onSecurityClick,
+                    cancellingRequestIds = cancellingRequestIds,
+                    activeActionIds = activeActionIds,
+                    allowAction = true
+                )
+            }
         }
     }
 }

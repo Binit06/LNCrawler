@@ -14,6 +14,7 @@ import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
+import com.halovoid.lncrawler.ui.screens.reader.ReaderViewModel
 
 class ViewModelFactory(private val application: Application) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -46,6 +47,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(GroupedRequestsViewModel::class.java) -> {
                 GroupedRequestsViewModel(application, requestRepository) as T
+            }
+            modelClass.isAssignableFrom(ReaderViewModel::class.java) -> {
+                ReaderViewModel(application) as T
             }
             else -> throw IllegalArgumentException("Unknown ViewModel class")
         }
