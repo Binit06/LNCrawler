@@ -30,6 +30,7 @@ fun ReaderScreen(
     viewModel: ReaderViewModel
 ) {
     val window by viewModel.window.collectAsStateWithLifecycle()
+    val currentChapter by viewModel.currentChapter.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
     
@@ -80,7 +81,7 @@ fun ReaderScreen(
                 TopAppBar(
                     title = {
                         Text(
-                            text = window.firstOrNull()?.chapter?.title ?: "Reader",
+                            text = currentChapter?.title ?: "Reader",
                             style = MaterialTheme.typography.titleMedium,
                             color = PrimaryText
                         )
@@ -124,7 +125,10 @@ fun ReaderScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(window, key = { it.chapter.id }) { loadedChapter ->
-                        ChapterContent(loadedChapter)
+                        ChapterContent(
+                            loadedChapter = loadedChapter,
+                            onReload = { viewModel.reloadChapter(it) }
+                        )
                     }
                 }
             }
@@ -133,7 +137,10 @@ fun ReaderScreen(
 }
 
 @Composable
-fun ChapterContent(loadedChapter: LoadedChapter) {
+fun ChapterContent(
+    loadedChapter: LoadedChapter,
+    onReload: (Int) -> Unit
+) {
     Column(modifier = Modifier.fillMaxWidth()) {
         // Chapter Started Indicator
         Surface(
@@ -158,17 +165,47 @@ fun ChapterContent(loadedChapter: LoadedChapter) {
             }
         }
 
-        loadedChapter.paragraph.forEach { para ->
-            Text(
-                text = para,
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    lineHeight = 34.sp,
-                    letterSpacing = 0.5.sp,
-                    fontSize = 19.sp
-                ),
-                color = PrimaryText.copy(alpha = 0.9f),
-                modifier = Modifier.padding(bottom = 28.dp)
-            )
+        val isError = loadedChapter.paragraph.size == 1 && 
+                loadedChapter.paragraph.first().contains("Couldn't load", ignoreCase = true)
+        val isEmpty = loadedChapter.paragraph.isEmpty()
+
+        if (isError || isEmpty) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 40.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (isError) loadedChapter.paragraph.first() else "No content found for this chapter",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = SecondaryText,
+                        modifier = Modifier.padding(horizontal = 32.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                    Button(
+                        onClick = { onReload(loadedChapter.chapter.id) },
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent)
+                    ) {
+                        Text("Reload Chapter", color = Color.White)
+                    }
+                }
+            }
+        } else {
+            loadedChapter.paragraph.forEach { para ->
+                Text(
+                    text = para,
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        lineHeight = 34.sp,
+                        letterSpacing = 0.5.sp,
+                        fontSize = 19.sp
+                    ),
+                    color = PrimaryText.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(bottom = 28.dp)
+                )
+            }
         }
         
         // Chapter Ended Indicator

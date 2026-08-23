@@ -115,7 +115,7 @@ fun LibraryScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(filteredNovels) { novel ->
+                    items(filteredNovels, key = { it.url }) { novel ->
                         NovelCard(
                             novel = novel,
                             onClick = { onNovelClick(novel.crawlerName, novel.url) }

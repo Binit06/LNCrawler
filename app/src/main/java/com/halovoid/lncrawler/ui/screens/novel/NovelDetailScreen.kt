@@ -272,7 +272,7 @@ fun NovelDetailScreen(
                                     .padding(bottom = 8.dp)
                             )
                         }
-                        items(artifacts) { artifact ->
+                        items(artifacts, key = { it.id }) { artifact ->
                             Box(modifier = Modifier
                                 .padding(horizontal = 24.dp)
                                 .padding(bottom = 8.dp)) {

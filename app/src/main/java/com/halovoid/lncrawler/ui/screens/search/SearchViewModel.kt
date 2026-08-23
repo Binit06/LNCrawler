@@ -3,10 +3,10 @@ package com.halovoid.lncrawler.ui.screens.search
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
+import com.halovoid.lncrawler.data.repository.RequestRepository
 import com.halovoid.lncrawler.data.repository.SearchRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.domain.models.SearchItem
@@ -28,6 +28,7 @@ class SearchViewModel(
     application: Application,
     private val searchRepository: SearchRepository = SearchRepository()
 ) : AndroidViewModel(application) {
+    private val requestRepository = RequestRepository.getInstance(application)
 
     private val _searchState = MutableStateFlow<SearchState>(SearchState.Idle)
     val searchState: StateFlow<SearchState> = _searchState.asStateFlow()
@@ -52,9 +53,6 @@ class SearchViewModel(
 
     fun startCrawl(item: SearchItem) {
         viewModelScope.launch {
-            val database = AppDatabase.getDatabase(getApplication())
-            val requestDao = database.requestDao()
-
             val metadata = JSONObject().apply {
                 put("crawlerName", item.source)
             }.toString()
@@ -73,7 +71,7 @@ class SearchViewModel(
                 parentNovel = null
             )
 
-            requestDao.insertRequests(listOf(request))
+            requestRepository.insertRequests(listOf(request))
             SchedulerService.startService(getApplication())
         }
     }

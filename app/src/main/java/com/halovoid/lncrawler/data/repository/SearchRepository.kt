@@ -1,5 +1,6 @@
 package com.halovoid.lncrawler.data.repository
 
+import com.halovoid.lncrawler.api.core.network.NetworkClient
 import com.halovoid.lncrawler.domain.models.SearchResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -9,7 +10,7 @@ import okhttp3.Request
 import java.net.URLEncoder
 
 class SearchRepository(
-    private val client: OkHttpClient = OkHttpClient()
+    private val client: OkHttpClient = NetworkClient.okHttpClient
 ) {
     private val json = Json {
         ignoreUnknownKeys = true

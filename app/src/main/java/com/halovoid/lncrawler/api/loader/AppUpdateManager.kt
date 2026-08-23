@@ -1,5 +1,6 @@
 package com.halovoid.lncrawler.api.loader
 
+import com.halovoid.lncrawler.api.core.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -7,7 +8,7 @@ import okhttp3.Request
 import org.json.JSONObject
 
 class AppUpdateManager {
-    private val client = OkHttpClient()
+    private val client = NetworkClient.okHttpClient
     private val GITHUB_API_URL = "https://api.github.com/repos/Binit06/LNCrawler/releases/latest"
 
     data class AppReleaseInfo(val tagName: String, val releaseUrl: String, val apkDownloadUrl: String?)

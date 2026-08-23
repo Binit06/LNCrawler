@@ -314,7 +314,7 @@ fun SearchTabContent(
                                             modifier = Modifier.padding(vertical = 12.dp)
                                         )
                                     }
-                                    items(items) { item ->
+                                    items(items, key = { it.url }) { item ->
                                         SearchResultItem(
                                             item = item,
                                             onClick = { 

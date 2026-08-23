@@ -29,7 +29,7 @@ fun SourceSyncScreen(
     val scope = rememberCoroutineScope()
     val sourceLoader = remember { SourceLoader(context) }
     
-    val logs = remember { mutableStateListOf<String>() }
+    val logs = remember { mutableStateListOf<Pair<Long, String>>() }
     var isSyncing by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     
@@ -41,16 +41,16 @@ fun SourceSyncScreen(
         scope.launch {
             try {
                 sourceLoader.loadSources(onProgress = { log ->
-                    logs.add(log)
+                    logs.add(System.currentTimeMillis() to log)
                 })
                 isSyncing = false
             } catch (e: SourceLoader.IncompatibleAppException) {
                 error = "App Update Required: ${e.message}"
-                logs.add("Error: $error")
+                logs.add(System.currentTimeMillis() to "Error: $error")
                 isSyncing = false
             } catch (e: Exception) {
                 error = e.message ?: "An unknown error occurred"
-                logs.add("Error: $error")
+                logs.add(System.currentTimeMillis() to "Error: $error")
                 isSyncing = false
             }
         }
@@ -96,14 +96,14 @@ fun SourceSyncScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(logs) { log ->
+                    items(logs, key = { it.first }) { (_, logText) ->
                         Text(
-                            text = "> $log",
+                            text = "> $logText",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp
                             ),
-                            color = if (log.startsWith("Error")) MaterialTheme.colorScheme.error else PrimaryText
+                            color = if (logText.startsWith("Error")) MaterialTheme.colorScheme.error else PrimaryText
                         )
                     }
                 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.halovoid.lncrawler.api.core.crawler.Crawler
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.api.core.network.NetworkClient
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import com.halovoid.lncrawler.BuildConfig
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +21,7 @@ import java.io.FileOutputStream
 class SourceLoader(private val context: Context) {
     private val dexLoader = DexLoader(context)
     private val preferenceRepository = PreferenceRepository.getInstance(context)
-    private val client = OkHttpClient()
+    private val client = NetworkClient.okHttpClient
 
     private val GITHUB_API_URL = "https://api.github.com/repos/Binit06/LNCrawlerSources/releases/latest"
     private val AGGREGATOR_CLASS = "com.halovoid.lncrawlersources.CrawlerSourceAggregator"

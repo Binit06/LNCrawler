@@ -5,8 +5,10 @@ import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.db.mappers.toDomain
 import com.halovoid.lncrawler.data.db.mappers.toEntity
 import com.halovoid.lncrawler.domain.models.Novel
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 /**
  * Main repository for managing novel data in the Data layer.
@@ -58,7 +60,7 @@ class NovelRepository private constructor(context: Context) {
      * Persists a novel and its chapters to the local Room database.
      * @param novel The novel to save.
      */
-    fun saveNovelMetadata(novel: Novel) {
+    suspend fun saveNovelMetadata(novel: Novel) = withContext(Dispatchers.IO) {
         novelDao.upsertNovel(novel.toEntity())
     }
 

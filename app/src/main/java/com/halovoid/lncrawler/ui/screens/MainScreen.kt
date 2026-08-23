@@ -1,5 +1,7 @@
 package com.halovoid.lncrawler.ui.screens
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.LibraryBooks
@@ -14,6 +16,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -92,9 +96,11 @@ private fun LNCrawlerNavigationBar(
             val isSelected = currentDestination?.hierarchy?.any { it.route == tab.screen.route } == true
             NavigationBarItem(
                 icon = { 
-                    Icon(
-                        imageVector = if (isSelected) tab.filledIcon else tab.outlinedIcon,
-                        contentDescription = tab.label
+                    AnimatedTabIcon(
+                        isSelected = isSelected,
+                        outlinedIcon = tab.outlinedIcon,
+                        filledIcon = tab.filledIcon,
+                        label = tab.label
                     )
                 },
                 label = { 
@@ -124,3 +130,70 @@ data class TabInfo(
     val outlinedIcon: ImageVector,
     val filledIcon: ImageVector
 )
+
+@Composable
+fun AnimatedTabIcon(
+    isSelected: Boolean,
+    outlinedIcon: ImageVector,
+    filledIcon: ImageVector,
+    label: String
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "TabAnimation")
+    
+    // Scale animation on selection
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.2f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "Scale"
+    )
+
+    // Specific animations based on the tab
+    val rotation by animateFloatAsState(
+        targetValue = if (isSelected && label == "Browse") 180f else 0f,
+        animationSpec = spring(stiffness = Spring.StiffnessLow),
+        label = "Rotation"
+    )
+
+    val tilt by animateFloatAsState(
+        targetValue = if (isSelected && label == "Library") -10f else 0f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioHighBouncy),
+        label = "Tilt"
+    )
+
+    val bounce by animateDpAsState(
+        targetValue = if (isSelected && label == "Downloads") (-3).dp else 0.dp,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioHighBouncy),
+        label = "Bounce"
+    )
+
+    val waveOffset by infiniteTransition.animateFloat(
+        initialValue = -1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "WaveOffset"
+    )
+
+    Box(
+        modifier = Modifier
+            .scale(scale)
+            .rotate(if (label == "Browse") rotation else tilt)
+            .offset(y = when(label) {
+                "Downloads" -> bounce
+                "More" -> if (isSelected) waveOffset.dp else 0.dp
+                else -> 0.dp
+            }),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = if (isSelected) filledIcon else outlinedIcon,
+            contentDescription = null,
+            modifier = Modifier.size(24.dp)
+        )
+    }
+}
