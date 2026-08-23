@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.util.Locale
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.domain.models.SearchItem
 import com.halovoid.lncrawler.ui.theme.*
 
@@ -34,38 +35,22 @@ import com.halovoid.lncrawler.ui.theme.*
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel,
+    requestViewModel: RequestViewModel,
     onBack: () -> Unit,
-    onResultClick: (String) -> Unit
+    onNavigateToPreview: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
+    val novelPreview by requestViewModel.novelPreview.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var showCrawlDialog by remember { mutableStateOf(false) }
-    var itemToCrawl by remember { mutableStateOf<SearchItem?>(null) }
+    var isFetchingPreview by remember { mutableStateOf(false) }
 
-    if (showCrawlDialog && itemToCrawl != null) {
-        AlertDialog(
-            onDismissRequest = { showCrawlDialog = false },
-            title = { Text("Start Metadata Crawl", color = PrimaryText) },
-            text = { Text("This will start a metadata crawl for \"${itemToCrawl?.title}\". Do you want to proceed?", color = SecondaryText) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        itemToCrawl?.let { viewModel.startCrawl(it) }
-                        showCrawlDialog = false
-                    }
-                ) {
-                    Text("Proceed", color = PrimaryAccent)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCrawlDialog = false }) {
-                    Text("Cancel", color = SecondaryText)
-                }
-            },
-            containerColor = DarkSurface
-        )
+    LaunchedEffect(novelPreview) {
+        if (novelPreview != null && isFetchingPreview) {
+            isFetchingPreview = false
+            onNavigateToPreview()
+        }
     }
 
     Scaffold(
@@ -170,19 +155,34 @@ fun SearchScreen(
                                     items(items) { item ->
                                         SearchResultItem(
                                             item = item,
-                                            onClick = { onResultClick(item.url) },
+                                            onClick = { 
+                                                isFetchingPreview = true
+                                                requestViewModel.fetchNovelPreview(item.url)
+                                            },
                                             onBrowserClick = {
                                                 val intent = Intent(Intent.ACTION_VIEW, item.url.toUri())
                                                 context.startActivity(intent)
-                                            },
-                                            onCrawlClick = {
-                                                itemToCrawl = item
-                                                showCrawlDialog = true
                                             }
                                         )
                                     }
                                 }
                             }
+                        }
+                    }
+                }
+
+                if (isFetchingPreview) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Color.Black.copy(alpha = 0.5f))
+                            .clickable(enabled = false) {},
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = PrimaryAccent)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text("Fetching novel details...", color = Color.White)
                         }
                     }
                 }
@@ -195,8 +195,7 @@ fun SearchScreen(
 fun SearchResultItem(
     item: SearchItem,
     onClick: () -> Unit,
-    onBrowserClick: () -> Unit,
-    onCrawlClick: () -> Unit
+    onBrowserClick: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -229,14 +228,6 @@ fun SearchResultItem(
                             Icons.AutoMirrored.Filled.OpenInNew,
                             contentDescription = "Open in Browser",
                             tint = SecondaryText,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    IconButton(onClick = onCrawlClick) {
-                        Icon(
-                            Icons.Default.Download,
-                            contentDescription = "Start Crawl",
-                            tint = PrimaryAccent,
                             modifier = Modifier.size(20.dp)
                         )
                     }

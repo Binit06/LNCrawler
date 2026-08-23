@@ -31,6 +31,7 @@ import com.halovoid.lncrawler.ui.theme.*
 fun RequestScreen(
     onRequestClick: (String) -> Unit,
     onGroupClick: (RequestType) -> Unit,
+    onNavigateToPreview: () -> Unit,
     viewModel: RequestViewModel,
     searchUrl: String? = null
 ) {
@@ -45,6 +46,14 @@ fun RequestScreen(
     val requestHistory by viewModel.requestHistory.collectAsStateWithLifecycle()
     val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
     val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
+
+    val novelPreview by viewModel.novelPreview.collectAsStateWithLifecycle()
+
+    LaunchedEffect(novelPreview) {
+        if (novelPreview != null) {
+            onNavigateToPreview()
+        }
+    }
 
     var statusFilter by remember { mutableStateOf<RequestStatus?>(null) }
     var typeFilter by remember { mutableStateOf<RequestType?>(null) }
@@ -107,7 +116,7 @@ fun RequestScreen(
                                     if (!isLoading) {
                                         val crawlerName = viewModel.validateUrl(urlInput)
                                         if (crawlerName != null) {
-                                            viewModel.startNovelCrawl(crawlerName, urlInput)
+                                            viewModel.fetchNovelPreview(urlInput)
                                         }
                                     }
                                 },

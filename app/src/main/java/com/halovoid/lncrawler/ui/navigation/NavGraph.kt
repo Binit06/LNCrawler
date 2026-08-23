@@ -26,6 +26,7 @@ import com.halovoid.lncrawler.ui.screens.novel.NovelDetailViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestScreen
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailScreen
+import com.halovoid.lncrawler.ui.screens.request.NovelPreviewScreen
 import com.halovoid.lncrawler.ui.screens.library.LibraryScreen
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -66,6 +67,7 @@ sealed class Screen(val route: String) {
     object NovelDetail : Screen("novel_detail/{crawlerName}/{novelUrl}") {
         fun createRoute(crawlerName: String, novelUrl: String) = "novel_detail/$crawlerName/${URLEncoder.encode(novelUrl, "UTF-8")}"
     }
+    object NovelPreview : Screen("novel_preview")
     object GroupedRequests : Screen("grouped_requests/{contextType}/{contextValue}/{type}") {
         fun createRoute(contextType: String, contextValue: String, type: String) = 
             "grouped_requests/$contextType/${URLEncoder.encode(contextValue, "UTF-8")}/$type"
@@ -179,6 +181,20 @@ fun NavGraph(navController: NavHostController) {
                     }
                 )
             }
+            composable(Screen.NovelPreview.route) {
+                NovelPreviewScreen(
+                    viewModel = requestViewModel,
+                    onBack = {
+                        requestViewModel.clearPreview()
+                        navController.popBackStack()
+                    },
+                    onConfirm = { crawlerName: String, url: String ->
+                        requestViewModel.startNovelCrawl(crawlerName, url)
+                        requestViewModel.clearPreview()
+                        navController.popBackStack()
+                    }
+                )
+            }
             composable(Screen.Request.route) { backStackEntry ->
                 val searchUrl = backStackEntry.savedStateHandle.get<String>("search_url")
                 RequestScreen(
@@ -188,6 +204,9 @@ fun NavGraph(navController: NavHostController) {
                     },
                     onGroupClick = { type ->
                         navController.navigate(Screen.GroupedRequests.createRoute("ALL", "all", type.name))
+                    },
+                    onNavigateToPreview = {
+                        navController.navigate(Screen.NovelPreview.route)
                     },
                     searchUrl = searchUrl
                 )
@@ -220,14 +239,10 @@ fun NavGraph(navController: NavHostController) {
             composable(Screen.GlobalSearch.route) {
                 SearchScreen(
                     viewModel = searchViewModel,
+                    requestViewModel = requestViewModel,
                     onBack = { navController.popBackStack() },
-                    onResultClick = { url ->
-                        // Navigate to Request screen and fill the URL
-                        // Actually, maybe we should just navigate to the search screen directly?
-                        // The user said "redirects to this screen" from a globe icon.
-                        // When clicking a result, we probably want to go back to Request screen with this URL.
-                        navController.previousBackStackEntry?.savedStateHandle?.set("search_url", url)
-                        navController.popBackStack()
+                    onNavigateToPreview = {
+                        navController.navigate(Screen.NovelPreview.route)
                     }
                 )
             }

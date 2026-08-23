@@ -13,6 +13,7 @@ import com.halovoid.lncrawler.data.redis.RedisManager
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.data.repository.RequestRepository
 import com.halovoid.lncrawler.domain.models.Request
+import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.toDomain
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -29,6 +30,9 @@ class RequestViewModel(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
+
+    private val _novelPreview = MutableStateFlow<Novel?>(null)
+    val novelPreview: StateFlow<Novel?> = _novelPreview.asStateFlow()
 
     val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
     val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
@@ -55,6 +59,30 @@ class RequestViewModel(
             _error.value = "URL not supported or invalid"
             null
         }
+    }
+
+    fun fetchNovelPreview(url: String) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _error.value = null
+            try {
+                val crawler = CrawlerFactory.getCrawlerByUrl(url)
+                if (crawler != null) {
+                    val novel = crawler.getNovelDetails(url)
+                    _novelPreview.value = novel
+                } else {
+                    _error.value = "URL not supported"
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to fetch preview: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun clearPreview() {
+        _novelPreview.value = null
     }
 
     fun startNovelCrawl(crawlerName: String, url: String) {
