@@ -187,6 +187,14 @@ fun NavGraph(navController: NavHostController) {
                     onNavigateToPreview = {
                         navController.navigate(Screen.NovelPreview.route)
                     },
+                    onNavigateToDetail = { crawlerName, novelUrl ->
+                        navController.navigate(
+                            Screen.NovelDetail.createRoute(
+                                crawlerName,
+                                novelUrl
+                            )
+                        )
+                    },
                     onCrawlerClick = {
                         navController.navigate(Screen.Crawlers.route)
                     },

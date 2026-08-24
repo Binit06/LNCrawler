@@ -4,7 +4,7 @@ import android.content.Intent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import androidx.compose.ui.tooling.preview.Preview
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.theme.*
 
@@ -91,35 +90,40 @@ fun SimilarityBottomSheet(
     onDismiss: () -> Unit,
     onConfirmAnyway: () -> Unit
 ) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
+        sheetState = sheetState,
         containerColor = DarkSurface,
         scrimColor = Color.Black.copy(alpha = 0.6f)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp)
+                .padding(bottom = 24.dp)
         ) {
-            Text(
-                text = "Similar Novels Found",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryText
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "You already have similar novels in your library. Do you still want to add this one?",
-                style = MaterialTheme.typography.bodyMedium,
-                color = SecondaryText
-            )
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                Text(
+                    text = "Similar Novels Found",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryText
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "You already have similar novels in your library. Do you still want to add this one?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SecondaryText
+                )
+            }
             
             Spacer(modifier = Modifier.height(24.dp))
             
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.weight(1f, fill = false)
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 items(similarNovels) { novel ->
                     SimilarNovelCard(novel)
@@ -128,22 +132,24 @@ fun SimilarityBottomSheet(
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            Button(
-                onClick = onConfirmAnyway,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text("Proceed Anyway", fontWeight = FontWeight.Bold)
-            }
-            
-            Spacer(modifier = Modifier.height(12.dp))
-            
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Cancel", color = SecondaryText)
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                Button(
+                    onClick = onConfirmAnyway,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Proceed Anyway", fontWeight = FontWeight.Bold)
+                }
+                
+                Spacer(modifier = Modifier.height(12.dp))
+                
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancel", color = SecondaryText)
+                }
             }
         }
     }
@@ -151,39 +157,35 @@ fun SimilarityBottomSheet(
 
 @Composable
 fun SimilarNovelCard(novel: Novel) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(DarkBackground.copy(alpha = 0.5f))
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = Modifier.width(120.dp)
     ) {
         AsyncImage(
             model = novel.coverUrl,
             contentDescription = null,
             modifier = Modifier
-                .size(44.dp, 64.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .fillMaxWidth()
+                .aspectRatio(2f / 3f)
+                .clip(RoundedCornerShape(12.dp))
                 .background(DarkSurface),
             contentScale = ContentScale.Crop
         )
-        Spacer(modifier = Modifier.width(16.dp))
-        Column {
-            Text(
-                text = novel.title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryText,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = novel.author ?: "Unknown Author",
-                style = MaterialTheme.typography.labelSmall,
-                color = SecondaryText
-            )
-        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = novel.title,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Bold,
+            color = PrimaryText,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            text = novel.author ?: "Unknown Author",
+            style = MaterialTheme.typography.labelSmall,
+            color = SecondaryText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -480,68 +482,5 @@ fun NovelPreviewContent(
             }
         }
 
-    }
-}
-
-@Preview(name = "Short Title", showBackground = true)
-@Composable
-private fun PreviewShortTitle() {
-    LNCrawlerTheme {
-        NovelPreviewContent(
-            novel = Novel(
-                url = "https://example.com",
-                title = "Short Title",
-                author = "Author Name",
-                crawlerName = "Test Crawler",
-                description = "This is a short synopsis."
-            ),
-            isLoading = false,
-            error = null,
-            onBack = {},
-            onConfirm = { _ -> },
-            onCrawlManually = {}
-        )
-    }
-}
-
-@Preview(name = "Long Title", showBackground = true)
-@Composable
-private fun PreviewLongTitle() {
-    LNCrawlerTheme {
-        NovelPreviewContent(
-            novel = Novel(
-                url = "https://example.com",
-                title = "A Very Long Novel Title That Should Wrap to Multiple Lines To Test Vertical Layout Reflow Correctly",
-                author = "Some Prolific Author",
-                crawlerName = "Generic Source",
-                description = "A long synopsis ".repeat(20)
-            ),
-            isLoading = false,
-            error = null,
-            onBack = {},
-            onConfirm = { _ -> },
-            onCrawlManually = {}
-        )
-    }
-}
-
-@Preview(name = "Missing Author and Badge", showBackground = true)
-@Composable
-private fun PreviewMissingMetadata() {
-    LNCrawlerTheme {
-        NovelPreviewContent(
-            novel = Novel(
-                url = "https://example.com",
-                title = "Mysterious Novel",
-                author = null,
-                crawlerName = "",
-                description = "No author, no badge."
-            ),
-            isLoading = false,
-            error = null,
-            onBack = {},
-            onConfirm = { _ -> },
-            onCrawlManually = {}
-        )
     }
 }

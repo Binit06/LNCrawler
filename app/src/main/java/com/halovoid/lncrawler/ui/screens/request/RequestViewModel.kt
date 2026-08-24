@@ -43,6 +43,10 @@ class RequestViewModel(
     private val _similarNovels = MutableStateFlow<List<Novel>>(emptyList())
     val similarNovels: StateFlow<List<Novel>> = _similarNovels.asStateFlow()
 
+    val libraryUrls: StateFlow<Set<String>> = novelRepository.getAllNovels()
+        .map { novels -> novels.map { it.url }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+
     private val _addSuccess = MutableSharedFlow<Unit>()
     val addSuccess = _addSuccess.asSharedFlow()
 
