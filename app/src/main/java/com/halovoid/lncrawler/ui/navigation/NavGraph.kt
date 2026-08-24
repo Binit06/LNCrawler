@@ -213,7 +213,10 @@ fun NavGraph(navController: NavHostController) {
                 val crawlerViewModel: CrawlerViewModel = viewModel(
                     factory = remember { ViewModelFactory(application) }
                 )
-                CrawlerScreen(viewModel = crawlerViewModel)
+                CrawlerScreen(
+                    viewModel = crawlerViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(Screen.Downloads.route) {
                 val downloadViewModel: DownloadViewModel = viewModel(

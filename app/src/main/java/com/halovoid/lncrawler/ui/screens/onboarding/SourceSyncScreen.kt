@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,11 +30,15 @@ fun SourceSyncScreen(
     val scope = rememberCoroutineScope()
     val sourceLoader = remember { SourceLoader(context) }
     
-    val logs = remember { mutableStateListOf<Pair<Long, String>>() }
+    val logs = remember { mutableStateListOf<LogEntry>() }
     var isSyncing by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     
     val listState = rememberLazyListState()
+
+    fun addLog(message: String) {
+        logs.add(LogEntry(message = message))
+    }
 
     fun performSync() {
         isSyncing = true
@@ -41,16 +46,16 @@ fun SourceSyncScreen(
         scope.launch {
             try {
                 sourceLoader.loadSources(onProgress = { log ->
-                    logs.add(System.currentTimeMillis() to log)
+                    addLog(log)
                 })
                 isSyncing = false
             } catch (e: SourceLoader.IncompatibleAppException) {
                 error = "App Update Required: ${e.message}"
-                logs.add(System.currentTimeMillis() to "Error: $error")
+                addLog("Error: $error")
                 isSyncing = false
             } catch (e: Exception) {
                 error = e.message ?: "An unknown error occurred"
-                logs.add(System.currentTimeMillis() to "Error: $error")
+                addLog("Error: $error")
                 isSyncing = false
             }
         }
@@ -96,14 +101,14 @@ fun SourceSyncScreen(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    items(logs, key = { it.first }) { (_, logText) ->
+                    items(logs, key = { it.id }) { logEntry ->
                         Text(
-                            text = "> $logText",
+                            text = "> ${logEntry.message}",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 11.sp
                             ),
-                            color = if (logText.startsWith("Error")) MaterialTheme.colorScheme.error else PrimaryText
+                            color = if (logEntry.message.startsWith("Error")) MaterialTheme.colorScheme.error else PrimaryText
                         )
                     }
                 }
@@ -135,3 +140,9 @@ fun SourceSyncScreen(
         }
     }
 }
+
+@Immutable
+data class LogEntry(
+    val id: Long = System.nanoTime(),
+    val message: String
+)

@@ -123,7 +123,7 @@ class NovelDetailViewModel(
             }.toString()
 
             val request = RequestEntity(
-                id = "${novel.url}_export_${format}_${start}_${end}_${System.currentTimeMillis()}",
+                id = "${novel.url}_export_${format}_${start}_${end}_${System.nanoTime()}",
                 type = RequestType.ARTIFACT,
                 novelUrl = novel.url,
                 name = "Export: ${novel.title} ($format) [$start-$end]",

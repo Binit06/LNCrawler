@@ -10,18 +10,20 @@ import androidx.compose.ui.platform.LocalContext
  * Modern Dark color scheme for LNCrawler.
  */
 private val DarkColorScheme = darkColorScheme(
-    primary = PrimaryAccent,
-    secondary = SuccessGreen,
+    primary = PrimaryText, // Text is often the most "primary" element in editorial
+    secondary = BrandAccent,
     tertiary = ErrorRed,
     background = DarkBackground,
     surface = DarkSurface,
-    onPrimary = Color.White,
+    surfaceVariant = DarkSurfaceVariant,
+    onPrimary = DarkBackground,
     onSecondary = Color.White,
     onTertiary = Color.White,
     onBackground = PrimaryText,
     onSurface = PrimaryText,
     onSurfaceVariant = SecondaryText,
-    outline = BorderColor
+    outline = BorderColor,
+    outlineVariant = BorderColor.copy(alpha = 0.5f)
 )
 
 /**

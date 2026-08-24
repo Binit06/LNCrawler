@@ -1,7 +1,9 @@
 package com.halovoid.lncrawler.ui.screens.support
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
@@ -84,7 +88,7 @@ fun SupportScreen(
                 Icon(
                     Icons.Default.Favorite,
                     contentDescription = null,
-                    tint = PrimaryAccent,
+                    tint = SupportRose, // Warm Rose for life
                     modifier = Modifier.size(64.dp)
                 )
                 
@@ -115,7 +119,8 @@ fun SupportScreen(
                     description = "Get help, report bugs, suggest features, and talk directly with the developer and other users.",
                     icon = Icons.Default.Forum,
                     buttonText = "Join Discord",
-                    onClick = { uriHandler.openUri("https://discord.gg/A6cY7pN6Y") }
+                    onClick = { uriHandler.openUri("https://discord.gg/A6cY7pN6Y") },
+                    accentColor = DiscordBlurple
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -125,7 +130,8 @@ fun SupportScreen(
                     description = "Show your support by starring the repository. It helps more people discover the project.",
                     icon = Icons.Default.Star,
                     buttonText = "GitHub Repo",
-                    onClick = { uriHandler.openUri("https://github.com/Binit06/LNCrawler") }
+                    onClick = { uriHandler.openUri("https://github.com/Binit06/LNCrawler") },
+                    accentColor = GitHubOrange
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -138,7 +144,8 @@ fun SupportScreen(
                     description = "Help support the development by buying me a coffee! Your contributions help keep the project alive and free of ads.",
                     icon = Icons.Default.Payments,
                     buttonText = "Support",
-                    onClick = { uriHandler.openUri("https://buymeacoffee.com/halovoid") }
+                    onClick = { uriHandler.openUri("https://buymeacoffee.com/halovoid") },
+                    accentColor = BrandAccent
                 )
                 
                 Spacer(modifier = Modifier.height(24.dp))
@@ -173,7 +180,7 @@ fun AppUpdateCard(
         shape = RoundedCornerShape(12.dp),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
-            if (state is AppUpdateState.UpdateAvailable) PrimaryAccent.copy(alpha = 0.5f) else BorderColor
+            if (state is AppUpdateState.UpdateAvailable) BrandAccent.copy(alpha = 0.5f) else BorderColor
         )
     ) {
         Row(
@@ -189,17 +196,17 @@ fun AppUpdateCard(
                         is AppUpdateState.Loading, is AppUpdateState.Idle -> 
                             Triple("Checking Updates", PrimaryText, Icons.Default.Refresh)
                         is AppUpdateState.UpdateAvailable -> 
-                            Triple("Update Available", PrimaryAccent, Icons.Default.SystemUpdate)
+                            Triple("Update Available", BrandAccent, Icons.Default.SystemUpdate)
                         is AppUpdateState.Downloading ->
-                            Triple("Downloading...", PrimaryAccent, Icons.Default.SystemUpdate)
+                            Triple("Downloading...", BrandAccent, Icons.Default.SystemUpdate)
                         is AppUpdateState.ReadyToInstall ->
-                            Triple("Ready to Install", PrimaryAccent, Icons.Default.CheckCircle)
+                            Triple("Ready to Install", BrandAccent, Icons.Default.CheckCircle)
                         is AppUpdateState.Installing ->
-                            Triple("Installing...", PrimaryAccent, Icons.Default.Refresh)
+                            Triple("Installing...", BrandAccent, Icons.Default.Refresh)
                         is AppUpdateState.UpToDate -> 
-                            Triple("Latest Version", PrimaryText, Icons.Default.CheckCircle)
+                            Triple("Latest Version", SuccessGreen, Icons.Default.CheckCircle)
                         is AppUpdateState.Error -> 
-                            Triple("Check Failed", MaterialTheme.colorScheme.error, Icons.Default.Error)
+                            Triple("Check Failed", ErrorRed, Icons.Default.Error)
                     }
                     
                     if (state !is AppUpdateState.Loading) {
@@ -236,37 +243,37 @@ fun AppUpdateCard(
                 is AppUpdateState.Loading, is AppUpdateState.Idle, is AppUpdateState.Installing -> {
                     CircularProgressIndicator(
                         modifier = Modifier.size(24.dp),
-                        color = PrimaryAccent,
+                        color = BrandAccent,
                         strokeWidth = 2.dp
                     )
                 }
                 is AppUpdateState.Downloading -> {
                     LinearProgressIndicator(
                         modifier = Modifier.width(64.dp),
-                        color = PrimaryAccent,
-                        trackColor = PrimaryAccent.copy(alpha = 0.1f)
+                        color = BrandAccent,
+                        trackColor = BrandAccent.copy(alpha = 0.1f)
                     )
                 }
                 is AppUpdateState.UpdateAvailable -> {
                     Button(
                         onClick = { onUpdateClick(state) },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
-                        Text("Update", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Update", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
                 is AppUpdateState.ReadyToInstall -> {
                     Button(
                         onClick = { onInstallClick(state.uri) },
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                        colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
                         shape = RoundedCornerShape(8.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         modifier = Modifier.height(32.dp)
                     ) {
-                        Text("Install", color = DarkBackground, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                        Text("Install", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     }
                 }
                 is AppUpdateState.UpToDate -> {
@@ -277,7 +284,7 @@ fun AppUpdateCard(
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = "Retry",
-                            tint = MaterialTheme.colorScheme.error
+                            tint = ErrorRed
                         )
                     }
                 }
@@ -288,15 +295,23 @@ fun AppUpdateCard(
 
 @Composable
 fun SectionHeader(title: String) {
-    Box(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp)
+            .padding(bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .clip(CircleShape)
+                .background(BrandAccent)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
         Text(
             text = title.uppercase(),
-            style = MaterialTheme.typography.labelMedium,
-            color = PrimaryAccent,
+            style = MaterialTheme.typography.labelSmall,
+            color = SecondaryText,
             fontWeight = FontWeight.Bold,
             letterSpacing = 1.sp
         )
@@ -310,6 +325,7 @@ fun SupportCard(
     icon: ImageVector,
     buttonText: String,
     onClick: () -> Unit,
+    accentColor: Color = BrandAccent,
     secondaryButtonText: String? = null,
     onSecondaryClick: (() -> Unit)? = null
 ) {
@@ -323,7 +339,7 @@ fun SupportCard(
             modifier = Modifier.padding(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(24.dp))
+                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(24.dp))
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
                     text = title,
@@ -347,20 +363,20 @@ fun SupportCard(
                 Button(
                     onClick = onClick,
                     modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
+                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Text(buttonText, color = DarkBackground, fontWeight = FontWeight.Bold)
+                    Text(buttonText, color = Color.White, fontWeight = FontWeight.Bold)
                 }
                 
                 if (secondaryButtonText != null && onSecondaryClick != null) {
                     OutlinedButton(
                         onClick = onSecondaryClick,
                         modifier = Modifier.weight(1f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor),
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(secondaryButtonText, color = PrimaryAccent, fontWeight = FontWeight.Bold)
+                        Text(secondaryButtonText, color = accentColor, fontWeight = FontWeight.Bold)
                     }
                 }
             }

@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -85,20 +86,11 @@ fun InfoScreen(
             }
         },
     ) { paddingValues ->
-        // Status bar scrim
-        Box(
-            modifier = Modifier
-                .zIndex(2f)
-                .background(MaterialTheme.colorScheme.background)
-                .fillMaxWidth()
-                .height(paddingValues.calculateTopPadding()),
-        )
-
         Column(
             modifier = Modifier
-                .verticalScroll(rememberScrollState())
-                .fillMaxWidth()
+                .fillMaxSize()
                 .padding(paddingValues)
+                .verticalScroll(rememberScrollState())
                 .padding(top = 48.dp)
                 .padding(horizontal = 10.dp),
         ) {

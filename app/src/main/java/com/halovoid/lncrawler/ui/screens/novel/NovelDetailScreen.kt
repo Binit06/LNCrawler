@@ -4,33 +4,21 @@ import android.app.Application
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.*
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -38,19 +26,17 @@ import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
-import com.halovoid.lncrawler.domain.models.Request
-import com.halovoid.lncrawler.domain.models.Volume
 import com.halovoid.lncrawler.data.handlers.utility.parsedMetadata
 import com.halovoid.lncrawler.ui.ViewModelFactory
 import com.halovoid.lncrawler.ui.components.ConfirmDeleteDialog
 import com.halovoid.lncrawler.ui.components.DownloadRangeDialog
 import com.halovoid.lncrawler.ui.components.ExportWarningDialog
-import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
-import com.halovoid.lncrawler.ui.components.artifact.ArtifactExportButton
 import com.halovoid.lncrawler.ui.components.artifact.ExportFormat
 import com.halovoid.lncrawler.ui.components.requestHistorySection
+import com.halovoid.lncrawler.ui.screens.novel.components.*
 import com.halovoid.lncrawler.ui.theme.*
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalResources
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +56,24 @@ fun NovelDetailScreen(
     val novel by viewModel.novel.collectAsState()
     val chapters by viewModel.chapters.collectAsStateWithLifecycle()
     val chapterRange by viewModel.chapterRange.collectAsState()
-    var descriptionExpanded by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val density = LocalResources.current.displayMetrics.density
+    val heroHeightPx = remember { (340 * density).toInt() }
+
+    val isTopBarOpaque by remember {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0
+        }
+    }
+    val showTitleInTopBar by remember {
+        derivedStateOf {
+            val firstItemIndex = listState.firstVisibleItemIndex
+            val firstItemOffset = listState.firstVisibleItemScrollOffset
+            firstItemIndex > 0 || (firstItemIndex == 0 && firstItemOffset > heroHeightPx)
+        }
+    }
+
+    var descriptionExpanded by remember { mutableStateOf(value = false) }
 
     val requestHistory by viewModel.rootRequests.collectAsStateWithLifecycle()
     
@@ -157,94 +160,32 @@ fun NovelDetailScreen(
             }
         } else {
             val currentNovel = novel!!
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Box(modifier = Modifier.fillMaxSize().background(DarkBackground)) {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(bottom = 24.dp)
+                    contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
-                    // Hero Section
+                    // 1. Hero Info (Title, Author, Source, Small Cover)
                     item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .padding(top = 72.dp, bottom = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            AsyncImage(
-                                model = currentNovel.coverUrl,
-                                contentDescription = null,
-                                modifier = Modifier
-                                    .width(160.dp)
-                                    .aspectRatio(2f / 3f)
-                                    .clip(RoundedCornerShape(8.dp)),
-                                contentScale = ContentScale.Crop
-                            )
-                            Spacer(modifier = Modifier.height(20.dp))
-                            Text(
-                                text = currentNovel.title,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryText,
-                                textAlign = TextAlign.Center
-                            )
-                            Text(
-                                text = currentNovel.crawlerName,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = PrimaryAccent,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
-                        }
+                        NovelHeroSection(novel = currentNovel)
                     }
 
-                    // Metadata Table
+                    // 2. Metadata Grid (Author, Volumes, etc)
                     item {
-                        Box(modifier = Modifier
-                            .padding(horizontal = 24.dp)
-                            .padding(bottom = 24.dp)) {
-                            MetadataSection(
-                                mapOf(
-                                    "Author" to (currentNovel.author ?: "Unknown"),
-                                    "Volumes" to currentNovel.volumes.size.toString(),
-                                    "Chapters" to currentNovel.chapters.size.toString(),
-                                    "Source" to currentNovel.crawlerName
-                                )
-                            )
-                        }
+                        NovelMetadataTable(novel = currentNovel)
                     }
 
-                    // Synopsis
+                    // 3. Synopsis
                     item {
-                        Column(modifier = Modifier
-                            .animateContentSize()
-                            .padding(horizontal = 24.dp)
-                            .padding(bottom = 24.dp)) {
-                            Text(
-                                "Synopsis",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryText,
-                                modifier = Modifier.padding(bottom = 8.dp)
-                            )
-                            Text(
-                                text = currentNovel.description ?: "No description available.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = SecondaryText,
-                                maxLines = if (descriptionExpanded) Int.MAX_VALUE else 4,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Text(
-                                text = if (descriptionExpanded) "Read Less" else "Read More",
-                                color = PrimaryAccent,
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier
-                                    .clickable { descriptionExpanded = !descriptionExpanded }
-                                    .padding(vertical = 4.dp)
-                            )
-                        }
+                        NovelSynopsisSection(
+                            novel = currentNovel,
+                            isExpanded = descriptionExpanded,
+                            onExpandClick = { descriptionExpanded = !descriptionExpanded }
+                        )
                     }
 
-                    // Request History Section
+                    // 4. Request History (Active crawls)
                     requestHistorySection(
                         requestHistory = requestHistory,
                         onRequestClick = onRequestClick,
@@ -257,157 +198,63 @@ fun NovelDetailScreen(
                         allowAction = true
                     )
 
-                    item { Spacer(modifier = Modifier.height(12.dp)) }
-
-                    // Artifacts Section
-                    if (artifacts.isNotEmpty()) {
-                        item {
-                            Text(
-                                "Artifacts",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryText,
-                                modifier = Modifier
-                                    .padding(horizontal = 24.dp)
-                                    .padding(bottom = 8.dp)
-                            )
+                    // 5. Artifacts (Exports)
+                    novelArtifactsSection(
+                        artifacts = artifacts,
+                        onDownload = {
+                            selectedArtifact = it
+                            exportLauncher.launch(it.artifactName)
                         }
-                        items(artifacts, key = { it.id }) { artifact ->
-                            Box(modifier = Modifier
-                                .padding(horizontal = 24.dp)
-                                .padding(bottom = 8.dp)) {
-                                ArtifactCard (
-                                    artifact = artifact,
-                                    onDownload = {
-                                        selectedArtifact = it
-                                        exportLauncher.launch(it.artifactName)
-                                    }
-                                )
-                            }
-                        }
-                        item { Spacer(modifier = Modifier.height(16.dp)) }
-                    }
+                    )
 
-                    // Actions Section (FETCH only)
+                    // 6. Actions (Manual controls)
                     item {
-                        Box(modifier = Modifier
-                            .padding(horizontal = 24.dp)
-                            .padding(bottom = 24.dp)) {
-                            ActionsSection(
-                                onFetchMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
-                                onShowDownloadRange = { showDownloadDialog = true },
-                                onExport = { format ->
-                                    val start = chapterRange.start.toInt()
-                                    val end = chapterRange.endInclusive.toInt()
-                                    val rangeChapters = chapters.filter { it.index in start..end }
-                                    val downloaded = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
+                        NovelActionsSection(
+                            onFetchMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
+                            onShowDownloadRange = { showDownloadDialog = true },
+                            onExport = { format ->
+                                val start = chapterRange.start.toInt()
+                                val end = chapterRange.endInclusive.toInt()
+                                val rangeChapters = chapters.filter { it.index in start..end }
+                                val downloaded = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
 
-                                    if (downloaded < rangeChapters.size) {
-                                        pendingExportFormat = format
-                                        showExportWarning = true
-                                    } else {
-                                        viewModel.startBackgroundExport(currentNovel, format)
-                                    }
-                                },
-                                onDelete = {
-                                    showDeleteConfirmation = true
+                                if (downloaded < rangeChapters.size) {
+                                    pendingExportFormat = format
+                                    showExportWarning = true
+                                } else {
+                                    viewModel.startBackgroundExport(currentNovel, format)
                                 }
-                            )
-                        }
-                    }
-
-                    // Table of Contents
-                    item {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 24.dp)
-                                .padding(top = 12.dp, bottom = 8.dp)
-                        ) {
-                            Text(
-                                "Table of Contents",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = PrimaryText,
-                                modifier = Modifier.padding(bottom = 4.dp)
-                            )
-                            Text(
-                                text = "${chapters.size} Chapters",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = SecondaryText
-                            )
-                        }
-                    }
-
-                    currentNovel.volumes.forEach { volume ->
-                        item(key = "vol_${volume.id}") {
-                            Text(
-                                text = "Volume ${volume.volumeIndex}",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = PrimaryAccent,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .background(DarkBackground)
-                                    .padding(horizontal = 24.dp)
-                                    .padding(top = 16.dp, bottom = 8.dp)
-                            )
-                        }
-                        
-                        val volumeChapters = chapters.filter { it.volumeId == volume.id }
-                        items(volumeChapters, key = { it.id }) { chapter ->
-                            val isDownloading = remember(downloadingChapters, chapter.id, chapter.index) {
-                                downloadingChapters.first.contains(chapter.id) || 
-                                downloadingChapters.second.any { it.contains(chapter.index) }
                             }
-                            ChapterRow(
-                                chapter = chapter,
-                                onFetchChapter = { viewModel.fetchChapter(currentNovel, it) },
-                                onChapterClick = { onChapterClick(currentNovel.url, it.id) },
-                                isDownloading = isDownloading
-                            )
-                            HorizontalDivider(
-                                color = BorderColor.copy(alpha = 0.2f), 
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(horizontal = 24.dp)
-                            )
-                        }
+                        )
                     }
+
+                    // 7. Table of Contents
+                    novelTableOfContents(
+                        novel = currentNovel,
+                        chapters = chapters,
+                        downloadingChapters = downloadingChapters,
+                        onFetchChapter = { viewModel.fetchChapter(currentNovel, it) },
+                        onChapterClick = { onChapterClick(currentNovel.url, it.id) }
+                    )
                 }
 
-                // Integrated Floating Header
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = PrimaryText
-                        )
-                    }
-                    IconButton(onClick = {
-                        val intent = Intent(Intent.ACTION_VIEW, novelUrl.toUri())
-                        context.startActivity(intent)
-                    }) {
-                        Icon(
-                            Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = "Open in browser",
-                            tint = PrimaryAccent
-                        )
-                    }
-                }
+                // Dynamic Top Bar
+                NovelTopBar(
+                    novel = currentNovel,
+                    isOpaque = isTopBarOpaque,
+                    showTitle = showTitleInTopBar,
+                    onBack = onBack,
+                    onDownloadClick = { showDownloadDialog = true },
+                    onRefreshMetadata = { viewModel.fetchNovelMetadata(currentNovel) },
+                    onDeleteNovel = { showDeleteConfirmation = true }
+                )
             }
 
+            // Dialogs
             if (showDeleteConfirmation) {
-                val displayName = currentNovel.title
                 ConfirmDeleteDialog (
                     title = "Delete request?",
-                    message = "This will permanently remove \"$displayName\" from your request history. This action cannot be undone.",
+                    message = "This will permanently remove \"${currentNovel.title}\" from your request history. This action cannot be undone.",
                     onConfirm = {
                         showDeleteConfirmation = false
                         viewModel.deleteNovelPermanently(currentNovel)
@@ -453,178 +300,5 @@ fun NovelDetailScreen(
                 )
             }
         }
-    }
-}
-
-@Composable
-fun ChapterRow(
-    chapter: Chapter,
-    onFetchChapter: (Chapter) -> Unit,
-    onChapterClick: (Chapter) -> Unit,
-    isDownloading: Boolean
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(DarkBackground)
-            .clickable { onChapterClick(chapter) }
-            .padding(horizontal = 24.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Chapter ${chapter.index}",
-                color = PrimaryText,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = chapter.title.ifBlank { "Unknown" },
-                color = SecondaryText,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        
-        if (chapter.fileLocation?.contains("content://") == true) {
-            Icon(
-                imageVector = Icons.Default.CheckCircle,
-                contentDescription = "Downloaded",
-                tint = SuccessGreen,
-                modifier = Modifier.size(28.dp)
-            )
-        } else if (isDownloading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(24.dp),
-                strokeWidth = 2.dp,
-                color = PrimaryAccent
-            )
-        } else {
-            IconButton(
-                onClick = { onFetchChapter(chapter) },
-                modifier = Modifier.size(28.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DownloadForOffline,
-                    contentDescription = "Download Chapter",
-                    tint = PrimaryAccent,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun MetadataSection(data: Map<String, String>) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(DarkSurface)
-            .padding(16.dp)
-    ) {
-        data.forEach { (key, value) ->
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(text = key, color = SecondaryText, fontSize = 14.sp)
-                Text(text = value, color = PrimaryText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            }
-            if (key != data.keys.last()) {
-                HorizontalDivider(color = BorderColor, modifier = Modifier.padding(vertical = 4.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun ActionsSection(
-    onFetchMetadata: () -> Unit,
-    onShowDownloadRange: () -> Unit,
-    onExport: (ExportFormat) -> Unit,
-    onDelete: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(DarkSurface)
-            .padding(8.dp)
-    ) {
-        Text(
-            "FETCH",
-            style = MaterialTheme.typography.labelSmall,
-            color = PrimaryAccent,
-            modifier = Modifier.padding(
-                start = 8.dp,
-                top = 8.dp,
-                bottom = 4.dp
-            )
-        )
-
-        ActionRow(
-            icon = Icons.Default.Refresh,
-            title = "Refresh Metadata",
-            subtext = "Update novel info and chapter list",
-            onClick = onFetchMetadata
-        )
-
-        HorizontalDivider(color = BorderColor)
-
-        ActionRow(
-            icon = Icons.Default.Download,
-            title = "Download Range",
-            subtext = "Select chapter range to download",
-            onClick = onShowDownloadRange
-        )
-
-        HorizontalDivider(color = BorderColor)
-
-        ActionRow(
-            icon = Icons.Default.DeleteForever,
-            title = "Delete Novel",
-            subtext = "Permanently remove this novel and all assosiated data",
-            onClick = onDelete
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            "EXPORT",
-            style = MaterialTheme.typography.labelSmall,
-            color = PrimaryAccent,
-            modifier = Modifier.padding(
-                start = 8.dp,
-                top = 8.dp,
-                bottom = 4.dp
-            )
-        )
-
-        ArtifactExportButton(
-            onExport = onExport
-        )
-    }
-}
-
-@Composable
-fun ActionRow(icon: ImageVector, title: String, subtext: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = PrimaryAccent, modifier = Modifier.size(24.dp))
-        Spacer(modifier = Modifier.width(16.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = PrimaryText, fontWeight = FontWeight.Medium)
-            Text(subtext, color = SecondaryText, fontSize = 12.sp)
-        }
-        Icon(Icons.Default.ChevronRight, contentDescription = null, tint = SecondaryText)
     }
 }

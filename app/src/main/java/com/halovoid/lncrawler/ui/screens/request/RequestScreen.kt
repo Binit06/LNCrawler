@@ -81,7 +81,7 @@ fun RequestScreen(
                             Icon(
                                 imageVector = Icons.Default.Language,
                                 contentDescription = "Crawlers",
-                                tint = PrimaryAccent
+                                tint = PrimaryText // Neutral icon for secondary action
                             )
                         }
                     }
@@ -90,12 +90,12 @@ fun RequestScreen(
                 TabRow(
                     selectedTabIndex = selectedTab.ordinal,
                     containerColor = Color.Transparent,
-                    contentColor = PrimaryAccent,
+                    contentColor = BrandAccent, // Vibrant BrandAccent for tabs
                     indicator = { tabPositions ->
                         TabRowDefaults.SecondaryIndicator(
                             Modifier.tabIndicatorOffset(tabPositions[selectedTab.ordinal]),
-                            color = PrimaryAccent,
-                            height = 2.dp
+                            color = BrandAccent,
+                            height = 3.dp // Slightly thicker indicator for higher contrast
                         )
                     },
                     divider = {},
@@ -106,12 +106,26 @@ fun RequestScreen(
                     Tab(
                         selected = selectedTab == RequestTab.SEARCH,
                         onClick = { selectedTab = RequestTab.SEARCH },
-                        text = { Text("Search", style = MaterialTheme.typography.titleSmall, fontWeight = if (selectedTab == RequestTab.SEARCH) FontWeight.Bold else FontWeight.Normal) }
+                        text = { 
+                            Text(
+                                "Search", 
+                                style = MaterialTheme.typography.titleSmall, 
+                                fontWeight = if (selectedTab == RequestTab.SEARCH) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedTab == RequestTab.SEARCH) PrimaryText else SecondaryText
+                            ) 
+                        }
                     )
                     Tab(
                         selected = selectedTab == RequestTab.REQUEST,
                         onClick = { selectedTab = RequestTab.REQUEST },
-                        text = { Text("Request", style = MaterialTheme.typography.titleSmall, fontWeight = if (selectedTab == RequestTab.REQUEST) FontWeight.Bold else FontWeight.Normal) }
+                        text = { 
+                            Text(
+                                "Request", 
+                                style = MaterialTheme.typography.titleSmall, 
+                                fontWeight = if (selectedTab == RequestTab.REQUEST) FontWeight.Bold else FontWeight.Normal,
+                                color = if (selectedTab == RequestTab.REQUEST) PrimaryText else SecondaryText
+                            ) 
+                        }
                     )
                 }
 
@@ -235,7 +249,7 @@ fun SearchTabContent(
                     disabledContainerColor = Color.Transparent,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
-                    cursorColor = PrimaryAccent,
+                    cursorColor = BrandAccent,
                     focusedTextColor = PrimaryText,
                     unfocusedTextColor = PrimaryText
                 ),
@@ -248,7 +262,7 @@ fun SearchTabContent(
                 modifier = Modifier.size(48.dp),
                 shape = CircleShape,
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = PrimaryAccent,
+                    containerColor = BrandAccent,
                     contentColor = Color.White
                 )
             ) {
@@ -413,14 +427,14 @@ fun ManualRequestContent(
                     if (isLoading) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(24.dp),
-                            color = PrimaryAccent,
+                            color = BrandAccent,
                             strokeWidth = 2.dp
                         )
                     } else {
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Submit",
-                            tint = if (urlInput.isNotBlank()) PrimaryAccent else SecondaryText.copy(alpha = 0.5f),
+                            tint = if (urlInput.isNotBlank()) BrandAccent else SecondaryText.copy(alpha = 0.5f),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -493,7 +507,7 @@ fun StepItem(number: String, title: String, description: String) {
             text = number,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.ExtraBold,
-            color = PrimaryAccent.copy(alpha = 0.2f),
+            color = BrandAccent.copy(alpha = 0.3f), // Using BrandAccent for step numbers
             fontSize = 28.sp
         )
         Spacer(modifier = Modifier.width(16.dp))
@@ -572,7 +586,7 @@ fun SearchResultItem(
                 Text(
                     text = item.source,
                     style = MaterialTheme.typography.labelSmall,
-                    color = PrimaryAccent
+                    color = BrandAccent
                 )
                 Text(
                     text = "Score: ${String.format(Locale.US, "%.2f", item.score)}",

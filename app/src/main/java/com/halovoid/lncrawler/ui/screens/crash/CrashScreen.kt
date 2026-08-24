@@ -81,15 +81,15 @@ fun CrashScreen(
         Surface(
             modifier = Modifier
                 .padding(vertical = 8.dp)
-                .fillMaxSize(),
+                .heightIn(max = 400.dp)
+                .fillMaxWidth(),
             color = MaterialTheme.colorScheme.surfaceVariant,
             shape = MaterialTheme.shapes.medium
         ) {
             Text(
                 text = exception?.stackTraceToString() ?: "Unknown error",
                 modifier = Modifier
-                    .padding(all = 12.dp)
-                    .verticalScroll(rememberScrollState()),
+                    .padding(all = 12.dp),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

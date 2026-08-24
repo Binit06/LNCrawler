@@ -28,8 +28,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.halovoid.lncrawler.ui.navigation.NavGraph
 import com.halovoid.lncrawler.ui.navigation.Screen
-import com.halovoid.lncrawler.ui.theme.PrimaryAccent
-import com.halovoid.lncrawler.ui.theme.SecondaryText
+import com.halovoid.lncrawler.ui.theme.*
 
 /**
  * The primary entry point Composable for the UI.
@@ -91,7 +90,10 @@ private fun LNCrawlerNavigationBar(
     currentDestination: androidx.navigation.NavDestination?,
     onNavigate: (String) -> Unit
 ) {
-    NavigationBar {
+    NavigationBar(
+        containerColor = DarkBackground,
+        tonalElevation = 8.dp
+    ) {
         mainTabs.forEach { tab ->
             val isSelected = currentDestination?.hierarchy?.any { it.route == tab.screen.route } == true
             NavigationBarItem(
@@ -107,16 +109,17 @@ private fun LNCrawlerNavigationBar(
                     Text(
                         text = tab.label,
                         style = MaterialTheme.typography.labelSmall,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                        color = if (isSelected) PrimaryText else SecondaryText
                     ) 
                 },
                 selected = isSelected,
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = PrimaryAccent,
+                    selectedIconColor = PrimaryText,
                     unselectedIconColor = SecondaryText,
-                    selectedTextColor = PrimaryAccent,
+                    selectedTextColor = PrimaryText,
                     unselectedTextColor = SecondaryText,
-                    indicatorColor = Color.Transparent
+                    indicatorColor = BrandAccent.copy(alpha = 0.2f) // Vibrant indicator
                 ),
                 onClick = { onNavigate(tab.screen.route) }
             )

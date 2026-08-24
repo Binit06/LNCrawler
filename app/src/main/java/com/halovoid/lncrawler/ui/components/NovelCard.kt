@@ -18,9 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.Novel
-import com.halovoid.lncrawler.ui.theme.DarkSurface
-import com.halovoid.lncrawler.ui.theme.PrimaryAccent
-import com.halovoid.lncrawler.ui.theme.PrimaryText
+import com.halovoid.lncrawler.ui.theme.*
 
 @Composable
 fun NovelCard(
@@ -68,15 +66,16 @@ fun NovelCard(
                     Icons.Default.Public,
                     contentDescription = null,
                     modifier = Modifier.padding(4.dp),
-                    tint = PrimaryAccent
+                    tint = BrandAccent // Using vibrant BrandAccent for source
                 )
             }
 
-            // Title overlay (Bottom)
+            // Title and Metadata overlay (Bottom)
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(8.dp)
+                    .padding(bottom = 4.dp) // Space for progress bar
             ) {
                 Text(
                     text = novel.title,
@@ -87,6 +86,27 @@ fun NovelCard(
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
                     lineHeight = 16.sp
+                )
+                if (novel.chapters.isNotEmpty()) {
+                    Text(
+                        text = "${novel.chapters.size} Chapters",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SecondaryText,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+
+            // Subtle Progress indicator (Bottom)
+            if (novel.chapters.isNotEmpty()) {
+                LinearProgressIndicator(
+                    progress = { 0.35f }, // Placeholder: 35% read
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(2.dp),
+                    color = BrandAccent,
+                    trackColor = Color.Transparent
                 )
             }
         }

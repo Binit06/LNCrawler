@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Link
@@ -27,7 +28,8 @@ import com.halovoid.lncrawler.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrawlerScreen(
-    viewModel: CrawlerViewModel
+    viewModel: CrawlerViewModel,
+    onBack: () -> Unit
 ) {
     val crawlers by viewModel.crawlers.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
@@ -59,8 +61,17 @@ fun CrawlerScreen(
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             ScreenHeader(
-// ...
                 title = "Crawlers",
+                isExpanded = true,
+                expandedContent = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = PrimaryText
+                        )
+                    }
+                },
                 actions = {
                     if (syncState is SyncState.Loading) {
                         CircularProgressIndicator(
