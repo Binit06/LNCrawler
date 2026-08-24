@@ -41,7 +41,7 @@ class RangeDownloadHandler(
         val chapterRequests = chapters.map { chapter ->
             currentCoroutineContext().ensureActive()
 
-            val requestId = "${request.id}_ch_${chapter.index}"
+            val requestId = "${request.id}_chapter_${chapter.index}"
             val existing = requestDao.getRequestById(requestId)
             
             // If it already exists and is finished, don't recreate it
@@ -60,7 +60,7 @@ class RangeDownloadHandler(
                 parentNovel = request.novelUrl,
                 dependsOn = request.id,
                 priority = request.priority,
-                name = "Chapter ${chapter.index}: ${chapter.title}",
+                name = "Chapter: ${chapter.title}",
                 completedAt = null,
                 metadata = chapterMetadata,
                 url = chapter.url,

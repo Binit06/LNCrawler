@@ -3,6 +3,7 @@ package com.halovoid.lncrawler.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -70,12 +71,13 @@ fun RequestCard(
         )
     }
 
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
             .clickable(enabled = !isCancelling) { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface)
+        color = DarkSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -94,31 +96,58 @@ fun RequestCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Badge(
-                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f),
-                            contentColor = MaterialTheme.colorScheme.primary
+                    
+                    Spacer(modifier = Modifier.height(6.dp))
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Type Badge - Subordinate
+                        Surface(
+                            color = DarkSurfaceVariant,
+                            shape = RoundedCornerShape(4.dp)
                         ) {
-                            Text(request.type.name, modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp), fontSize = 10.sp)
+                            Text(
+                                text = request.type.name,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 9.sp,
+                                color = SecondaryText,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
+
                         if (request.priority > 0) {
-                            Spacer(modifier = Modifier.width(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     Icons.Default.FlashOn,
                                     contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = SuccessGreen
+                                    modifier = Modifier.size(10.dp),
+                                    tint = SecondaryText.copy(alpha = 0.7f)
                                 )
+                                Spacer(modifier = Modifier.width(2.dp))
                                 Text(
-                                    "High Priority",
+                                    text = "High Priority",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = SuccessGreen,
-                                    fontSize = 10.sp
+                                    color = SecondaryText.copy(alpha = 0.7f),
+                                    fontSize = 9.sp
                                 )
                             }
                         }
+                        
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryText.copy(alpha = 0.4f)
+                        )
+                        
+                        Text(
+                            text = formattedDate,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryText.copy(alpha = 0.6f),
+                            fontSize = 9.sp
+                        )
                     }
                 }
                 
@@ -126,22 +155,22 @@ fun RequestCard(
                     if (request.status == RequestStatus.BLOCKED && onSecurityClick != null) {
                         IconButton(
                             onClick = onSecurityClick,
-                            modifier = Modifier.size(32.dp)
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 Icons.Default.Shield,
                                 contentDescription = "Security Check Needed",
-                                tint = PrimaryAccent,
-                                modifier = Modifier.size(20.dp)
+                                tint = BrandAccent,
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                         Spacer(modifier = Modifier.width(8.dp))
                     }
-                    StatusIcon(displayStatus)
+                    StatusIndicator(displayStatus)
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Progress Section
             val progress = if (request.progressTotal > 0) {
@@ -155,87 +184,92 @@ fun RequestCard(
                     cancelled = request.progressCancelled,
                     total = request.progressTotal,
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
                         text = "${(progress * 100).toInt()}% completed",
                         style = MaterialTheme.typography.labelSmall,
-                        color = SecondaryText
+                        color = if (displayStatus == RequestStatus.SUCCESS) SuccessGreen.copy(alpha = 0.8f) else PrimaryText.copy(alpha = 0.6f),
+                        fontWeight = if (displayStatus == RequestStatus.SUCCESS) FontWeight.Bold else FontWeight.Medium
                     )
-                    Text(
-                        text = formattedDate,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = SecondaryText
-                    )
+
+                    if (allowAction) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (isCancelling) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(12.dp),
+                                    strokeWidth = 2.dp,
+                                    color = ErrorRed
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "Cancelling",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = ErrorRed,
+                                    fontSize = 10.sp
+                                )
+                            } else if (isProcessing) {
+                                TextButton(
+                                    onClick = { showCancelDialog = true },
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(24.dp),
+                                    colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed.copy(alpha = 0.8f))
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Cancel", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            } else {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (canContinue && onContinue != null) {
+                                        TextButton(
+                                            onClick = onContinue,
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                            modifier = Modifier.height(24.dp),
+                                            colors = ButtonDefaults.textButtonColors(contentColor = BrandAccent)
+                                        ) {
+                                            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Resume", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                    }
+                                    
+                                    TextButton(
+                                        onClick = onReplay,
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                        modifier = Modifier.height(24.dp),
+                                        colors = ButtonDefaults.textButtonColors(contentColor = SecondaryText)
+                                    ) {
+                                        Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("Replay", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
             if (!request.error.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = request.error,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = ErrorRed,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Actions
-            if (allowAction) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    color = ErrorRed.copy(alpha = 0.05f),
+                    shape = RoundedCornerShape(4.dp)
                 ) {
-                    if (isCancelling) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp,
-                            color = ErrorRed
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Cancelling...",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ErrorRed
-                        )
-                    } else if (isProcessing) {
-                        TextButton(
-                            onClick = { showCancelDialog = true },
-                            colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
-                        ) {
-                            Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Cancel")
-                        }
-                    } else {
-                        TextButton(
-                            onClick = onReplay,
-                            colors = ButtonDefaults.textButtonColors(contentColor = ErrorRed)
-                        ) {
-                            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Replay")
-                        }
-
-                        if (canContinue && onContinue != null) {
-                            Spacer(modifier = Modifier.width(8.dp))
-                            TextButton(
-                                onClick = onContinue,
-                                colors = ButtonDefaults.textButtonColors(contentColor = PrimaryAccent)
-                            ) {
-                                Icon(Icons.Default.Replay, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Resume")
-                            }
-                        }
-                    }
+                    Text(
+                        text = request.error,
+                        modifier = Modifier.padding(8.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = ErrorRed.copy(alpha = 0.8f),
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
         }
@@ -243,13 +277,42 @@ fun RequestCard(
 }
 
 @Composable
-fun StatusIcon(status: RequestStatus) {
+fun StatusIndicator(status: RequestStatus) {
     when (status) {
-        RequestStatus.SUCCESS -> Icon(Icons.Default.CheckCircle, contentDescription = "Success", tint = SuccessGreen)
-        RequestStatus.FAILED -> Icon(Icons.Default.Error, contentDescription = "Failed", tint = ErrorRed)
-        RequestStatus.CANCELLED -> Icon(Icons.Default.Cancel, contentDescription = "Cancelled", tint = SecondaryText)
-        RequestStatus.RUNNING -> CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp, color = PrimaryAccent)
-        RequestStatus.BLOCKED -> Icon(Icons.Default.Security, contentDescription = "Blocked", tint = PrimaryAccent)
-        else -> Icon(Icons.Default.Schedule, contentDescription = "Pending", tint = SecondaryText)
+        RequestStatus.SUCCESS -> Icon(
+            imageVector = Icons.Default.CheckCircle, 
+            contentDescription = "Success", 
+            tint = SuccessGreen.copy(alpha = 0.7f),
+            modifier = Modifier.size(20.dp)
+        )
+        RequestStatus.FAILED -> Icon(
+            imageVector = Icons.Default.Error, 
+            contentDescription = "Failed", 
+            tint = ErrorRed.copy(alpha = 0.7f),
+            modifier = Modifier.size(20.dp)
+        )
+        RequestStatus.CANCELLED -> Icon(
+            imageVector = Icons.Default.Cancel, 
+            contentDescription = "Cancelled", 
+            tint = SecondaryText.copy(alpha = 0.5f),
+            modifier = Modifier.size(20.dp)
+        )
+        RequestStatus.RUNNING -> CircularProgressIndicator(
+            modifier = Modifier.size(18.dp), 
+            strokeWidth = 2.dp, 
+            color = BrandAccent
+        )
+        RequestStatus.BLOCKED -> Icon(
+            imageVector = Icons.Default.Security, 
+            contentDescription = "Blocked", 
+            tint = BrandAccent,
+            modifier = Modifier.size(20.dp)
+        )
+        else -> Icon(
+            imageVector = Icons.Default.Schedule, 
+            contentDescription = "Pending", 
+            tint = SecondaryText.copy(alpha = 0.5f),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }

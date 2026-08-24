@@ -5,7 +5,9 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
@@ -98,30 +100,81 @@ fun NovelTopBar(
             }
 
             var showMenu by remember { mutableStateOf(false) }
-            Box {
-                IconButton(onClick = { showMenu = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = "More", tint = PrimaryText)
-                }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false },
-                    modifier = Modifier.background(DarkSurface)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Refresh Metadata", color = PrimaryText) },
-                        leadingIcon = { Icon(Icons.Default.Refresh, contentDescription = null, tint = SecondaryText) },
-                        onClick = {
-                            showMenu = false
-                            onRefreshMetadata()
-                        }
+            IconButton(onClick = { showMenu = true }) {
+                Icon(Icons.Default.MoreVert, contentDescription = "More", tint = PrimaryText)
+            }
+            
+            if (showMenu) {
+                NovelActionsBottomSheet(
+                    novel = novel,
+                    onDismiss = { showMenu = false },
+                    onRefreshMetadata = {
+                        onRefreshMetadata()
+                        showMenu = false
+                    },
+                    onDeleteNovel = {
+                        onDeleteNovel()
+                        showMenu = false
+                    }
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NovelActionsBottomSheet(
+    novel: Novel,
+    onDismiss: () -> Unit,
+    onRefreshMetadata: () -> Unit,
+    onDeleteNovel: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        scrimColor = Color.Black.copy(alpha = 0.6f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp)
+        ) {
+            Text(
+                text = "Novel Options",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryText
+            )
+            Text(
+                text = novel.title,
+                style = MaterialTheme.typography.bodyMedium,
+                color = SecondaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = DarkBackground.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("Refresh Metadata", color = PrimaryText) },
+                        leadingContent = { Icon(Icons.Default.Refresh, contentDescription = null, tint = PrimaryText) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { onRefreshMetadata() }
                     )
-                    DropdownMenuItem(
-                        text = { Text("Delete Novel", color = ErrorRed) },
-                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed) },
-                        onClick = {
-                            showMenu = false
-                            onDeleteNovel()
-                        }
+                    HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
+                    ListItem(
+                        headlineContent = { Text("Delete Novel", color = ErrorRed) },
+                        leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed) },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { onDeleteNovel() }
                     )
                 }
             }

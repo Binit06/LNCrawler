@@ -17,8 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.CollectionsBookmark
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Language
@@ -63,7 +65,7 @@ fun RequestScreen(
     var selectedTab by remember { mutableStateOf(RequestTab.SEARCH) }
     val libraryUrls by viewModel.libraryUrls.collectAsStateWithLifecycle()
     val searchState by searchViewModel.searchState.collectAsStateWithLifecycle()
-    
+
     val isSearching = searchState !is SearchState.Idle && selectedTab == RequestTab.SEARCH
 
     RequestActionHandler(
@@ -645,5 +647,72 @@ fun SearchResultCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterBottomSheet(
+    currentFilter: com.halovoid.lncrawler.data.db.entities.RequestType?,
+    onDismiss: () -> Unit,
+    onFilterSelected: (com.halovoid.lncrawler.data.db.entities.RequestType?) -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        scrimColor = Color.Black.copy(alpha = 0.6f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp)
+        ) {
+            Text(
+                text = "Filter Results",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryText
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = DarkBackground.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column {
+                    ListItem(
+                        headlineContent = { Text("All Downloads", color = PrimaryText) },
+                        trailingContent = { 
+                            if (currentFilter == null) Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable { onFilterSelected(null) }
+                    )
+                    HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
+                    
+                    com.halovoid.lncrawler.data.db.entities.RequestType.entries.forEach { type ->
+                        val label = when (type) {
+                            com.halovoid.lncrawler.data.db.entities.RequestType.NOVEL_METADATA -> "Metadata"
+                            com.halovoid.lncrawler.data.db.entities.RequestType.CHAPTER -> "Chapters"
+                            com.halovoid.lncrawler.data.db.entities.RequestType.ARTIFACT -> "Exports"
+                            com.halovoid.lncrawler.data.db.entities.RequestType.RANGE_DOWNLOAD -> "Downloads"
+                        }
+                        ListItem(
+                            headlineContent = { Text(label, color = PrimaryText) },
+                            trailingContent = { 
+                                if (currentFilter == type) Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { onFilterSelected(type) }
+                        )
+                        if (type != com.halovoid.lncrawler.data.db.entities.RequestType.entries.last()) {
+                            HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

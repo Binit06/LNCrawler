@@ -1,15 +1,16 @@
 package com.halovoid.lncrawler.ui.screens.crawler
 
 import android.content.Intent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Language
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,12 +18,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.api.core.crawler.Crawler
-import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,65 +61,94 @@ fun CrawlerScreen(
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
-            ScreenHeader(
-                title = "Crawlers",
-                isExpanded = true,
-                expandedContent = {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = PrimaryText
+            // Compact Refined Header
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        tint = PrimaryText
+                    )
+                }
+                
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp)
+                ) {
+                    Text(
+                        text = "Sources",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = PrimaryText
+                    )
+                    if (crawlers.isNotEmpty()) {
+                        Text(
+                            text = "${crawlers.size} sources available",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryText
                         )
-                    }
-                },
-                actions = {
-                    if (syncState is SyncState.Loading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = PrimaryAccent,
-                            strokeWidth = 2.dp
-                        )
-                    } else if (showSyncOption) {
-                        IconButton(onClick = { viewModel.syncCrawlers() }) {
-                            Icon(Icons.Default.Sync, contentDescription = "Sync Crawlers", tint = PrimaryAccent)
-                        }
                     }
                 }
-            )
+
+                if (syncState is SyncState.Loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.padding(end = 12.dp).size(20.dp),
+                        color = BrandAccent,
+                        strokeWidth = 2.dp
+                    )
+                } else if (showSyncOption) {
+                    IconButton(onClick = { viewModel.syncCrawlers() }) {
+                        Icon(
+                            Icons.Default.Sync, 
+                            contentDescription = "Sync Crawlers", 
+                            tint = BrandAccent,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+            }
 
             if (syncState is SyncState.Incompatible) {
-                Card(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                    color = ErrorRed.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed.copy(alpha = 0.3f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = "App Update Required",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = ErrorRed,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "The latest crawlers require LNCrawler version ${(syncState as SyncState.Incompatible).minVersion} or higher. Please update the app from the Support screen.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onErrorContainer
+                            text = "The latest crawlers require LNCrawler version ${(syncState as SyncState.Incompatible).minVersion} or higher.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = SecondaryText
                         )
                     }
                 }
             }
 
             if (isUpdateAvailable && syncState !is SyncState.Incompatible) {
-                Card(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    colors = CardDefaults.cardColors(containerColor = PrimaryAccent.copy(alpha = 0.1f)),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, PrimaryAccent.copy(alpha = 0.5f))
+                    color = BrandAccent.copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, BrandAccent.copy(alpha = 0.2f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -129,32 +159,35 @@ fun CrawlerScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "Update Available",
+                                "Updates Available",
                                 style = MaterialTheme.typography.labelLarge,
-                                color = PrimaryAccent,
+                                color = BrandAccent,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "New crawler versions are ready to download.",
+                                "New crawler versions are ready.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = SecondaryText
                             )
                         }
-                        Button(
+                        TextButton(
                             onClick = { viewModel.syncCrawlers() },
-                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryAccent),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            modifier = Modifier.height(32.dp)
+                            colors = ButtonDefaults.textButtonColors(contentColor = BrandAccent),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
                         ) {
-                            Text("Update Now", fontSize = 12.sp)
+                            Text("Update", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
 
-            if (crawlers.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No crawlers available. Please sync.", color = SecondaryText)
+            if (crawlers.isEmpty() && syncState !is SyncState.Loading) {
+                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(48.dp), tint = DarkSurfaceVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("No crawlers available. Please sync.", color = SecondaryText)
+                    }
                 }
             } else {
                 LazyColumn(
@@ -171,91 +204,91 @@ fun CrawlerScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrawlerItem(crawler: Crawler) {
     val context = LocalContext.current
-    Card(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
+        color = DarkSurface,
         shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
     ) {
-        Column(
+        Row(
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
+            // Source Identity Placeholder
+            Surface(
+                modifier = Modifier.size(40.dp),
+                color = DarkSurfaceVariant,
+                shape = CircleShape
             ) {
+                Icon(
+                    imageVector = Icons.Default.Language,
+                    contentDescription = null,
+                    modifier = Modifier.padding(10.dp),
+                    tint = SecondaryText.copy(alpha = 0.5f)
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = crawler.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = PrimaryText,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    // Subtle Integrated Status
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(SuccessGreen, CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "Active",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = SuccessGreen.copy(alpha = 0.8f),
+                        fontSize = 10.sp
+                    )
+                }
+                
                 Text(
-                    text = crawler.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = PrimaryText,
-                    fontWeight = FontWeight.Bold
+                    text = crawler.baseUrl.removePrefix("https://").removePrefix("http://").removeSuffix("/"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SecondaryText,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
                 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = {
-                            val intent = Intent(Intent.ACTION_VIEW, crawler.baseUrl.toUri())
-                            context.startActivity(intent)
-                        }
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.OpenInNew,
-                            contentDescription = "Open in browser",
-                            tint = PrimaryAccent,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                    Badge(
-                        containerColor = PrimaryAccent.copy(alpha = 0.1f),
-                        contentColor = PrimaryAccent
-                    ) {
-                        Text(
-                            text = "Active",
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Default.Link,
-                    contentDescription = null,
-                    tint = SecondaryText,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = crawler.baseUrl,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SecondaryText
+                    text = crawler.language.uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = SecondaryText.copy(alpha = 0.6f),
+                    fontWeight = FontWeight.Medium
                 )
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, crawler.baseUrl.toUri())
+                    context.startActivity(intent)
+                },
+                modifier = Modifier.size(32.dp)
+            ) {
                 Icon(
-                    Icons.Default.Language,
-                    contentDescription = null,
-                    tint = SecondaryText,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "Language: ${crawler.language.uppercase()}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SecondaryText
+                    imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                    contentDescription = "Open in browser",
+                    tint = SecondaryText.copy(alpha = 0.4f),
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }

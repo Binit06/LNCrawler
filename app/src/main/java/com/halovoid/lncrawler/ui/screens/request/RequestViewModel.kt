@@ -151,7 +151,7 @@ class RequestViewModel(
         _similarNovels.value = emptyList()
     }
 
-    fun startNovelCrawl(crawlerName: String, url: String) {
+    fun startNovelCrawl(crawlerName: String, url: String, title: String) {
         viewModelScope.launch {
             _isLoading.value = true
 
@@ -160,10 +160,10 @@ class RequestViewModel(
             }.toString()
 
             val request = RequestEntity(
-                id = "${url}_crawl",
+                id = "${url}_metadata",
                 type = RequestType.NOVEL_METADATA,
                 novelUrl = url,
-                name = "Metadata: $url",
+                name = "Metadata: $title",
                 metadata = metadata,
                 status = RequestStatus.PENDING,
                 dependsOn = null,

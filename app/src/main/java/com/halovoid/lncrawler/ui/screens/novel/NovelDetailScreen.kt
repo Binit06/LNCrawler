@@ -234,6 +234,8 @@ fun NovelDetailScreen(
                         chapters = chapters,
                         downloadingChapters = downloadingChapters,
                         onFetchChapter = { viewModel.fetchChapter(currentNovel, it) },
+                        onDeleteChapter = { viewModel.deleteChapter(it) },
+                        onReplayChapter = { viewModel.replayChapter(currentNovel, it) },
                         onChapterClick = { onChapterClick(currentNovel.url, it.id) }
                     )
                 }

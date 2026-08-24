@@ -114,7 +114,7 @@ class SchedulerService : Service() {
         val chapterRepository = ChapterRepository.getInstance(this)
         val volumeRepository = VolumeRepository.getInstance(this)
         val preferenceRepository = PreferenceRepository.getInstance(this)
-        val storageRepository = StorageRepositoryImpl(this, preferenceRepository)
+        val storageRepository = StorageRepositoryImpl.getInstance(this)
         val artifactRepository = ArtifactRepository.getInstance(this)
 
         // 2. Initialize Artifact System

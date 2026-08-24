@@ -166,8 +166,8 @@ fun NavGraph(navController: NavHostController) {
                     onConfirm = { novel ->
                         requestViewModel.addNovelDirectly(novel)
                     },
-                    onCrawlManually = { crawlerName, url ->
-                        requestViewModel.startNovelCrawl(crawlerName, url)
+                    onCrawlManually = { crawlerName, url, title ->
+                        requestViewModel.startNovelCrawl(crawlerName, url, title)
                         requestViewModel.clearPreview()
                         navController.popBackStack()
                     }

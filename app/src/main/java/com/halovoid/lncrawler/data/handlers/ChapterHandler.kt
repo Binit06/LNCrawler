@@ -56,7 +56,7 @@ class ChapterHandler(
         if (!url.startsWith("content://")) {
             try {
                 val chapterContent = crawler.getChapterContent(url)
-                if (chapterContent != null) {
+                if (!chapterContent.isNullOrBlank() && chapterContent.trim().length > 100) {
                     val novelKey = crawler.getNovelKey(chapter.novelUrl)
                     val fileName = "${chapter.index.toString().padStart(4, '0')}.html"
                     val relativePath = "novels/$novelKey/chapters"
@@ -70,7 +70,8 @@ class ChapterHandler(
 
                     return localUri
                 } else {
-                    return null
+                    val errorMsg = if (chapterContent.isNullOrBlank()) "Empty content" else "Content too short (${chapterContent.length} chars)"
+                    throw Exception("Failed to fetch valid content: $errorMsg")
                 }
             } catch (e: Exception) {
                 return null

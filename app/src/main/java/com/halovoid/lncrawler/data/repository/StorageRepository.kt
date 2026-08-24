@@ -60,10 +60,24 @@ interface StorageRepository {
     ): Boolean
 }
 
-class StorageRepositoryImpl(
+class StorageRepositoryImpl private constructor(
     private val context: Context,
     private val preferenceRepository: PreferenceRepository
 ) : StorageRepository {
+
+    companion object {
+        @Volatile
+        private var INSTANCE: StorageRepository? = null
+
+        fun getInstance(context: Context): StorageRepository {
+            return INSTANCE ?: synchronized(this) {
+                INSTANCE ?: StorageRepositoryImpl(
+                    context.applicationContext,
+                    PreferenceRepository.getInstance(context)
+                ).also { INSTANCE = it }
+            }
+        }
+    }
 
     @SuppressLint("Recycle")
     override suspend fun openInputStream(uri: Uri): InputStream? = withContext(Dispatchers.IO) {

@@ -14,6 +14,7 @@ import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.components.RequestActionHandler
 import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.components.requestHistorySection
+import com.halovoid.lncrawler.ui.screens.request.FilterBottomSheet
 import com.halovoid.lncrawler.ui.theme.DarkBackground
 import com.halovoid.lncrawler.ui.theme.PrimaryText
 
@@ -52,41 +53,29 @@ fun DownloadScreen(
                     subtitle = if (requestHistory.isNotEmpty()) "${filteredHistory.size} items" else null,
                     actions = {
                         IconButton(onClick = { showFilterMenu = true }) {
-                            Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = PrimaryText)
-                        }
-                        DropdownMenu(
-                            expanded = showFilterMenu,
-                            onDismissRequest = { showFilterMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("All") },
-                                onClick = {
-                                    filterType = null
-                                    showFilterMenu = false
-                                }
+                            Icon(
+                                imageVector = Icons.Default.FilterList,
+                                contentDescription = "Filter",
+                                tint = PrimaryText
                             )
-                            RequestType.values().forEach { type ->
-                                val label = when (type) {
-                                    RequestType.NOVEL_METADATA -> "Metadata"
-                                    RequestType.CHAPTER -> "Chapters"
-                                    RequestType.ARTIFACT -> "Exports"
-                                    RequestType.RANGE_DOWNLOAD -> "Downloads"
-                                }
-                                DropdownMenuItem(
-                                    text = { Text(label) },
-                                    onClick = {
-                                        filterType = type
-                                        showFilterMenu = false
-                                    }
-                                )
-                            }
                         }
                     }
                 )
 
+                if (showFilterMenu) {
+                    FilterBottomSheet(
+                        currentFilter = filterType,
+                        onDismiss = { showFilterMenu = false },
+                        onFilterSelected = { selected ->
+                            filterType = selected
+                            showFilterMenu = false
+                        }
+                    )
+                }
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 16.dp),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     requestHistorySection(

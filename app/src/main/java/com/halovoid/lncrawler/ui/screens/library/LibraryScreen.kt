@@ -1,6 +1,7 @@
 package com.halovoid.lncrawler.ui.screens.library
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -8,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.Language
@@ -23,7 +25,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.ui.components.NovelCard
 import com.halovoid.lncrawler.ui.components.ScreenHeader
-import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -99,7 +100,22 @@ fun LibraryScreen(
                         Icon(Icons.Default.Search, contentDescription = "Search", tint = PrimaryText)
                     }
                     
-                    DomainFilter(selectedDomain, domains) { selectedDomain = it }
+                    var showFilter by remember { mutableStateOf(false) }
+                    IconButton(onClick = { showFilter = true }) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = PrimaryText)
+                    }
+
+                    if (showFilter) {
+                        LibraryFilterBottomSheet(
+                            selected = selectedDomain,
+                            options = domains,
+                            onDismiss = { showFilter = false },
+                            onSelected = { selected ->
+                                selectedDomain = selected
+                                showFilter = false
+                            }
+                        )
+                    }
                 }
             )
 
@@ -127,34 +143,55 @@ fun LibraryScreen(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DomainFilter(selected: String, options: List<String>, onSelected: (String) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
+fun LibraryFilterBottomSheet(
+    selected: String,
+    options: List<String>,
+    onDismiss: () -> Unit,
+    onSelected: (String) -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        scrimColor = Color.Black.copy(alpha = 0.6f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp)
+        ) {
+            Text(
+                text = "Filter Sources",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryText
+            )
+            Spacer(modifier = Modifier.height(24.dp))
 
-    Box {
-        OutlinedButton(
-            onClick = { expanded = true },
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = SecondaryText),
-            contentPadding = PaddingValues(horizontal = 12.dp)
-        ) {
-            Text(selected, fontSize = 12.sp)
-            Spacer(modifier = Modifier.width(4.dp))
-            Icon(Icons.Default.FilterList, contentDescription = null, modifier = Modifier.size(16.dp))
-        }
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier.background(DarkSurface)
-        ) {
-            options.forEach { option ->
-                DropdownMenuItem(
-                    text = { Text(option, color = PrimaryText) },
-                    onClick = {
-                        onSelected(option)
-                        expanded = false
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = DarkBackground.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column {
+                    options.forEachIndexed { index, option ->
+                        ListItem(
+                            headlineContent = { Text(option, color = PrimaryText) },
+                            trailingContent = {
+                                if (selected == option) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
+                                }
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable { onSelected(option) }
+                        )
+                        if (index < options.lastIndex) {
+                            HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
+                        }
                     }
-                )
+                }
             }
         }
     }

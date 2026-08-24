@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -133,13 +134,13 @@ fun RequestGroupCard(
         RequestType.RANGE_DOWNLOAD -> "Downloads"
     }
 
-    Card(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        color = DarkSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
     ) {
         Column(
             modifier = Modifier.padding(16.dp)
@@ -158,56 +159,55 @@ fun RequestGroupCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    
+                    Spacer(modifier = Modifier.height(6.dp))
+                    
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Surface(
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                            color = BrandAccent.copy(alpha = 0.1f),
                             shape = RoundedCornerShape(4.dp)
                         ) {
-                            Row(
+                            Text(
+                                text = type.name, 
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    Icons.Default.Folder,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(10.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = type.name, 
-                                    fontSize = 10.sp,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
+                                fontSize = 9.sp,
+                                color = BrandAccent,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
-                        Spacer(modifier = Modifier.width(8.dp))
+                        
                         Text(
-                            text = "${requests.size} requests",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = SecondaryText
-                        )
-                    }
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Icon(
-                        Icons.Default.ChevronRight,
-                        contentDescription = null,
-                        tint = SecondaryText
-                    )
-                    if (latestUpdate > 0) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = android.text.format.DateUtils.getRelativeTimeSpanString(latestUpdate).toString(),
+                            text = "${requests.size} jobs",
                             style = MaterialTheme.typography.labelSmall,
                             color = SecondaryText.copy(alpha = 0.7f),
                             fontSize = 10.sp
                         )
+
+                        if (latestUpdate > 0) {
+                            Text(
+                                text = "·",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SecondaryText.copy(alpha = 0.4f)
+                            )
+                            Text(
+                                text = android.text.format.DateUtils.getRelativeTimeSpanString(latestUpdate).toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SecondaryText.copy(alpha = 0.6f),
+                                fontSize = 10.sp
+                            )
+                        }
                     }
                 }
+
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = SecondaryText.copy(alpha = 0.5f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -224,7 +224,7 @@ fun RequestGroupCard(
                     cancelled = totalCancelled,
                     total = totalProgress,
                 )
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(8.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -233,16 +233,24 @@ fun RequestGroupCard(
                     Text(
                         text = "${(progress * 100).toInt()}% completed",
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (progress == 1f) SuccessGreen else PrimaryAccent,
-                        fontWeight = FontWeight.Bold
+                        color = if (progress == 1f) SuccessGreen.copy(alpha = 0.8f) else PrimaryText.copy(alpha = 0.6f),
+                        fontWeight = if (progress == 1f) FontWeight.Bold else FontWeight.Medium
                     )
                     
                     if (totalFailed > 0) {
-                        Text(
-                            text = "$totalFailed failed",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ErrorRed
-                        )
+                        Surface(
+                            color = ErrorRed.copy(alpha = 0.1f),
+                            shape = CircleShape
+                        ) {
+                            Text(
+                                text = "$totalFailed failed",
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ErrorRed,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp
+                            )
+                        }
                     }
                 }
             }

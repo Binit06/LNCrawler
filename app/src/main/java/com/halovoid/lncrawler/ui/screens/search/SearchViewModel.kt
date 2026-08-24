@@ -58,7 +58,7 @@ class SearchViewModel(
             }.toString()
 
             val request = RequestEntity(
-                id = "${item.title}_crawl",
+                id = "${item.url}_metadata",
                 type = RequestType.NOVEL_METADATA,
                 novelUrl = item.url,
                 name = "Metadata: ${item.title}",

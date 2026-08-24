@@ -1,21 +1,15 @@
 package com.halovoid.lncrawler.ui.screens.support
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Error
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material.icons.filled.Payments
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.SystemUpdate
-import androidx.compose.material.icons.filled.Terminal
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,7 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.BuildConfig
-import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -42,14 +35,11 @@ fun SupportScreen(
     viewModel: SupportViewModel
 ) {
     val uriHandler = LocalUriHandler.current
-    val snackbarHostState = remember { SnackbarHostState() }
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
-
     val context = LocalContext.current
 
     Scaffold(
-        containerColor = DarkBackground,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        containerColor = DarkBackground
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -57,329 +47,295 @@ fun SupportScreen(
                 .padding(bottom = innerPadding.calculateBottomPadding())
                 .verticalScroll(rememberScrollState())
         ) {
-            ScreenHeader(
-                title = "Support",
-                subtitle = "Version ${BuildConfig.VERSION_NAME}"
-            )
+            // 1. Unified Identity & Status Header
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 24.dp)
+            ) {
+                Text(
+                    text = "Support & Community",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = PrimaryText
+                )
+                
+                Spacer(modifier = Modifier.height(4.dp))
+                
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "v${BuildConfig.VERSION_NAME}",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = SecondaryText,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = " · ",
+                        color = SecondaryText.copy(alpha = 0.5f)
+                    )
+                    AppUpdateStatus(
+                        state = updateState,
+                        onUpdateClick = { update ->
+                            if (update.apkDownloadUrl != null) {
+                                viewModel.startUpdateDownload(update.apkDownloadUrl)
+                            } else {
+                                uriHandler.openUri(update.releaseUrl)
+                            }
+                        },
+                        onInstallClick = { uri ->
+                            viewModel.installUpdate(context, uri)
+                        },
+                        onRetryClick = { viewModel.checkForUpdates() }
+                    )
+                }
+            }
 
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 24.dp),
+                horizontalAlignment = Alignment.Start
             ) {
-                AppUpdateCard(
-                    state = updateState,
-                    onUpdateClick = { update ->
-                        if (update.apkDownloadUrl != null) {
-                            viewModel.startUpdateDownload(update.apkDownloadUrl)
-                        } else {
-                            uriHandler.openUri(update.releaseUrl)
-                        }
-                    },
-                    onInstallClick = { uri ->
-                        viewModel.installUpdate(context, uri)
-                    },
-                    onRetryClick = { viewModel.checkForUpdates() }
-                )
+                // 2. The Emotional Message (The "Why")
+                AboutSection()
+
+                Spacer(modifier = Modifier.height(40.dp))
+
+                // 3. Ways to Engage (The "How")
+                SectionLabel("Community")
+                EngagementGroup {
+                    SupportItem(
+                        title = "Discord Server",
+                        subtitle = "Get help, report bugs, and chat with users.",
+                        icon = Icons.Default.Forum,
+                        iconTint = DiscordBlurple,
+                        onClick = { uriHandler.openUri("https://discord.gg/A6cY7pN6Y") }
+                    )
+                    ItemDivider()
+                    SupportItem(
+                        title = "GitHub Repository",
+                        subtitle = "Follow development or star the project.",
+                        icon = Icons.Default.Star,
+                        iconTint = GitHubOrange,
+                        onClick = { uriHandler.openUri("https://github.com/Binit06/LNCrawler") }
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Icon(
-                    Icons.Default.Favorite,
-                    contentDescription = null,
-                    tint = SupportRose, // Warm Rose for life
-                    modifier = Modifier.size(64.dp)
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                Text(
-                    text = "Enjoying LNCrawler?",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = PrimaryText,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                Text(
-                    text = "LNCrawler is an open-source project maintained by a single developer. Your support helps keep the crawlers updated and the app free of ads.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = SecondaryText,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-                
+                SectionLabel("Support Development")
+                EngagementGroup {
+                    SupportItem(
+                        title = "Buy Me A Coffee",
+                        subtitle = "Help keep LNCrawler Active",
+                        icon = Icons.Default.Payments,
+                        iconTint = BrandAccent,
+                        onClick = { uriHandler.openUri("https://buymeacoffee.com/halovoid") }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Community Section
-                SectionHeader("Community")
+                SectionLabel("For Developers")
+                EngagementGroup {
+                    SupportItem(
+                        title = "Contribute Sources",
+                        subtitle = "Write new crawlers for missing novel sites.",
+                        icon = Icons.Default.Terminal,
+                        iconTint = PrimaryAccent,
+                        onClick = { uriHandler.openUri("https://github.com/Binit06/LNCrawlerSources") }
+                    )
+                }
                 
-                SupportCard(
-                    title = "Join Discord",
-                    description = "Get help, report bugs, suggest features, and talk directly with the developer and other users.",
-                    icon = Icons.Default.Forum,
-                    buttonText = "Join Discord",
-                    onClick = { uriHandler.openUri("https://discord.gg/A6cY7pN6Y") },
-                    accentColor = DiscordBlurple
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
-                
-                SupportCard(
-                    title = "Star on GitHub",
-                    description = "Show your support by starring the repository. It helps more people discover the project.",
-                    icon = Icons.Default.Star,
-                    buttonText = "GitHub Repo",
-                    onClick = { uriHandler.openUri("https://github.com/Binit06/LNCrawler") },
-                    accentColor = GitHubOrange
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Support Section
-                SectionHeader("Support Development")
-                
-                SupportCard(
-                    title = "Buy Me A Coffee",
-                    description = "Help support the development by buying me a coffee! Your contributions help keep the project alive and free of ads.",
-                    icon = Icons.Default.Payments,
-                    buttonText = "Support",
-                    onClick = { uriHandler.openUri("https://buymeacoffee.com/halovoid") },
-                    accentColor = BrandAccent
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Development Section
-                SectionHeader("For Developers")
-                
-                SupportCard(
-                    title = "Contribute Sources",
-                    description = "Are you a developer? You can help by writing new crawlers for missing novel sites.",
-                    icon = Icons.Default.Terminal,
-                    buttonText = "Source Guide",
-                    onClick = { uriHandler.openUri("https://github.com/Binit06/LNCrawlerSources") }
-                )
-                
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(48.dp))
             }
         }
     }
 }
 
 @Composable
-fun AppUpdateCard(
+fun AppUpdateStatus(
     state: AppUpdateState,
     onUpdateClick: (AppUpdateState.UpdateAvailable) -> Unit,
     onInstallClick: (String) -> Unit,
     onRetryClick: () -> Unit
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            if (state is AppUpdateState.UpdateAvailable) BrandAccent.copy(alpha = 0.5f) else BorderColor
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val (title, color, icon) = when (state) {
-                        is AppUpdateState.Loading, is AppUpdateState.Idle -> 
-                            Triple("Checking Updates", PrimaryText, Icons.Default.Refresh)
-                        is AppUpdateState.UpdateAvailable -> 
-                            Triple("Update Available", BrandAccent, Icons.Default.SystemUpdate)
-                        is AppUpdateState.Downloading ->
-                            Triple("Downloading...", BrandAccent, Icons.Default.SystemUpdate)
-                        is AppUpdateState.ReadyToInstall ->
-                            Triple("Ready to Install", BrandAccent, Icons.Default.CheckCircle)
-                        is AppUpdateState.Installing ->
-                            Triple("Installing...", BrandAccent, Icons.Default.Refresh)
-                        is AppUpdateState.UpToDate -> 
-                            Triple("Latest Version", SuccessGreen, Icons.Default.CheckCircle)
-                        is AppUpdateState.Error -> 
-                            Triple("Check Failed", ErrorRed, Icons.Default.Error)
-                    }
-                    
-                    if (state !is AppUpdateState.Loading) {
-                        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
-                    
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = color,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-                
-                Text(
-                    text = when (state) {
-                        is AppUpdateState.Loading, is AppUpdateState.Idle -> "Connecting to GitHub..."
-                        is AppUpdateState.UpdateAvailable -> "Version ${state.tagName} is now ready."
-                        is AppUpdateState.Downloading -> "Fetching latest APK..."
-                        is AppUpdateState.ReadyToInstall -> "Download complete. Tap to install."
-                        is AppUpdateState.Installing -> "The installer should open shortly."
-                        is AppUpdateState.UpToDate -> "You are on the latest release."
-                        is AppUpdateState.Error -> "Please check your internet connection."
-                    },
-                    style = MaterialTheme.typography.bodySmall,
-                    color = SecondaryText
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            when (state) {
-                is AppUpdateState.Loading, is AppUpdateState.Idle, is AppUpdateState.Installing -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        color = BrandAccent,
-                        strokeWidth = 2.dp
-                    )
-                }
-                is AppUpdateState.Downloading -> {
-                    LinearProgressIndicator(
-                        modifier = Modifier.width(64.dp),
-                        color = BrandAccent,
-                        trackColor = BrandAccent.copy(alpha = 0.1f)
-                    )
-                }
-                is AppUpdateState.UpdateAvailable -> {
-                    Button(
-                        onClick = { onUpdateClick(state) },
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Text("Update", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                }
-                is AppUpdateState.ReadyToInstall -> {
-                    Button(
-                        onClick = { onInstallClick(state.uri) },
-                        colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Text("Install", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                }
-                is AppUpdateState.UpToDate -> {
-                    // No trailing icon needed if we have one in the title
-                }
-                is AppUpdateState.Error -> {
-                    IconButton(onClick = onRetryClick) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = "Retry",
-                            tint = ErrorRed
-                        )
-                    }
-                }
-            }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        val (text, color, isLoading) = when (state) {
+            is AppUpdateState.Loading, is AppUpdateState.Idle -> 
+                Triple("Checking updates...", SecondaryText, true)
+            is AppUpdateState.UpdateAvailable -> 
+                Triple("Update available", BrandAccent, false)
+            is AppUpdateState.Downloading ->
+                Triple("Downloading...", BrandAccent, true)
+            is AppUpdateState.ReadyToInstall ->
+                Triple("Ready to install", SuccessGreen, false)
+            is AppUpdateState.Installing ->
+                Triple("Installing...", BrandAccent, true)
+            is AppUpdateState.UpToDate -> 
+                Triple("Up to date", SuccessGreen.copy(alpha = 0.7f), false)
+            is AppUpdateState.Error -> 
+                Triple("Check failed", ErrorRed, false)
         }
+
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(12.dp),
+                color = color,
+                strokeWidth = 1.5.dp
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        } else if (state !is AppUpdateState.UpToDate) {
+            Icon(
+                imageVector = if (state is AppUpdateState.Error) Icons.Default.Error else Icons.Default.Info,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(12.dp)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+        }
+
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium,
+            color = color,
+            fontWeight = if (state is AppUpdateState.UpToDate) FontWeight.Normal else FontWeight.Bold,
+            modifier = Modifier.clickable(enabled = state is AppUpdateState.UpdateAvailable || state is AppUpdateState.ReadyToInstall || state is AppUpdateState.Error) {
+                when (state) {
+                    is AppUpdateState.UpdateAvailable -> onUpdateClick(state)
+                    is AppUpdateState.ReadyToInstall -> onInstallClick(state.uri)
+                    is AppUpdateState.Error -> onRetryClick()
+                    else -> {}
+                }
+            }
+        )
     }
 }
 
 @Composable
-fun SectionHeader(title: String) {
+fun EngagementGroup(content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        color = DarkSurface,
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth(),
+        content = { Column(content = content) }
+    )
+}
+
+@Composable
+fun ItemDivider() {
+    HorizontalDivider(
+        color = BorderColor.copy(alpha = 0.4f),
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    )
+}
+
+
+@Composable
+fun AboutSection() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(BrandAccent.copy(alpha = 0.05f))
+            .border(1.dp, BrandAccent.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
+            .padding(20.dp),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                Icons.Default.Favorite,
+                contentDescription = null,
+                tint = SupportRose,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = "Enjoying LNCrawler?",
+                style = MaterialTheme.typography.titleMedium,
+                color = PrimaryText,
+                fontWeight = FontWeight.Bold
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Text(
+            text = "LNCrawler is an open-source project maintained by a single developer. Your support helps keep the crawlers updated and the app free of ads.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = SecondaryText,
+            lineHeight = 22.sp
+        )
+    }
+}
+
+@Composable
+fun SectionLabel(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelMedium,
+        color = SecondaryText,
+        fontWeight = FontWeight.Medium,
+        modifier = Modifier.padding(bottom = 8.dp, start = 4.dp)
+    )
+}
+
+@Composable
+fun SupportItem(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    onClick: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 12.dp),
+            .clickable { onClick() }
+            .padding(vertical = 12.dp, horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(4.dp)
-                .clip(CircleShape)
-                .background(BrandAccent)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall,
-            color = SecondaryText,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 1.sp
-        )
-    }
-}
-
-@Composable
-fun SupportCard(
-    title: String,
-    description: String,
-    icon: ImageVector,
-    buttonText: String,
-    onClick: () -> Unit,
-    accentColor: Color = BrandAccent,
-    secondaryButtonText: String? = null,
-    onSecondaryClick: (() -> Unit)? = null
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        Surface(
+            color = iconTint.copy(alpha = 0.1f),
+            shape = CircleShape,
+            modifier = Modifier.size(40.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(24.dp))
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = PrimaryText,
-                    fontWeight = FontWeight.Bold
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodyMedium,
-                color = SecondaryText
-            )
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(
-                    onClick = onClick,
-                    modifier = Modifier.weight(1f),
-                    colors = ButtonDefaults.buttonColors(containerColor = accentColor),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(buttonText, color = Color.White, fontWeight = FontWeight.Bold)
-                }
-                
-                if (secondaryButtonText != null && onSecondaryClick != null) {
-                    OutlinedButton(
-                        onClick = onSecondaryClick,
-                        modifier = Modifier.weight(1f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(secondaryButtonText, color = accentColor, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
         }
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title, 
+                style = MaterialTheme.typography.bodyLarge, 
+                fontWeight = FontWeight.Bold,
+                color = PrimaryText 
+            ) 
+            Text(
+                text = subtitle, 
+                style = MaterialTheme.typography.bodySmall, 
+                color = SecondaryText 
+            ) 
+        }
+        
+        Spacer(modifier = Modifier.width(8.dp))
+        
+        Icon(
+            imageVector = Icons.Default.ChevronRight,
+            contentDescription = null,
+            tint = SecondaryText.copy(alpha = 0.3f),
+            modifier = Modifier.size(20.dp)
+        )
     }
 }

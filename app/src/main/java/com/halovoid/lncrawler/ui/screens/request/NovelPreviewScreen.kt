@@ -39,7 +39,7 @@ fun NovelPreviewScreen(
     viewModel: RequestViewModel,
     onBack: () -> Unit,
     onConfirm: (Novel) -> Unit,
-    onCrawlManually: (String, String) -> Unit
+    onCrawlManually: (String, String, String) -> Unit
 ) {
     val novel by viewModel.novelPreview.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
@@ -67,7 +67,7 @@ fun NovelPreviewScreen(
         onConfirm = onConfirm,
         onCrawlManually = {
             if (previewUrl != null) {
-                onCrawlManually(novel?.crawlerName ?: "", previewUrl!!)
+                onCrawlManually(novel?.crawlerName ?: "", previewUrl!!, novel?.title ?: previewUrl!!)
             }
         }
     )

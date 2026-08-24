@@ -34,7 +34,10 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
                 RequestDetailViewModel(application, RequestRepository.getInstance(application)) as T
             }
             modelClass.isAssignableFrom(NovelDetailViewModel::class.java) -> {
-                NovelDetailViewModel(application, RequestRepository.getInstance(application)) as T
+                NovelDetailViewModel(
+                    application,
+                    RequestRepository.getInstance(application)
+                ) as T
             }
             modelClass.isAssignableFrom(FolderViewModel::class.java) -> {
                 FolderViewModel(application, PreferenceRepository.getInstance(application)) as T

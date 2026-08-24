@@ -14,6 +14,8 @@ import com.halovoid.lncrawler.data.repository.NovelRepository
 import com.halovoid.lncrawler.data.repository.VolumeRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.data.repository.RequestRepository
+import com.halovoid.lncrawler.data.repository.StorageRepository
+import com.halovoid.lncrawler.data.repository.StorageRepositoryImpl
 import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
@@ -44,6 +46,7 @@ class NovelDetailViewModel(
 
     private val artifactRepository = ArtifactRepository.getInstance(application)
     private val chapterRepository = ChapterRepository.getInstance(application)
+    private val storageRepository = StorageRepositoryImpl.getInstance(application)
 
     private val _novel = MutableStateFlow<Novel?>(null)
     val novel: StateFlow<Novel?> = _novel.asStateFlow()
@@ -146,7 +149,7 @@ class NovelDetailViewModel(
             }.toString()
 
             val request = RequestEntity(
-                id = "${novel.url}_crawl",
+                id = "${novel.url}_metadata",
                 type = RequestType.NOVEL_METADATA,
                 novelUrl = novel.url,
                 name = "Metadata: ${novel.title}",
@@ -173,7 +176,7 @@ class NovelDetailViewModel(
             
             val rangeChapters = novel.chapters.filter { it.index in start..end }
             
-            val requestId = "${novel.url}_range_${start}_${end}"
+            val requestId = "${novel.url}_download_${start}_${end}"
             val metadata = JSONObject().apply {
                 put("crawlerName", novel.crawlerName)
                 put("startIndex", start)
@@ -207,7 +210,7 @@ class NovelDetailViewModel(
             val start = 1
             val end = allChapters.size
             
-            val requestId = "${novel.url}_full_download"
+            val requestId = "${novel.url}_download_all"
             val metadata = JSONObject().apply {
                 put("crawlerName", novel.crawlerName)
                 put("startIndex", start)
@@ -241,7 +244,7 @@ class NovelDetailViewModel(
             val start = volumeChapters.minOf { it.index }
             val end = volumeChapters.maxOf { it.index }
             
-            val requestId = "${novel.url}_vol_${volumeIndex}_download"
+            val requestId = "${novel.url}_download_vol_${volumeIndex}"
             val metadata = JSONObject().apply {
                 put("crawlerName", novel.crawlerName)
                 put("startIndex", start)
@@ -273,12 +276,12 @@ class NovelDetailViewModel(
             }.toString()
 
             val request = RequestEntity(
-                id = "${novel.url}_ch_${chapter.index}",
+                id = "${novel.url}_chapter_${chapter.index}",
                 type = RequestType.CHAPTER,
                 parentNovel = novel.url,
                 dependsOn = null,
                 priority = 10, // Higher priority for manual single chapter fetch
-                name = "Chapter ${chapter.title} Download",
+                name = "Chapter: ${chapter.title}",
                 completedAt = null,
                 metadata = chapterMetadata,
                 url = chapter.url,
@@ -289,6 +292,32 @@ class NovelDetailViewModel(
 
             requestRepository.insertRequests(listOf(request))
             SchedulerService.startService(getApplication())
+        }
+    }
+
+    fun deleteChapter(chapter: Chapter) {
+        viewModelScope.launch(Dispatchers.IO) {
+            chapter.fileLocation?.let { location ->
+                try {
+                    storageRepository.delete(Uri.parse(location))
+                } catch (e: Exception) {
+                    // Log or handle error if file is already gone
+                }
+            }
+            chapterRepository.updateChapter(chapter.copy(fileLocation = null))
+        }
+    }
+
+    fun replayChapter(novel: Novel, chapter: Chapter) {
+        // First delete if exists, then fetch again
+        viewModelScope.launch(Dispatchers.IO) {
+            chapter.fileLocation?.let { location ->
+                try {
+                    storageRepository.delete(Uri.parse(location))
+                } catch (e: Exception) {}
+            }
+            chapterRepository.updateChapter(chapter.copy(fileLocation = null))
+            fetchChapter(novel, chapter)
         }
     }
 
