@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 12,
-    "identityHash": "b57a8ce1c44815d5d63f79fc28da0ef5",
+    "identityHash": "11d256a00be6b5b97f027d1ad207e751",
     "entities": [
       {
         "tableName": "novels",
@@ -217,7 +217,7 @@
       },
       {
         "tableName": "requests",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `parentNovel` TEXT, `dependsOn` TEXT, `url` TEXT, `novelUrl` TEXT NOT NULL, `priority` INTEGER NOT NULL, `type` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `completedAt` INTEGER, `progressTotal` INTEGER NOT NULL, `progressSuccess` INTEGER NOT NULL, `progressFailed` INTEGER NOT NULL, `progressCancelled` INTEGER NOT NULL, `status` TEXT NOT NULL, `rstatus` TEXT NOT NULL, `metadata` TEXT, `error` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`parentNovel`) REFERENCES `novels`(`url`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`dependsOn`) REFERENCES `requests`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `parentNovel` TEXT, `dependsOn` TEXT, `url` TEXT, `novelUrl` TEXT NOT NULL, `priority` INTEGER NOT NULL, `type` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, `completedAt` INTEGER, `progressTotal` INTEGER NOT NULL, `progressSuccess` INTEGER NOT NULL, `progressFailed` INTEGER NOT NULL, `progressCancelled` INTEGER NOT NULL, `status` TEXT NOT NULL, `rstatus` TEXT NOT NULL, `metadata` TEXT, `error` TEXT, `attemptCount` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`parentNovel`) REFERENCES `novels`(`url`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`dependsOn`) REFERENCES `requests`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -326,6 +326,12 @@
             "fieldPath": "error",
             "columnName": "error",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "attemptCount",
+            "columnName": "attemptCount",
+            "affinity": "INTEGER",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -457,7 +463,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'b57a8ce1c44815d5d63f79fc28da0ef5')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '11d256a00be6b5b97f027d1ad207e751')"
     ]
   }
 }

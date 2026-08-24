@@ -3,6 +3,8 @@ package com.halovoid.lncrawler.data.scheduler.jobs
 import com.halovoid.lncrawler.data.config.SchedulerConfig
 import com.halovoid.lncrawler.data.db.dao.RequestDao
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
+import com.halovoid.lncrawler.data.handlers.utility.parsedMetadata
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
 import java.util.concurrent.ConcurrentHashMap
@@ -21,7 +23,8 @@ class JobScheduler(
 ) {
     private var pollingJob: Job? = null
     private val activeJobs = ConcurrentHashMap<String, Job>()
-    private val workerPool = WorkerPool(config.maxConcurrentJobs)
+    private val crawlerPools = ConcurrentHashMap<String, WorkerPool>()
+    private val globalPool = WorkerPool(config.maxConcurrentJobs)
     private val leaseMonitor = LeaseMonitor(config.abandonedTimeoutMs)
     private var onEmptyListener: (() -> Unit)? = null
 
@@ -51,11 +54,28 @@ class JobScheduler(
     }
 
     fun cancelActiveJob(requestId: String) {
-        activeJobs[requestId]?.cancel()
         scope.launch {
             val graph = JobGraph.build(requestDao.getAllRequests().first())
-            graph.subtreeOf(requestId).forEach { descendant ->
-                if (descendant.id != requestId) activeJobs[descendant.id]?.cancel()
+            val subtree = graph.subtreeOf(requestId)
+
+            // Write CANCELLED to the DB *before* cancelling coroutines, for every node in the
+            // subtree — including ones currently RUNNING. This is the fix for the old "stuck
+            // pending" bug: previously we only cancelled the coroutine and waited for the running
+            // JobRunner to notice and persist it, which raced against lease-based recovery and
+            // could reset an orphaned child back to PENDING before it ever saw CANCELLED.
+            // requestDao.cancelRequest() already exists and does status + rstatus + progress +
+            // propagation in one transaction, so we just reuse it here.
+            subtree.forEach { node ->
+                if (node.status == RequestStatus.PENDING || node.status == RequestStatus.RUNNING) {
+                    requestDao.cancelRequest(node.id)
+                }
+            }
+
+            // Now stop the actual work. JobRunner's retry loop checks DB status on every
+            // iteration and after every backoff delay, so even without this the loop would stop
+            // on its own — this just interrupts it immediately instead of waiting out the delay.
+            subtree.forEach { node ->
+                activeJobs[node.id]?.cancel()
             }
         }
     }
@@ -79,7 +99,22 @@ class JobScheduler(
             val request = readyQueue.pop() ?: break
             if (activeJobs.containsKey(request.id)) continue
 
-            if (!workerPool.tryAcquire()) break
+            val crawlerName = request.parsedMetadata.crawlerName
+            val pool = if (crawlerName != null) {
+                crawlerPools.getOrPut(crawlerName) {
+                    val crawler = CrawlerFactory.getCrawler(crawlerName)
+                    val limit = crawler?.config?.runnerConcurrency ?: config.maxConcurrentJobs
+                    WorkerPool(limit)
+                }
+            } else {
+                globalPool
+            }
+
+            if (!pool.tryAcquire()) {
+                // If we can't acquire for this specific crawler, we skip it for this tick,
+                // but we keep looking in the readyQueue for other crawlers
+                continue
+            }
 
             val job = scope.launch {
                 try {
@@ -90,7 +125,7 @@ class JobScheduler(
                 } catch (e: Exception) {
                     activeJobs.remove(request.id)
                 } finally {
-                    workerPool.release()
+                    pool.release()
                 }
             }
             activeJobs[request.id] = job

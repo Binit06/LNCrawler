@@ -17,9 +17,14 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.halovoid.lncrawler.api.loader.SourceLoader
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.text.font.FontWeight
+import com.halovoid.lncrawler.ui.theme.BrandAccent
 import com.halovoid.lncrawler.ui.theme.DarkSurface
-import com.halovoid.lncrawler.ui.theme.PrimaryAccent
 import com.halovoid.lncrawler.ui.theme.PrimaryText
+import com.halovoid.lncrawler.ui.theme.SecondaryText
+import com.halovoid.lncrawler.ui.theme.SuccessGreen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -91,51 +96,85 @@ fun SourceSyncScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .height(240.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(DarkSurface)
-                    .padding(8.dp)
+                    .padding(12.dp)
             ) {
                 LazyColumn(
                     state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     items(logs, key = { it.id }) { logEntry ->
                         Text(
-                            text = "> ${logEntry.message}",
+                            text = if (logEntry.message.startsWith("Error")) "✖ ${logEntry.message}" else "✔ ${logEntry.message}",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp
                             ),
-                            color = if (logEntry.message.startsWith("Error")) MaterialTheme.colorScheme.error else PrimaryText
+                            color = when {
+                                logEntry.message.startsWith("Error") -> MaterialTheme.colorScheme.error
+                                logEntry.message.contains("Complete") -> SuccessGreen
+                                else -> PrimaryText.copy(alpha = 0.8f)
+                            }
                         )
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             if (isSyncing) {
-                CircularProgressIndicator(
-                    color = PrimaryAccent,
-                    modifier = Modifier.size(32.dp),
-                    strokeWidth = 3.dp
-                )
-            } else if (error != null) {
-                TextButton(onClick = onComplete) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        color = BrandAccent,
+                        modifier = Modifier.size(36.dp),
+                        strokeWidth = 3.dp
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Proceed Anyway",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                        style = MaterialTheme.typography.bodyMedium
+                        text = "Synchronizing...",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = BrandAccent
                     )
                 }
+            } else if (error != null) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Sync Failed",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold
+                    )
+                    TextButton(onClick = onComplete) {
+                        Text(
+                            text = "Proceed Anyway",
+                            color = SecondaryText,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
             } else {
-                Text(
-                    text = "Sync Complete!",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = PrimaryAccent
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = SuccessGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Sources up to date",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = SuccessGreen,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }

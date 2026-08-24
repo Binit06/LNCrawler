@@ -84,4 +84,10 @@ object DatabaseMigrations {
             db.execSQL("ALTER TABLE novels ADD column titleHash INTEGER DEFAULT NULL")
         }
     }
+
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE requests ADD COLUMN attemptCount INTEGER NOT NULL DEFAULT 0")
+        }
+    }
 }

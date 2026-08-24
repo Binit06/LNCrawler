@@ -32,7 +32,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.halovoid.lncrawler.ui.theme.PrimaryAccent
+import com.halovoid.lncrawler.ui.theme.BrandAccent
+import com.halovoid.lncrawler.ui.theme.DarkSurface
 import com.halovoid.lncrawler.ui.theme.SecondaryText
 import com.halovoid.lncrawler.ui.theme.SuccessGreen
 
@@ -136,11 +137,28 @@ fun PermissionItem(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(if (isGranted) PrimaryAccent.copy(alpha = 0.1f) else Color.Transparent)
+            .background(DarkSurface)
             .clickable(enabled = !isGranted) { onClick() }
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(if (isGranted) SuccessGreen.copy(alpha = 0.15f) else BrandAccent.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isGranted) Icons.Default.Check else icon,
+                contentDescription = null,
+                tint = if (isGranted) SuccessGreen else BrandAccent,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(16.dp))
+
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -159,18 +177,17 @@ fun PermissionItem(
         if (!isGranted) {
             Text(
                 text = "Grant",
-                color = PrimaryAccent,
+                color = BrandAccent,
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(start = 8.dp)
             )
         } else {
-            Text(
-                text = "Granted",
-                color = SecondaryText,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(start = 8.dp)
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = null,
+                tint = SuccessGreen,
+                modifier = Modifier.size(20.dp).padding(start = 8.dp)
             )
         }
     }

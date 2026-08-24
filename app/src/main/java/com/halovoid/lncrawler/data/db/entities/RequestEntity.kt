@@ -65,5 +65,6 @@ data class RequestEntity(
     val status: RequestStatus = RequestStatus.PENDING,
     val rstatus: RequestStatus = RequestStatus.PENDING,
     val metadata: String? = null, //JSON String for containing extra data
-    val error: String? = null
+    val error: String? = null,
+    val attemptCount: Int = 0
 )

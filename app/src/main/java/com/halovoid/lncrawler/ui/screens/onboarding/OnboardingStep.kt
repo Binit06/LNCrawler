@@ -15,9 +15,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.halovoid.lncrawler.ui.theme.DarkBackground
-import com.halovoid.lncrawler.ui.theme.DarkSurface
+import com.halovoid.lncrawler.ui.theme.DarkSurfaceVariant
 import com.halovoid.lncrawler.ui.theme.PrimaryText
 import com.halovoid.lncrawler.ui.theme.SecondaryText
+import com.halovoid.lncrawler.ui.theme.BrandAccent
 
 @Composable
 fun OnboardingStep(
@@ -34,7 +35,7 @@ fun OnboardingStep(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp)
+                    .padding(horizontal = 24.dp, vertical = 32.dp)
             ) {
                 Button(
                     onClick = onNext,
@@ -42,15 +43,16 @@ fun OnboardingStep(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        disabledContainerColor = Color.DarkGray
-                    )
+                        containerColor = BrandAccent,
+                        disabledContainerColor = Color.DarkGray.copy(alpha = 0.5f)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                 ) {
                     Text(
                         text = buttonText,
-                        fontSize = 18.sp,
+                        style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = if (isNextEnabled) Color.White else Color.White.copy(alpha = 0.5f)
                     )
@@ -63,40 +65,40 @@ fun OnboardingStep(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 40.dp),
+                .padding(horizontal = 28.dp, vertical = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.displaySmall,
+                style = MaterialTheme.typography.headlineMedium,
                 color = PrimaryText,
-                fontWeight = FontWeight.Bold,
+                fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center
             )
             
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
             
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyLarge,
                 color = SecondaryText,
                 textAlign = TextAlign.Center,
-                lineHeight = 22.sp
+                lineHeight = 24.sp
             )
             
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(40.dp))
             
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(24.dp)),
-                color = DarkSurface,
+                color = DarkSurfaceVariant,
                 tonalElevation = 2.dp
             ) {
                 Column(
-                    modifier = Modifier.padding(5.dp),
+                    modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
                     content = content
                 )
             }

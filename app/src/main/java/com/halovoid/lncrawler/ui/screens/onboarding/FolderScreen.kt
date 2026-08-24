@@ -20,8 +20,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.halovoid.lncrawler.ui.theme.PrimaryAccent
+import androidx.compose.ui.text.style.TextAlign
+import com.halovoid.lncrawler.ui.theme.BrandAccent
 import com.halovoid.lncrawler.ui.theme.SecondaryText
+import com.halovoid.lncrawler.ui.theme.DarkSurface
 import kotlinx.coroutines.launch
 
 @Composable
@@ -57,62 +59,80 @@ fun FolderScreen(
         isNextEnabled = selectedFolder != null
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(5.dp),
+            modifier = Modifier.fillMaxWidth().padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
 
         ) {
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(96.dp)
                     .clip(CircleShape)
-                    .background(PrimaryAccent.copy(alpha = 0.1f)),
+                    .background(BrandAccent.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (selectedFolder == null) Icons.Default.CreateNewFolder else Icons.Default.Folder,
                     contentDescription = null,
-                    tint = PrimaryAccent,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            if (selectedFolder != null) {
-                Text(
-                    text = "Selected Path",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = PrimaryAccent,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = friendlyPath,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 8.dp)
-                )
-            } else {
-                Text(
-                    text = "No folder selected",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SecondaryText
+                    tint = BrandAccent,
+                    modifier = Modifier.size(44.dp)
                 )
             }
             
             Spacer(modifier = Modifier.height(32.dp))
             
-            OutlinedButton(
+            if (selectedFolder != null) {
+                Surface(
+                    color = DarkSurface,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "Selected Path",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = BrandAccent,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = friendlyPath,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "No folder selected",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SecondaryText,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(40.dp))
+            
+            Button(
                 onClick = { launcher.launch(null) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                border = ButtonDefaults.outlinedButtonBorder.copy(width = 1.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryAccent)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = BrandAccent.copy(alpha = 0.2f),
+                    contentColor = BrandAccent
+                )
             ) {
+                Icon(Icons.Default.Folder, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (selectedFolder == null) "Choose Directory" else "Change Directory",
+                    fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             }
