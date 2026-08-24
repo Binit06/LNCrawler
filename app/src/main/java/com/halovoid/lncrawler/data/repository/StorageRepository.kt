@@ -4,9 +4,12 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.net.Uri
 import android.provider.DocumentsContract
+import com.halovoid.lncrawler.api.core.network.NetworkClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
+import okhttp3.Request
+import java.io.FilterInputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStream
@@ -65,6 +68,8 @@ class StorageRepositoryImpl private constructor(
     private val preferenceRepository: PreferenceRepository
 ) : StorageRepository {
 
+    private val httpClient = NetworkClient.okHttpClient
+
     companion object {
         @Volatile
         private var INSTANCE: StorageRepository? = null
@@ -79,12 +84,44 @@ class StorageRepositoryImpl private constructor(
         }
     }
 
+    private fun openHttpInputStream(uri: Uri): InputStream? {
+        val request = Request.Builder()
+            .url(uri.toString())
+            .build()
+
+        val response = httpClient.newCall(request).execute()
+
+        if (!response.isSuccessful) {
+            response.close()
+            return null
+        }
+
+        val body = response.body ?: run {
+            response.close()
+            return null
+        }
+
+        return object : FilterInputStream(body.byteStream()) {
+            override fun close() {
+                try {
+                    super.close()
+                } finally {
+                    response.close()
+                }
+            }
+        }
+    }
+
     @SuppressLint("Recycle")
     override suspend fun openInputStream(uri: Uri): InputStream? = withContext(Dispatchers.IO) {
-        try {
-            context.contentResolver.openInputStream(uri)
-        } catch (_: Exception) {
-            null
+        when (uri.scheme?.lowercase()) {
+            "content", "file" ->
+                context.contentResolver.openInputStream(uri)
+
+            "http", "https" ->
+                openHttpInputStream(uri)
+
+            else -> null
         }
     }
 
