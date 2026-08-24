@@ -15,6 +15,7 @@ import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.toDomain
+import com.halovoid.lncrawler.utils.SimhashUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -38,6 +39,12 @@ class RequestViewModel(
 
     private val _previewUrl = MutableStateFlow<String?>(null)
     val previewUrl: StateFlow<String?> = _previewUrl.asStateFlow()
+
+    private val _similarNovels = MutableStateFlow<List<Novel>>(emptyList())
+    val similarNovels: StateFlow<List<Novel>> = _similarNovels.asStateFlow()
+
+    private val _addSuccess = MutableSharedFlow<Unit>()
+    val addSuccess = _addSuccess.asSharedFlow()
 
     val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
     val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
@@ -98,20 +105,46 @@ class RequestViewModel(
         _novelPreview.value = null
         _previewUrl.value = null
         _error.value = null
+        _similarNovels.value = emptyList()
     }
 
     fun addNovelDirectly(novel: Novel) {
         viewModelScope.launch {
             _isLoading.value = true
             try {
+                val hash = novel.titleHash ?: SimhashUtils.generateSimhash(novel.title)
+                val similar = novelRepository.getSimilarNovels(hash, 3)
+                
+                if (similar.isNotEmpty()) {
+                    _similarNovels.value = similar
+                } else {
+                    saveNovel(novel)
+                }
+            } catch (e: Exception) {
+                _error.value = "Failed to check similarity: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
+    fun saveNovel(novel: Novel) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
                 novelRepository.saveNovelMetadata(novel)
-                // Optionally start crawl for chapters if needed, but for now just save
+                _similarNovels.value = emptyList()
+                _addSuccess.emit(Unit)
             } catch (e: Exception) {
                 _error.value = "Failed to add to library: ${e.message}"
             } finally {
                 _isLoading.value = false
             }
         }
+    }
+
+    fun clearSimilarNovels() {
+        _similarNovels.value = emptyList()
     }
 
     fun startNovelCrawl(crawlerName: String, url: String) {

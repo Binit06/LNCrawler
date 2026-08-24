@@ -78,4 +78,10 @@ object DatabaseMigrations {
             db.execSQL("UPDATE requests SET rstatus = status")
         }
     }
+
+    val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE novels ADD column titleHash INTEGER DEFAULT NULL")
+        }
+    }
 }

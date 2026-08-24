@@ -4,6 +4,8 @@ import android.content.Intent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -44,6 +46,13 @@ fun NovelPreviewScreen(
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val previewUrl by viewModel.previewUrl.collectAsStateWithLifecycle()
     val error by viewModel.error.collectAsStateWithLifecycle()
+    val similarNovels by viewModel.similarNovels.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        viewModel.addSuccess.collect {
+            onBack()
+        }
+    }
 
     LaunchedEffect(previewUrl) {
         if (previewUrl != null && (novel == null || novel?.chapters?.isEmpty() == true)) {
@@ -63,6 +72,119 @@ fun NovelPreviewScreen(
             }
         }
     )
+
+    if (similarNovels.isNotEmpty()) {
+        SimilarityBottomSheet(
+            similarNovels = similarNovels,
+            onDismiss = { viewModel.clearSimilarNovels() },
+            onConfirmAnyway = {
+                novel?.let { viewModel.saveNovel(it) }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SimilarityBottomSheet(
+    similarNovels: List<Novel>,
+    onDismiss: () -> Unit,
+    onConfirmAnyway: () -> Unit
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        scrimColor = Color.Black.copy(alpha = 0.6f)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 48.dp)
+        ) {
+            Text(
+                text = "Similar Novels Found",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryText
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "You already have similar novels in your library. Do you still want to add this one?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = SecondaryText
+            )
+            
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.weight(1f, fill = false)
+            ) {
+                items(similarNovels) { novel ->
+                    SimilarNovelCard(novel)
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
+            
+            Button(
+                onClick = onConfirmAnyway,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Text("Proceed Anyway", fontWeight = FontWeight.Bold)
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text("Cancel", color = SecondaryText)
+            }
+        }
+    }
+}
+
+@Composable
+fun SimilarNovelCard(novel: Novel) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(DarkBackground.copy(alpha = 0.5f))
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        AsyncImage(
+            model = novel.coverUrl,
+            contentDescription = null,
+            modifier = Modifier
+                .size(44.dp, 64.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(DarkSurface),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text(
+                text = novel.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+                color = PrimaryText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = novel.author ?: "Unknown Author",
+                style = MaterialTheme.typography.labelSmall,
+                color = SecondaryText
+            )
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

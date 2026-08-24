@@ -5,6 +5,7 @@ import com.halovoid.lncrawler.data.db.AppDatabase
 import com.halovoid.lncrawler.data.db.mappers.toDomain
 import com.halovoid.lncrawler.data.db.mappers.toEntity
 import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.utils.SimhashUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -63,7 +64,13 @@ class NovelRepository private constructor(context: Context) {
      * @param novel The novel to save.
      */
     suspend fun saveNovelMetadata(novel: Novel) = withContext(Dispatchers.IO) {
-        novelDao.upsertNovel(novel.toEntity())
+        val novelToSave = if (novel.titleHash == null) {
+            novel.copy(titleHash = SimhashUtils.generateSimhash(novel.title))
+        } else {
+            novel
+        }
+        
+        novelDao.upsertNovel(novelToSave.toEntity())
         
         // Save volumes and chapters if present
         if (novel.volumes.isNotEmpty()) {
@@ -71,6 +78,14 @@ class NovelRepository private constructor(context: Context) {
         }
         if (novel.chapters.isNotEmpty()) {
             chapterDao.insertChapters(novel.chapters.map { it.toEntity() })
+        }
+    }
+
+    suspend fun getSimilarNovels(hash: Long, threshold: Int): List<Novel> = withContext(Dispatchers.IO) {
+        novelDao.getAllNovelsOnce().map { it.toDomain() }.filter { existingNovel ->
+            existingNovel.titleHash?.let { existingHash ->
+                SimhashUtils.hammingDistance(hash, existingHash) <= threshold
+            } ?: false
         }
     }
 

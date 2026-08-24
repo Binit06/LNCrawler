@@ -9,5 +9,6 @@ data class Novel(
     val chapters: List<Chapter> = emptyList(),
     val volumes: List<Volume> = emptyList(),
     val crawlerName: String,
-    val alternativeNames: String? = null
+    val alternativeNames: String? = null,
+    val titleHash: Long? = null
 )

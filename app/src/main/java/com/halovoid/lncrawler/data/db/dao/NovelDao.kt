@@ -9,6 +9,9 @@ interface NovelDao {
     @Query("SELECT * FROM novels")
     fun getAllNovels(): Flow<List<NovelEntity>>
 
+    @Query("SELECT * FROM novels")
+    suspend fun getAllNovelsOnce(): List<NovelEntity>
+
     @Query("SELECT * FROM novels WHERE url = :url")
     fun getNovelByUrl(url: String): NovelEntity?
 

@@ -16,7 +16,8 @@ fun NovelEntity.toDomain(): Novel = Novel(
     crawlerName = crawlerName,
     alternativeNames = alternativeNames,
     chapters = emptyList(), // Chapters are usually loaded separately
-    volumes = emptyList()   // Volumes are usually loaded separately
+    volumes = emptyList(),   // Volumes are usually loaded separately
+    titleHash = titleHash
 )
 
 
@@ -27,7 +28,8 @@ fun Novel.toEntity() = NovelEntity(
     coverUrl = coverUrl,
     description = description,
     crawlerName = crawlerName,
-    alternativeNames = alternativeNames
+    alternativeNames = alternativeNames,
+    titleHash = titleHash
 )
 
 // --- Chapter Mappings ---

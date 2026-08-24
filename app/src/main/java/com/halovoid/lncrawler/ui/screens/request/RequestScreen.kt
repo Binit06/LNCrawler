@@ -1,22 +1,15 @@
 package com.halovoid.lncrawler.ui.screens.request
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
@@ -28,13 +21,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.SearchItem
@@ -44,7 +34,6 @@ import com.halovoid.lncrawler.ui.screens.search.SearchState
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.theme.*
-import java.util.Locale
 
 enum class RequestTab {
     SEARCH, REQUEST
@@ -60,7 +49,6 @@ fun RequestScreen(
     searchUrl: String? = null
 ) {
     var selectedTab by remember { mutableStateOf(RequestTab.SEARCH) }
-    val novelPreview by viewModel.novelPreview.collectAsStateWithLifecycle()
 
     RequestActionHandler(
         onResolveCloudflare = { id, url -> viewModel.resolveCloudflare(id, url) }
@@ -152,32 +140,6 @@ fun RequestScreen(
 }
 
 @Composable
-fun CenteredInfo(message: String, icon: androidx.compose.ui.graphics.vector.ImageVector = Icons.Default.Info) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            modifier = Modifier.size(48.dp),
-            tint = SecondaryText.copy(alpha = 0.4f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyMedium,
-            color = SecondaryText.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center,
-            lineHeight = 22.sp
-        )
-    }
-}
-
-@Composable
 fun SearchTabContent(
     viewModel: SearchViewModel,
     requestViewModel: RequestViewModel,
@@ -185,7 +147,6 @@ fun SearchTabContent(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
-    val context = LocalContext.current
 
     Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
         val isIdle = searchState is SearchState.Idle
@@ -405,11 +366,11 @@ fun ManualRequestContent(
                     onClick = {
                         if (!isLoading) {
                             val crawlerName = viewModel.validateUrl(urlInput)
-                                if (crawlerName != null) {
-                                    viewModel.setPreviewUrl(urlInput)
-                                    viewModel.setPreviewNovel(null) // We don't have metadata yet
-                                    onNavigateToPreview()
-                                }
+                            if (crawlerName != null) {
+                                viewModel.setPreviewUrl(urlInput)
+                                viewModel.setPreviewNovel(null) // We don't have metadata yet
+                                onNavigateToPreview()
+                            }
                         }
                     },
                     enabled = !isLoading && urlInput.isNotBlank(),
@@ -472,22 +433,6 @@ fun ManualRequestContent(
             
             Spacer(modifier = Modifier.height(40.dp))
         }
-    }
-}
-
-@Composable
-fun SourceBadge(name: String) {
-    Surface(
-        color = DarkSurface,
-        shape = RoundedCornerShape(8.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.3f))
-    ) {
-        Text(
-            text = name,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            style = MaterialTheme.typography.bodySmall,
-            color = PrimaryText.copy(alpha = 0.8f)
-        )
     }
 }
 
