@@ -5,13 +5,13 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.api.core.scrapper.Scrapper
-import com.halovoid.lncrawler.data.db.dao.RequestDao
+import com.halovoid.lncrawler.data.repository.RequestRepository
+import com.halovoid.lncrawler.data.repository.NovelRepository
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.data.redis.RedisManager
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
-import com.halovoid.lncrawler.data.repository.RequestRepository
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.domain.models.toDomain
@@ -24,6 +24,8 @@ class RequestViewModel(
     private val requestRepository: RequestRepository
 ) : AndroidViewModel(application) {
 
+    private val novelRepository = NovelRepository.getInstance(application)
+
     /** Tracks validation errors for the URL input field. */
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
@@ -33,6 +35,9 @@ class RequestViewModel(
 
     private val _novelPreview = MutableStateFlow<Novel?>(null)
     val novelPreview: StateFlow<Novel?> = _novelPreview.asStateFlow()
+
+    private val _previewUrl = MutableStateFlow<String?>(null)
+    val previewUrl: StateFlow<String?> = _previewUrl.asStateFlow()
 
     val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
     val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
@@ -61,6 +66,14 @@ class RequestViewModel(
         }
     }
 
+    fun setPreviewUrl(url: String) {
+        _previewUrl.value = url
+    }
+
+    fun setPreviewNovel(novel: Novel?) {
+        _novelPreview.value = novel
+    }
+
     fun fetchNovelPreview(url: String) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -83,6 +96,22 @@ class RequestViewModel(
 
     fun clearPreview() {
         _novelPreview.value = null
+        _previewUrl.value = null
+        _error.value = null
+    }
+
+    fun addNovelDirectly(novel: Novel) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            try {
+                novelRepository.saveNovelMetadata(novel)
+                // Optionally start crawl for chapters if needed, but for now just save
+            } catch (e: Exception) {
+                _error.value = "Failed to add to library: ${e.message}"
+            } finally {
+                _isLoading.value = false
+            }
+        }
     }
 
     fun startNovelCrawl(crawlerName: String, url: String) {

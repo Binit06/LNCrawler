@@ -5,6 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -30,11 +36,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.SearchItem
 import com.halovoid.lncrawler.ui.components.RequestActionHandler
 import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.screens.search.SearchState
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
+import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.theme.*
 import java.util.Locale
 
@@ -52,16 +60,7 @@ fun RequestScreen(
     searchUrl: String? = null
 ) {
     var selectedTab by remember { mutableStateOf(RequestTab.SEARCH) }
-    
     val novelPreview by viewModel.novelPreview.collectAsStateWithLifecycle()
-    var isFetchingPreview by remember { mutableStateOf(false) }
-
-    LaunchedEffect(novelPreview) {
-        if (novelPreview != null && isFetchingPreview) {
-            isFetchingPreview = false
-            onNavigateToPreview()
-        }
-    }
 
     RequestActionHandler(
         onResolveCloudflare = { id, url -> viewModel.resolveCloudflare(id, url) }
@@ -135,32 +134,15 @@ fun RequestScreen(
                             SearchTabContent(
                                 viewModel = searchViewModel,
                                 requestViewModel = viewModel,
-                                onStartFetching = { isFetchingPreview = true }
+                                onNavigateToPreview = onNavigateToPreview
                             )
                         }
                         RequestTab.REQUEST -> {
                             ManualRequestContent(
                                 viewModel = viewModel,
                                 searchUrl = searchUrl,
-                                onStartFetching = { isFetchingPreview = true }
+                                onNavigateToPreview = onNavigateToPreview
                             )
-                        }
-                    }
-// ...
-
-                    if (isFetchingPreview) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.6f))
-                                .clickable(enabled = false) {},
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = PrimaryAccent)
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("Fetching details...", color = Color.White, fontWeight = FontWeight.Medium)
-                            }
                         }
                     }
                 }
@@ -199,7 +181,7 @@ fun CenteredInfo(message: String, icon: androidx.compose.ui.graphics.vector.Imag
 fun SearchTabContent(
     viewModel: SearchViewModel,
     requestViewModel: RequestViewModel,
-    onStartFetching: () -> Unit
+    onNavigateToPreview: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
@@ -316,30 +298,38 @@ fun SearchTabContent(
                         } else {
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(bottom = 16.dp)
+                                contentPadding = PaddingValues(bottom = 32.dp),
+                                verticalArrangement = Arrangement.spacedBy(24.dp)
                             ) {
                                 state.response.results.forEach { (source, items) ->
                                     item {
-                                        Text(
-                                            text = source,
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = PrimaryAccent,
-                                            modifier = Modifier.padding(vertical = 12.dp)
-                                        )
-                                    }
-                                    items(items, key = { it.url }) { item ->
-                                        SearchResultItem(
-                                            item = item,
-                                            onClick = { 
-                                                onStartFetching()
-                                                requestViewModel.fetchNovelPreview(item.url)
-                                            },
-                                            onBrowserClick = {
-                                                val intent = Intent(Intent.ACTION_VIEW, item.url.toUri())
-                                                context.startActivity(intent)
+                                        Column {
+                                            SourceHeader(source = source, count = items.size)
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            LazyRow(
+                                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                                contentPadding = PaddingValues(bottom = 8.dp)
+                                            ) {
+                                                items(items, key = { it.url }) { item ->
+                                                    SearchResultCard(
+                                                        item = item,
+                                                        onClick = {
+                                                            requestViewModel.setPreviewUrl(item.url)
+                                                            requestViewModel.setPreviewNovel(
+                                                                Novel(
+                                                                    url = item.url,
+                                                                    title = item.title,
+                                                                    description = item.description,
+                                                                    coverUrl = item.imageUrl,
+                                                                    crawlerName = item.source
+                                                                )
+                                                            )
+                                                            onNavigateToPreview()
+                                                        }
+                                                    )
+                                                }
                                             }
-                                        )
+                                        }
                                     }
                                 }
                             }
@@ -356,7 +346,7 @@ fun SearchTabContent(
 fun ManualRequestContent(
     viewModel: RequestViewModel,
     searchUrl: String?,
-    onStartFetching: () -> Unit
+    onNavigateToPreview: () -> Unit
 ) {
     var urlInput by remember { mutableStateOf(searchUrl ?: "") }
     val error by viewModel.error.collectAsStateWithLifecycle()
@@ -415,10 +405,11 @@ fun ManualRequestContent(
                     onClick = {
                         if (!isLoading) {
                             val crawlerName = viewModel.validateUrl(urlInput)
-                            if (crawlerName != null) {
-                                onStartFetching()
-                                viewModel.fetchNovelPreview(urlInput)
-                            }
+                                if (crawlerName != null) {
+                                    viewModel.setPreviewUrl(urlInput)
+                                    viewModel.setPreviewNovel(null) // We don't have metadata yet
+                                    onNavigateToPreview()
+                                }
                         }
                     },
                     enabled = !isLoading && urlInput.isNotBlank(),
@@ -530,70 +521,82 @@ fun StepItem(number: String, title: String, description: String) {
 }
 
 @Composable
-fun SearchResultItem(
-    item: SearchItem,
-    onClick: () -> Unit,
-    onBrowserClick: () -> Unit
-) {
-    Card(
+fun SourceHeader(source: String, count: Int) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = DarkSurface),
-        shape = RoundedCornerShape(12.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
+            .padding(top = 16.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
-            ) {
-                Text(
-                    text = item.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryText,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
+        Text(
+            text = source,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = PrimaryText
+        )
+        Text(
+            text = "$count results",
+            style = MaterialTheme.typography.labelSmall,
+            color = SecondaryText
+        )
+    }
+}
 
-                IconButton(onClick = onBrowserClick) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.OpenInNew,
-                        contentDescription = "Open in Browser",
-                        tint = SecondaryText,
-                        modifier = Modifier.size(20.dp)
-                    )
+@Composable
+fun SearchResultCard(
+    item: SearchItem,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .width(130.dp) // Smaller width for horizontal scroll scannability
+            .clickable { onClick() }
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(0.7f),
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(containerColor = DarkSurface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, BorderColor.copy(alpha = 0.5f))
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                AsyncImage(
+                    model = item.imageUrl,
+                    contentDescription = item.title,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                    error = null
+                )
+                
+                if (item.imageUrl.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(DarkSurfaceVariant),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Language,
+                            contentDescription = null,
+                            tint = SecondaryText.copy(alpha = 0.2f),
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
                 }
             }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = item.description,
-                style = MaterialTheme.typography.bodySmall,
-                color = SecondaryText,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = item.source,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = BrandAccent
-                )
-                Text(
-                    text = "Score: ${String.format(Locale.US, "%.2f", item.score)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = SecondaryText
-                )
-            }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = item.title,
+            style = MaterialTheme.typography.bodyMedium, // Smaller font for smaller card
+            fontWeight = FontWeight.Bold,
+            color = PrimaryText,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }

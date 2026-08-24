@@ -14,5 +14,6 @@ data class SearchItem(
     val source: String,
     val url: String,
     val description: String,
-    val score: Double
+    val score: Double,
+    @kotlinx.serialization.SerialName("image_url") val imageUrl: String? = null
 )

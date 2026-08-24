@@ -20,6 +20,8 @@ class NovelRepository private constructor(context: Context) {
     private val db = AppDatabase.getDatabase(context)
     /** Data Access Object for novel-related database operations. */
     private val novelDao = db.novelDao()
+    private val volumeDao = db.volumeDao()
+    private val chapterDao = db.chapterDao()
 
     companion object {
         @Volatile
@@ -62,6 +64,14 @@ class NovelRepository private constructor(context: Context) {
      */
     suspend fun saveNovelMetadata(novel: Novel) = withContext(Dispatchers.IO) {
         novelDao.upsertNovel(novel.toEntity())
+        
+        // Save volumes and chapters if present
+        if (novel.volumes.isNotEmpty()) {
+            volumeDao.insertVolumes(novel.volumes.map { it.toEntity() })
+        }
+        if (novel.chapters.isNotEmpty()) {
+            chapterDao.insertChapters(novel.chapters.map { it.toEntity() })
+        }
     }
 
     /**
