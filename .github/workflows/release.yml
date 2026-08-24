@@ -36,8 +36,14 @@ jobs:
           fi
 
           # Fetch latest release tag from GitHub
-          LATEST_TAG=$(gh release view --json tagName -q .tagName 2>/dev/null || echo "")
-          LATEST_VERSION=$(echo "$LATEST_TAG" | sed 's/^v//' | xargs)
+          LATEST_TAG=$(gh release list \
+            --limit 100 \
+            --json tagName \
+            --jq '.[].tagName' |
+            sed 's/^v//' |
+            sort -V |
+            tail -n 1)
+          LATEST_VERSION=$(echo "$LATEST_TAG" | xargs)
 
           echo "Gradle version: $CURRENT_VERSION"
           echo "Latest release: ${LATEST_TAG:-None}"
