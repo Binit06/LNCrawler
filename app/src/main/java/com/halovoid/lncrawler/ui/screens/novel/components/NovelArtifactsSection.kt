@@ -12,9 +12,18 @@ import com.halovoid.lncrawler.domain.models.Artifact
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
 import com.halovoid.lncrawler.ui.theme.PrimaryText
 
+import androidx.core.net.toUri
+import android.content.Intent
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
+
 fun LazyListScope.novelArtifactsSection(
     artifacts: List<Artifact>,
-    onDownload: (Artifact) -> Unit
+    onDownload: (Artifact) -> Unit,
+    onOpen: (Artifact) -> Unit
 ) {
     if (artifacts.isEmpty()) return
 
@@ -36,6 +45,7 @@ fun LazyListScope.novelArtifactsSection(
             .padding(bottom = 8.dp)) {
             ArtifactCard (
                 artifact = artifact,
+                onOpen = { onOpen(it) },
                 onDownload = { onDownload(it) }
             )
         }

@@ -27,12 +27,29 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+
+enum class DownloadFilter {
+    ALL, DOWNLOADED, NOT_DOWNLOADED
+}
+
+enum class SortType {
+    CHAPTER_NUMBER, ALPHABETICAL
+}
+
+enum class SortOrder {
+    ASCENDING, DESCENDING
+}
+
+data class ChapterSortState(
+    val type: SortType = SortType.CHAPTER_NUMBER,
+    val order: SortOrder = SortOrder.ASCENDING
+)
 
 /**
  * ViewModel for the [NovelDetailScreen].
@@ -57,6 +74,12 @@ class NovelDetailViewModel(
     val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
     val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
 
+    private val _downloadFilter = MutableStateFlow(DownloadFilter.ALL)
+    val downloadFilter: StateFlow<DownloadFilter> = _downloadFilter.asStateFlow()
+
+    private val _sortState = MutableStateFlow(ChapterSortState())
+    val sortState: StateFlow<ChapterSortState> = _sortState.asStateFlow()
+
     @OptIn(ExperimentalCoroutinesApi::class)
     val rootRequests: StateFlow<List<Request>> = novel
         .filterNotNull()
@@ -70,16 +93,37 @@ class NovelDetailViewModel(
         )
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val chapters: StateFlow<List<Chapter>> = novel
-        .filterNotNull()
-        .flatMapLatest { nov ->
+    val chapters: StateFlow<List<Chapter>> = combine(
+        novel.filterNotNull().flatMapLatest { nov ->
             chapterRepository.getChaptersFlow(nov.url)
+        },
+        _downloadFilter,
+        _sortState
+    ) { rawChapters, filter, sort ->
+        val filtered = when (filter) {
+            DownloadFilter.ALL -> rawChapters
+            DownloadFilter.DOWNLOADED -> rawChapters.filter { it.fileLocation?.startsWith("content://") == true }
+            DownloadFilter.NOT_DOWNLOADED -> rawChapters.filter { it.fileLocation?.startsWith("content://") != true }
         }
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = emptyList()
-        )
+
+        when (sort.type) {
+            SortType.CHAPTER_NUMBER -> {
+                if (sort.order == SortOrder.ASCENDING) {
+                    filtered.sortedWith(compareBy({ it.index }, { it.id }))
+                } else {
+                    filtered.sortedWith(compareByDescending<Chapter> { it.index }.thenByDescending { it.id })
+                }
+            }
+            SortType.ALPHABETICAL -> {
+                if (sort.order == SortOrder.ASCENDING) filtered.sortedBy { it.title }
+                else filtered.sortedByDescending { it.title }
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val artifacts: StateFlow<List<Artifact>> = novel
@@ -355,5 +399,33 @@ class NovelDetailViewModel(
         viewModelScope.launch {
             requestRepository.cancelRequest(requestId)
         }
+    }
+
+    fun toggleAlphabeticalSort() {
+        val current = _sortState.value
+        _sortState.value = if (current.type != SortType.ALPHABETICAL) {
+            ChapterSortState(SortType.ALPHABETICAL, SortOrder.ASCENDING)
+        } else {
+            when (current.order) {
+                SortOrder.ASCENDING -> ChapterSortState(SortType.ALPHABETICAL, SortOrder.DESCENDING)
+                SortOrder.DESCENDING -> ChapterSortState(SortType.CHAPTER_NUMBER, SortOrder.ASCENDING)
+            }
+        }
+    }
+
+    fun toggleChapterNumberSort() {
+        val current = _sortState.value
+        _sortState.value = if (current.type != SortType.CHAPTER_NUMBER) {
+            ChapterSortState(SortType.CHAPTER_NUMBER, SortOrder.ASCENDING)
+        } else {
+            when (current.order) {
+                SortOrder.ASCENDING -> ChapterSortState(SortType.CHAPTER_NUMBER, SortOrder.DESCENDING)
+                SortOrder.DESCENDING -> ChapterSortState(SortType.CHAPTER_NUMBER, SortOrder.ASCENDING) // Baseline
+            }
+        }
+    }
+
+    fun setDownloadFilter(filter: DownloadFilter) {
+        _downloadFilter.value = filter
     }
 }

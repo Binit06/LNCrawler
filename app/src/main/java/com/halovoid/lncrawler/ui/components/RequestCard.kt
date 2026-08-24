@@ -38,18 +38,18 @@ fun RequestCard(
 ) {
     val isWorkFinished = (request.progressSuccess + request.progressFailed + request.progressCancelled) == request.progressTotal
 
-    val isProcessing = when (request.status) {
-        RequestStatus.RUNNING, RequestStatus.PENDING, RequestStatus.BLOCKED -> true
+    val isProcessing = when (request.rstatus) {
+        RequestStatus.RUNNING, RequestStatus.PENDING, RequestStatus.BLOCKED, RequestStatus.CANCELLING -> true
         RequestStatus.SUCCESS -> !isWorkFinished
         else -> isActionPending
     }
     
-    val canContinue = (request.status == RequestStatus.CANCELLED || request.status == RequestStatus.FAILED) && (request.progressSuccess < request.progressTotal)
+    val canContinue = (request.rstatus == RequestStatus.CANCELLED || request.rstatus == RequestStatus.FAILED) && (request.progressSuccess < request.progressTotal)
 
-    val displayStatus = if (isProcessing) {
+    val displayStatus = if (isProcessing && request.rstatus != RequestStatus.CANCELLING && request.rstatus != RequestStatus.BLOCKED) {
         RequestStatus.RUNNING
     } else {
-        request.status
+        request.rstatus
     }
     val locale = LocalConfiguration.current.locales[0]
 
@@ -152,7 +152,7 @@ fun RequestCard(
                 }
                 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (request.status == RequestStatus.BLOCKED && onSecurityClick != null) {
+                    if (request.rstatus == RequestStatus.BLOCKED && onSecurityClick != null) {
                         IconButton(
                             onClick = onSecurityClick,
                             modifier = Modifier.size(28.dp)
@@ -296,6 +296,11 @@ fun StatusIndicator(status: RequestStatus) {
             contentDescription = "Cancelled", 
             tint = SecondaryText.copy(alpha = 0.5f),
             modifier = Modifier.size(20.dp)
+        )
+        RequestStatus.CANCELLING -> CircularProgressIndicator(
+            modifier = Modifier.size(18.dp),
+            strokeWidth = 2.dp,
+            color = ErrorRed.copy(alpha = 0.7f)
         )
         RequestStatus.RUNNING -> CircularProgressIndicator(
             modifier = Modifier.size(18.dp), 

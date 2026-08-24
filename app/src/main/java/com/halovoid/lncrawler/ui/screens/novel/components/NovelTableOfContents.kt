@@ -18,10 +18,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.halovoid.lncrawler.domain.models.Chapter
 import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.ui.components.AppBottomSheet
+import com.halovoid.lncrawler.ui.components.AppBottomSheetDivider
+import com.halovoid.lncrawler.ui.components.AppBottomSheetGroup
 import com.halovoid.lncrawler.ui.theme.*
 
 fun LazyListScope.novelTableOfContents(
-    novel: Novel,
     chapters: List<Chapter>,
     downloadingChapters: Pair<Set<Int>, List<ClosedRange<Int>>>,
     onFetchChapter: (Chapter) -> Unit,
@@ -29,56 +31,26 @@ fun LazyListScope.novelTableOfContents(
     onReplayChapter: (Chapter) -> Unit,
     onChapterClick: (Chapter) -> Unit
 ) {
-    item {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 24.dp)
-        ) {
-            Text(
-                text = "${chapters.size} Chapters",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryText
-            )
-        }
-    }
 
-    novel.volumes.forEach { volume ->
-        item(key = "vol_${volume.id}") {
-            Text(
-                text = "Volume ${volume.volumeIndex}".uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = SecondaryText,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(DarkBackground)
-                    .padding(horizontal = 24.dp)
-                    .padding(top = 24.dp, bottom = 8.dp)
-            )
+
+    items(chapters, key = { it.id }) { chapter ->
+        val isDownloading = remember(downloadingChapters, chapter.id, chapter.index) {
+            downloadingChapters.first.contains(chapter.id) ||
+            downloadingChapters.second.any { it.contains(chapter.index) }
         }
-        
-        val volumeChapters = chapters.filter { it.volumeId == volume.id }.distinctBy { it.id }
-        items(volumeChapters, key = { it.id }) { chapter ->
-            val isDownloading = remember(downloadingChapters, chapter.id, chapter.index) {
-                downloadingChapters.first.contains(chapter.id) || 
-                downloadingChapters.second.any { it.contains(chapter.index) }
-            }
-            ChapterRow(
-                chapter = chapter,
-                onFetchChapter = { onFetchChapter(it) },
-                onDeleteChapter = { onDeleteChapter(it) },
-                onReplayChapter = { onReplayChapter(it) },
-                onChapterClick = { onChapterClick(it) },
-                isDownloading = isDownloading
-            )
-            HorizontalDivider(
-                color = BorderColor.copy(alpha = 0.4f), 
-                thickness = 0.5.dp,
-                modifier = Modifier.padding(horizontal = 24.dp)
-            )
-        }
+        ChapterRow(
+            chapter = chapter,
+            onFetchChapter = { onFetchChapter(it) },
+            onDeleteChapter = { onDeleteChapter(it) },
+            onReplayChapter = { onReplayChapter(it) },
+            onChapterClick = { onChapterClick(it) },
+            isDownloading = isDownloading
+        )
+        HorizontalDivider(
+            color = BorderColor.copy(alpha = 0.4f),
+            thickness = 0.5.dp,
+            modifier = Modifier.padding(horizontal = 24.dp)
+        )
     }
 }
 
@@ -176,60 +148,31 @@ fun ChapterActionsBottomSheet(
     onDelete: () -> Unit,
     onReplay: () -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = DarkSurface,
-        scrimColor = Color.Black.copy(alpha = 0.6f)
+    AppBottomSheet(
+        onDismiss = onDismiss,
+        title = "Chapter ${chapter.index}",
+        subtitle = if (chapter.title.isNotBlank()) chapter.title else null
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp)
-        ) {
-            Text(
-                text = "Chapter ${chapter.index}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryText
-            )
-            if (chapter.title.isNotBlank()) {
-                Text(
-                    text = chapter.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SecondaryText
-                )
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = DarkBackground.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("Replay Chapter", color = PrimaryText) },
-                        leadingContent = { Icon(Icons.Default.Refresh, contentDescription = null, tint = PrimaryText) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { 
-                            onReplay()
-                            onDismiss()
-                        }
-                    )
-                    HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
-                    ListItem(
-                        headlineContent = { Text("Delete Chapter", color = ErrorRed) },
-                        leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { 
-                            onDelete()
-                            onDismiss()
-                        }
-                    )
+        AppBottomSheetGroup {
+            ListItem(
+                headlineContent = { Text("Replay Chapter", color = PrimaryText) },
+                leadingContent = { Icon(Icons.Default.Refresh, contentDescription = null, tint = PrimaryText) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable {
+                    onReplay()
+                    onDismiss()
                 }
-            }
+            )
+            AppBottomSheetDivider()
+            ListItem(
+                headlineContent = { Text("Delete Chapter", color = ErrorRed) },
+                leadingContent = { Icon(Icons.Default.Delete, contentDescription = null, tint = ErrorRed) },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable {
+                    onDelete()
+                    onDismiss()
+                }
+            )
         }
     }
 }

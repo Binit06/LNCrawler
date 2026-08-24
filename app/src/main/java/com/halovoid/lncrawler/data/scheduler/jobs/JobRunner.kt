@@ -17,15 +17,16 @@ class JobRunner(
     suspend fun run(request: RequestEntity, onComplete: suspend () -> Unit) {
         var currRequest = request
         try {
+            val hasChildren = requestDao.hasChildren(currRequest.id)
             val preClaimStatus = requestDao.getRequestById(currRequest.id)?.status
             if (preClaimStatus == RequestStatus.CANCELLED) return
 
-            currRequest = applyEvent(currRequest, JobEvent.CLAIMED)
+            currRequest = applyEvent(currRequest, JobEvent.CLAIMED, hasChildren)
             requestDao.updateRequest(currRequest)
 
             val handler = handlerRegistry.getHandler(currRequest.type)
             if (handler == null) {
-                fail(currRequest, "No handler found for ${currRequest.type}")
+                fail(currRequest, "No handler found for ${currRequest.type}", hasChildren)
                 return
             }
 
@@ -33,38 +34,41 @@ class JobRunner(
 
             when (result) {
                 is JobResult.Success -> {
-                    markSuccess(currRequest)
+                    markSuccess(currRequest, hasChildren)
                     return
                 }
                 is JobResult.Cancelled -> {
-                    markCancelled(currRequest)
+                    markCancelled(currRequest, hasChildren)
                     return
                 }
                 is JobResult.Blocked -> {
-                    markBlocked(currRequest)
+                    markBlocked(currRequest, hasChildren)
                     return
                 }
                 is JobResult.Failure -> {
-                    fail(currRequest, result.error.message ?: "Execution Failed")
+                    fail(currRequest, result.error.message ?: "Execution Failed", hasChildren)
                     return
                 }
             }
         } catch (e: Exception) {
-            fail(request, e.message ?: "Unexpected error during execution")
+            val hasChildren = requestDao.hasChildren(request.id)
+            fail(request, e.message ?: "Unexpected error during execution", hasChildren)
         } finally {
             onComplete()
         }
     }
 
-    private fun applyEvent(request: RequestEntity, event: JobEvent): RequestEntity =
-        request.copy(
-            status = JobStateMachine.transition(request.status, event),
+    private fun applyEvent(request: RequestEntity, event: JobEvent, hasChildren: Boolean): RequestEntity {
+        val nextStatus = JobStateMachine.transition(request.status, event)
+        return request.copy(
+            status = nextStatus,
+            rstatus = if (!hasChildren) nextStatus else request.rstatus,
             updatedAt = System.currentTimeMillis()
         )
+    }
 
-    private suspend fun markSuccess(request: RequestEntity) {
-        val hasChildren = requestDao.hasChildren(request.id)
-        val updated = applyEvent(request, JobEvent.HANDLER_SUCCESS).copy(
+    private suspend fun markSuccess(request: RequestEntity, hasChildren: Boolean) {
+        val updated = applyEvent(request, JobEvent.HANDLER_SUCCESS, hasChildren).copy(
             rstatus = if (!hasChildren) RequestStatus.SUCCESS else request.rstatus,
             completedAt = System.currentTimeMillis(),
             progressSuccess = if (hasChildren) request.progressSuccess else request.progressTotal,
@@ -75,10 +79,9 @@ class JobRunner(
         requestDao.propagateProgress(request.id)
     }
 
-    private suspend fun fail(request: RequestEntity, errorMessage: String) {
-        val hasChildren = requestDao.hasChildren(request.id)
-        val updated = applyEvent(request, JobEvent.HANDLER_FAILURE_FINAL).copy(
-            rstatus = if (!hasChildren) RequestStatus.FAILED else request.status,
+    private suspend fun fail(request: RequestEntity, errorMessage: String, hasChildren: Boolean) {
+        val updated = applyEvent(request, JobEvent.HANDLER_FAILURE_FINAL, hasChildren).copy(
+            rstatus = if (!hasChildren) RequestStatus.FAILED else request.rstatus,
             progressFailed = if (hasChildren) request.progressFailed else request.progressTotal,
             error = errorMessage
         )
@@ -87,9 +90,8 @@ class JobRunner(
         requestDao.propagateProgress(request.id)
     }
 
-    private suspend fun markCancelled(request: RequestEntity) {
-        val hasChildren = requestDao.hasChildren(request.id)
-        val updated = applyEvent(request, JobEvent.CANCEL_REQUESTED).copy(
+    private suspend fun markCancelled(request: RequestEntity, hasChildren: Boolean) {
+        val updated = applyEvent(request, JobEvent.CANCEL_REQUESTED, hasChildren).copy(
             rstatus = if (hasChildren) RequestStatus.CANCELLING else RequestStatus.CANCELLED,
             progressCancelled = if (hasChildren) request.progressCancelled else request.progressTotal
         )
@@ -97,8 +99,8 @@ class JobRunner(
         requestDao.propagateProgress(request.id)
     }
 
-    private suspend fun markBlocked(request: RequestEntity) {
-        val updated = applyEvent(request, JobEvent.BLOCKED_BY_PROTECTION)
+    private suspend fun markBlocked(request: RequestEntity, hasChildren: Boolean) {
+        val updated = applyEvent(request, JobEvent.BLOCKED_BY_PROTECTION, hasChildren)
             .copy(error = "Security check required")
 
         requestDao.updateRequest(updated)

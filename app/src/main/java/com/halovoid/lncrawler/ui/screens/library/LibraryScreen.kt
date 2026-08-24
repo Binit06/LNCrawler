@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.ui.components.NovelCard
 import com.halovoid.lncrawler.ui.components.ScreenHeader
+import com.halovoid.lncrawler.ui.components.AppBottomSheet
+import com.halovoid.lncrawler.ui.components.AppBottomSheetDivider
+import com.halovoid.lncrawler.ui.components.AppBottomSheetGroup
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -151,46 +154,24 @@ fun LibraryFilterBottomSheet(
     onDismiss: () -> Unit,
     onSelected: (String) -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = DarkSurface,
-        scrimColor = Color.Black.copy(alpha = 0.6f)
+    AppBottomSheet(
+        onDismiss = onDismiss,
+        title = "Filter Sources"
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp)
-        ) {
-            Text(
-                text = "Filter Sources",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryText
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = DarkBackground.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column {
-                    options.forEachIndexed { index, option ->
-                        ListItem(
-                            headlineContent = { Text(option, color = PrimaryText) },
-                            trailingContent = {
-                                if (selected == option) {
-                                    Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
-                                }
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { onSelected(option) }
-                        )
-                        if (index < options.lastIndex) {
-                            HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
+        AppBottomSheetGroup {
+            options.forEachIndexed { index, option ->
+                ListItem(
+                    headlineContent = { Text(option, color = PrimaryText) },
+                    trailingContent = {
+                        if (selected == option) {
+                            Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
                         }
-                    }
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onSelected(option) }
+                )
+                if (index < options.lastIndex) {
+                    AppBottomSheetDivider()
                 }
             }
         }

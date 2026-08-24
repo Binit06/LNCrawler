@@ -32,6 +32,7 @@ import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.ui.components.AppBottomSheet
 import com.halovoid.lncrawler.ui.theme.*
 
 @Composable
@@ -92,65 +93,39 @@ fun SimilarityBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
+    AppBottomSheet(
+        onDismiss = onDismiss,
         sheetState = sheetState,
-        containerColor = DarkSurface,
-        scrimColor = Color.Black.copy(alpha = 0.6f)
+        title = "Similar Novels Found",
+        subtitle = "You already have similar novels in your library. Do you still want to add this one?"
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 24.dp)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                Text(
-                    text = "Similar Novels Found",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = PrimaryText
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "You already have similar novels in your library. Do you still want to add this one?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SecondaryText
-                )
+            items(similarNovels) { novel ->
+                SimilarNovelCard(novel)
             }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(similarNovels) { novel ->
-                    SimilarNovelCard(novel)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                Button(
-                    onClick = onConfirmAnyway,
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Proceed Anyway", fontWeight = FontWeight.Bold)
-                }
-                
-                Spacer(modifier = Modifier.height(12.dp))
-                
-                TextButton(
-                    onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Cancel", color = SecondaryText)
-                }
-            }
+        }
+        
+        Spacer(modifier = Modifier.height(32.dp))
+        
+        Button(
+            onClick = onConfirmAnyway,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = BrandAccent),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("Proceed Anyway", fontWeight = FontWeight.Bold)
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        TextButton(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Cancel", color = SecondaryText)
         }
     }
 }

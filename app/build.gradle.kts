@@ -15,21 +15,6 @@ android {
         version = release(37)
     }
 
-    val redisUrl: String = System.getenv("REDIS_URL")
-        ?: project.findProperty("REDIS_URL")?.toString()
-        ?: try {
-            val properties = Properties()
-            val propertiesFile = project.rootProject.file("local.properties")
-            if (propertiesFile.exists()) {
-                properties.load(FileInputStream(propertiesFile))
-                properties.getProperty("REDIS_URL") ?: ""
-            } else {
-                ""
-            }
-        } catch (_: Exception) {
-            ""
-        }
-
     defaultConfig {
         applicationId = "com.halovoid.lncrawler"
         minSdk = 26
@@ -38,8 +23,6 @@ android {
         versionName = "1.0.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        
-        buildConfigField("String", "REDIS_URL", "\"$redisUrl\"")
     }
 
     buildTypes {

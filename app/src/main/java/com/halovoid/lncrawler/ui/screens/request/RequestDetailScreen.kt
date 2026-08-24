@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.core.net.toUri
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.ViewModelFactory
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
@@ -185,6 +186,19 @@ fun RequestDetailScreen(
                     item {
                         ArtifactCard(
                             artifact = artifactMetadata!!,
+                            onOpen = {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(it.artifactDestination.toUri(), "application/epub+zip")
+                                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                }
+                                try {
+                                    context.startActivity(Intent.createChooser(intent, "Open with"))
+                                } catch (e: Exception) {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("No app found to open EPUB")
+                                    }
+                                }
+                            },
                             onDownload = {
                                 saveLauncher.launch(it.artifactName)
                             }

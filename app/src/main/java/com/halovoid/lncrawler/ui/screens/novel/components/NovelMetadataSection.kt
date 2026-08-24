@@ -19,10 +19,10 @@ fun NovelMetadataTable(novel: Novel) {
     Column(
         modifier = Modifier
             .padding(horizontal = 24.dp)
-            .padding(bottom = 24.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .padding(bottom = 8.dp)
+            .clip(RoundedCornerShape(8.dp))
             .background(DarkSurfaceVariant.copy(alpha = 0.5f))
-            .padding(16.dp)
+            .padding(12.dp)
     ) {
         MetadataSection(
             mapOf(
@@ -39,7 +39,7 @@ fun NovelMetadataTable(novel: Novel) {
 fun MetadataSection(data: Map<String, String>) {
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         data.forEach { (key, value) ->
             Row(

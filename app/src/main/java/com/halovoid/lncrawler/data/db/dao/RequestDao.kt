@@ -16,10 +16,10 @@ interface RequestDao {
     @Query("SELECT * FROM requests")
     fun getAllRequests(): Flow<List<RequestEntity>>
 
-    @Query("SELECT * FROM requests WHERE dependsOn IS NULL")
+    @Query("SELECT * FROM requests WHERE dependsOn IS NULL ORDER BY createdAt DESC")
     fun getRootRequests(): Flow<List<RequestEntity>>
 
-    @Query("SELECT * FROM requests WHERE dependsOn IS NULL AND novelUrl = :url")
+    @Query("SELECT * FROM requests WHERE dependsOn IS NULL AND novelUrl = :url ORDER BY createdAt DESC")
     fun getRootRequestByNovelFlow(url: String): Flow<List<RequestEntity>>
 
     @Query("SELECT * FROM requests WHERE id = :id")
@@ -47,6 +47,8 @@ interface RequestDao {
                 WHEN (SELECT COALESCE(SUM(progressSuccess + progressFailed + progressCancelled), 0) FROM requests WHERE dependsOn = :parentId) >= progressTotal 
                 THEN (CASE WHEN status = 'CANCELLED' THEN 'CANCELLED' ELSE 'SUCCESS' END)
                 WHEN status = 'CANCELLED' THEN 'CANCELLING'
+                WHEN (SELECT COALESCE(SUM(progressSuccess + progressFailed + progressCancelled), 0) FROM requests WHERE dependsOn = :parentId) > 0
+                THEN 'RUNNING'
                 ELSE rstatus 
             END
         WHERE id = :parentId

@@ -10,11 +10,9 @@ import com.halovoid.lncrawler.data.repository.NovelRepository
 import com.halovoid.lncrawler.data.db.entities.RequestEntity
 import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
-import com.halovoid.lncrawler.data.redis.RedisManager
+import com.halovoid.lncrawler.data.repository.IndexRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
-import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.domain.models.Novel
-import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.utils.SimhashUtils
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -26,6 +24,7 @@ class RequestViewModel(
 ) : AndroidViewModel(application) {
 
     private val novelRepository = NovelRepository.getInstance(application)
+    private val indexRepository: IndexRepository = IndexRepository()
 
     /** Tracks validation errors for the URL input field. */
     private val _error = MutableStateFlow<String?>(null)
@@ -150,6 +149,11 @@ class RequestViewModel(
     fun clearSimilarNovels() {
         _similarNovels.value = emptyList()
     }
+    fun pushToRedis(url: String) {
+        viewModelScope.launch {
+            indexRepository.index(url)
+        }
+    }
 
     fun startNovelCrawl(crawlerName: String, url: String, title: String) {
         viewModelScope.launch {
@@ -174,8 +178,6 @@ class RequestViewModel(
             )
 
             requestRepository.insertRequests(listOf(request))
-
-            RedisManager.pushUrl(url)
 
             SchedulerService.startService(getApplication())
 

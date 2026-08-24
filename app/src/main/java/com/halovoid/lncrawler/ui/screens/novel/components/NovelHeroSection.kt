@@ -21,6 +21,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.theme.*
@@ -30,20 +31,19 @@ fun NovelHeroSection(novel: Novel) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(340.dp)
+            .height(280.dp)
             .background(DarkBackground)
     ) {
-        // Atmospheric influence - using a very subtle blurred version of the cover or a soft gradient
+        // Atmospheric influence
         AsyncImage(
             model = novel.coverUrl,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
-                .alpha(0.12f), // Extremely subtle influence
+                .alpha(0.12f),
             contentScale = ContentScale.Crop
         )
 
-        // Gradient for a more editorial, structured feel
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -63,22 +63,21 @@ fun NovelHeroSection(novel: Novel) {
                 .fillMaxSize()
                 .statusBarsPadding()
                 .padding(horizontal = 24.dp)
-                .padding(top = 64.dp, bottom = 24.dp),
+                .padding(top = 48.dp, bottom = 16.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            // Poster with minimal, elegant styling
             AsyncImage(
                 model = novel.coverUrl,
                 contentDescription = null,
                 modifier = Modifier
-                    .width(120.dp)
+                    .width(100.dp)
                     .aspectRatio(2f / 3f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(DarkSurface),
                 contentScale = ContentScale.Crop
             )
 
-            Spacer(modifier = Modifier.width(24.dp))
+            Spacer(modifier = Modifier.width(20.dp))
 
             Column(
                 modifier = Modifier.weight(1f),
@@ -86,52 +85,52 @@ fun NovelHeroSection(novel: Novel) {
             ) {
                 Text(
                     text = novel.title,
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
                     color = PrimaryText,
-                    maxLines = 3,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
-                // Author info with neutral icons
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Outlined.Person,
                         contentDescription = null,
                         tint = SecondaryText,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(14.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = novel.author ?: "Unknown Author",
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = MaterialTheme.typography.bodySmall,
                         color = SecondaryText
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                // Source Provider - Neutral typography based badge
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clip(RoundedCornerShape(4.dp))
                         .background(DarkSurfaceVariant)
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.Source,
                         contentDescription = null,
                         tint = SecondaryText,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(12.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = novel.crawlerName.uppercase(),
                         style = MaterialTheme.typography.labelSmall,
                         color = SecondaryText,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp
                     )
                 }
             }

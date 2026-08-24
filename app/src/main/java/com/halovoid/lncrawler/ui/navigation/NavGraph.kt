@@ -39,10 +39,12 @@ import com.halovoid.lncrawler.ui.screens.crawler.CrawlerScreen
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
+import com.halovoid.lncrawler.ui.screens.novel.GroupedRequestsViewModel
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
 import com.halovoid.lncrawler.ui.screens.reader.ReaderScreen
 import com.halovoid.lncrawler.ui.screens.reader.ReaderViewModel
-import com.halovoid.lncrawler.ui.screens.novel.GroupedRequestsViewModel
+import com.halovoid.lncrawler.ui.screens.novel.NovelActivityScreen
+import com.halovoid.lncrawler.ui.screens.novel.NovelArtifactsScreen
 import com.halovoid.lncrawler.ui.screens.support.SupportScreen
 import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
 import kotlinx.coroutines.flow.first
@@ -66,6 +68,12 @@ sealed class Screen(val route: String) {
     }
     object NovelDetail : Screen("novel_detail/{crawlerName}/{novelUrl}") {
         fun createRoute(crawlerName: String, novelUrl: String) = "novel_detail/$crawlerName/${URLEncoder.encode(novelUrl, "UTF-8")}"
+    }
+    object NovelActivity : Screen("novel_activity/{novelUrl}") {
+        fun createRoute(novelUrl: String) = "novel_activity/${URLEncoder.encode(novelUrl, "UTF-8")}"
+    }
+    object NovelArtifacts : Screen("novel_artifacts/{novelUrl}") {
+        fun createRoute(novelUrl: String) = "novel_artifacts/${URLEncoder.encode(novelUrl, "UTF-8")}"
     }
     object NovelPreview : Screen("novel_preview")
     object GroupedRequests : Screen("grouped_requests/{contextType}/{contextValue}/{type}") {
@@ -283,8 +291,69 @@ fun NavGraph(navController: NavHostController) {
                     onGroupClick = { type ->
                         navController.navigate(Screen.GroupedRequests.createRoute("NOVEL", novelUrl, type.name))
                     },
+                    onActivityClick = {
+                        navController.navigate(Screen.NovelActivity.createRoute(novelUrl))
+                    },
+                    onArtifactsClick = {
+                        navController.navigate(Screen.NovelArtifacts.createRoute(novelUrl))
+                    },
                     onChapterClick = { url, chapterId ->
                         navController.navigate(Screen.Reader.createRoute(url, chapterId))
+                    }
+                )
+            }
+            composable(Screen.NovelActivity.route) { backStackEntry ->
+                val novelUrl = URLDecoder.decode(
+                    backStackEntry.arguments?.getString("novelUrl") ?: "",
+                    "UTF-8"
+                )
+                val viewModel: GroupedRequestsViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                LaunchedEffect(novelUrl) {
+                    viewModel.loadRequests("NOVEL", novelUrl)
+                }
+                val requests by viewModel.requests.collectAsStateWithLifecycle()
+                val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
+                val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
+
+                NovelActivityScreen(
+                    requests = requests,
+                    onBack = { navController.popBackStack() },
+                    onRequestClick = { requestId ->
+                        navController.navigate(Screen.RequestDetail.createRoute(requestId))
+                    },
+                    onReplay = { viewModel.replayRequest(it) },
+                    onCancel = { viewModel.cancelRequest(it) },
+                    onContinue = { viewModel.resumeRequest(it) },
+                    onResolveCloudflare = { requestId, url ->
+                        viewModel.resolveCloudflare(requestId, url)
+                    },
+                    cancellingRequestIds = cancellingRequestIds,
+                    activeActionIds = activeActionIds
+                )
+            }
+            composable(Screen.NovelArtifacts.route) { backStackEntry ->
+                val novelUrl = URLDecoder.decode(
+                    backStackEntry.arguments?.getString("novelUrl") ?: "",
+                    "UTF-8"
+                )
+                val viewModel: NovelDetailViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                LaunchedEffect(novelUrl) {
+                    viewModel.loadNovel(novelUrl)
+                }
+                val artifacts by viewModel.artifacts.collectAsStateWithLifecycle()
+                val novel by viewModel.novel.collectAsStateWithLifecycle()
+
+                NovelArtifactsScreen(
+                    novel = novel,
+                    artifacts = artifacts,
+                    onBack = { navController.popBackStack() },
+                    onDownload = { artifact ->
+                        // Artifact downloading logic is handled in the screen or passed here
+                        // For now, let's assume the screen handles the CreateDocument launcher
                     }
                 )
             }

@@ -1,0 +1,38 @@
+package com.halovoid.lncrawler.data.repository
+
+import android.util.Log
+import com.halovoid.lncrawler.api.core.network.NetworkClient
+import com.halovoid.lncrawler.domain.models.SearchResponse
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.net.URLEncoder
+
+class IndexRepository(
+    private val client: OkHttpClient = NetworkClient.okHttpClient
+) {
+    suspend fun index(url: String) = withContext(Dispatchers.IO) {
+        val requestBody = """
+            {
+                "url": "$url"
+            }
+        """.trimIndent()
+            .toRequestBody("application/json".toMediaType())
+
+        val request = Request.Builder()
+            .url("https://lncs.up.railway.app/api/index/request")
+            .post(requestBody)
+            .build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                Log.e("RedisManager", "Failed to push $url to redis")
+                // if this fails there is no need to throw exception
+                // it's not like the app stops to function without the indexes
+            }
+            Log.i("RedisManager", "Pushed $url to redis")
+        }
+    }
+}

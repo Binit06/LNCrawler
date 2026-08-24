@@ -46,6 +46,9 @@ import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.screens.search.SearchState
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
 import com.halovoid.lncrawler.domain.models.Novel
+import com.halovoid.lncrawler.ui.components.AppBottomSheet
+import com.halovoid.lncrawler.ui.components.AppBottomSheetDivider
+import com.halovoid.lncrawler.ui.components.AppBottomSheetGroup
 import com.halovoid.lncrawler.ui.theme.*
 
 enum class RequestTab {
@@ -186,7 +189,9 @@ fun SearchTabContent(
         label = "SearchBarHeight"
     )
 
-    Column(modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
+    Column(modifier = Modifier
+        .fillMaxSize()
+        .padding(horizontal = 24.dp)) {
         AnimatedVisibility(
             visible = !isSearching,
             enter = expandVertically() + fadeIn(),
@@ -446,6 +451,7 @@ fun ManualRequestContent(
                                 if (libraryUrls.contains(urlInput)) {
                                     onNavigateToDetail(crawlerName, urlInput)
                                 } else {
+                                    viewModel.pushToRedis(urlInput)
                                     viewModel.setPreviewUrl(urlInput)
                                     viewModel.setPreviewNovel(null) // We don't have metadata yet
                                     onNavigateToPreview()
@@ -657,60 +663,38 @@ fun FilterBottomSheet(
     onDismiss: () -> Unit,
     onFilterSelected: (com.halovoid.lncrawler.data.db.entities.RequestType?) -> Unit
 ) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        containerColor = DarkSurface,
-        scrimColor = Color.Black.copy(alpha = 0.6f)
+    AppBottomSheet(
+        onDismiss = onDismiss,
+        title = "Filter Results"
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp)
-                .padding(bottom = 48.dp)
-        ) {
-            Text(
-                text = "Filter Results",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = PrimaryText
+        AppBottomSheetGroup {
+            ListItem(
+                headlineContent = { Text("All Downloads", color = PrimaryText) },
+                trailingContent = {
+                    if (currentFilter == null) Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
+                },
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                modifier = Modifier.clickable { onFilterSelected(null) }
             )
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = DarkBackground.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text("All Downloads", color = PrimaryText) },
-                        trailingContent = { 
-                            if (currentFilter == null) Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable { onFilterSelected(null) }
-                    )
-                    HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
-                    
-                    com.halovoid.lncrawler.data.db.entities.RequestType.entries.forEach { type ->
-                        val label = when (type) {
-                            com.halovoid.lncrawler.data.db.entities.RequestType.NOVEL_METADATA -> "Metadata"
-                            com.halovoid.lncrawler.data.db.entities.RequestType.CHAPTER -> "Chapters"
-                            com.halovoid.lncrawler.data.db.entities.RequestType.ARTIFACT -> "Exports"
-                            com.halovoid.lncrawler.data.db.entities.RequestType.RANGE_DOWNLOAD -> "Downloads"
-                        }
-                        ListItem(
-                            headlineContent = { Text(label, color = PrimaryText) },
-                            trailingContent = { 
-                                if (currentFilter == type) Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                            modifier = Modifier.clickable { onFilterSelected(type) }
-                        )
-                        if (type != com.halovoid.lncrawler.data.db.entities.RequestType.entries.last()) {
-                            HorizontalDivider(color = BorderColor.copy(alpha = 0.2f), thickness = 0.5.dp)
-                        }
-                    }
+            AppBottomSheetDivider()
+
+            com.halovoid.lncrawler.data.db.entities.RequestType.entries.forEach { type ->
+                val label = when (type) {
+                    com.halovoid.lncrawler.data.db.entities.RequestType.NOVEL_METADATA -> "Metadata"
+                    com.halovoid.lncrawler.data.db.entities.RequestType.CHAPTER -> "Chapters"
+                    com.halovoid.lncrawler.data.db.entities.RequestType.ARTIFACT -> "Exports"
+                    com.halovoid.lncrawler.data.db.entities.RequestType.RANGE_DOWNLOAD -> "Downloads"
+                }
+                ListItem(
+                    headlineContent = { Text(label, color = PrimaryText) },
+                    trailingContent = {
+                        if (currentFilter == type) Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
+                    },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.clickable { onFilterSelected(type) }
+                )
+                if (type != com.halovoid.lncrawler.data.db.entities.RequestType.entries.last()) {
+                    AppBottomSheetDivider()
                 }
             }
         }
