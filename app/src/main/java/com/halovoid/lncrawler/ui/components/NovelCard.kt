@@ -53,23 +53,6 @@ fun NovelCard(
                     )
             )
 
-            // Source Icon overlay (Top Left)
-            Surface(
-                modifier = Modifier
-                    .padding(8.dp)
-                    .size(24.dp)
-                    .align(Alignment.TopStart),
-                shape = RoundedCornerShape(4.dp),
-                color = Color.Black.copy(alpha = 0.6f)
-            ) {
-                Icon(
-                    Icons.Default.Public,
-                    contentDescription = null,
-                    modifier = Modifier.padding(4.dp),
-                    tint = BrandAccent // Using vibrant BrandAccent for source
-                )
-            }
-
             // Title and Metadata overlay (Bottom)
             Column(
                 modifier = Modifier

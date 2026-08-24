@@ -31,22 +31,26 @@ class JobRunner(
             }
 
             val result = handler.handle(currRequest)
+            
+            // Fetch latest state as the handler might have updated the DB (progress, rstatus via syncProgress)
+            val latestRequest = requestDao.getRequestById(currRequest.id) ?: currRequest
+            val hasChildrenAfter = requestDao.hasChildren(latestRequest.id)
 
             when (result) {
                 is JobResult.Success -> {
-                    markSuccess(currRequest, hasChildren)
+                    markSuccess(latestRequest, hasChildrenAfter)
                     return
                 }
                 is JobResult.Cancelled -> {
-                    markCancelled(currRequest, hasChildren)
+                    markCancelled(latestRequest, hasChildrenAfter)
                     return
                 }
                 is JobResult.Blocked -> {
-                    markBlocked(currRequest, hasChildren)
+                    markBlocked(latestRequest, hasChildrenAfter)
                     return
                 }
                 is JobResult.Failure -> {
-                    fail(currRequest, result.error.message ?: "Execution Failed", hasChildren)
+                    fail(latestRequest, result.error.message ?: "Execution Failed", hasChildrenAfter)
                     return
                 }
             }

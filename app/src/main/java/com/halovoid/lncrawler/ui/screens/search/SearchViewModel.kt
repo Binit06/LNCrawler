@@ -64,6 +64,7 @@ class SearchViewModel(
                 name = "Metadata: ${item.title}",
                 metadata = metadata,
                 status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 dependsOn = null,
                 url = item.url,
                 priority = 0,

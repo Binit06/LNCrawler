@@ -176,6 +176,8 @@ class NovelDetailViewModel(
                 name = "Export: ${novel.title} ($format) [$start-$end]",
                 metadata = metadata,
                 parentNovel = novel.url,
+                status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 url = null,
                 dependsOn = null,
                 completedAt = null
@@ -199,6 +201,7 @@ class NovelDetailViewModel(
                 name = "Metadata: ${novel.title}",
                 metadata = metadata,
                 status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 dependsOn = null,
                 url = novel.url,
                 priority = 0,
@@ -235,6 +238,8 @@ class NovelDetailViewModel(
                 metadata = metadata,
                 parentNovel = novel.url,
                 url = novel.url,
+                status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 completedAt = null,
                 progressTotal = rangeChapters.size
             )
@@ -269,6 +274,8 @@ class NovelDetailViewModel(
                 metadata = metadata,
                 parentNovel = novel.url,
                 url = novel.url,
+                status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 completedAt = null,
                 progressTotal = allChapters.size
             )
@@ -303,6 +310,8 @@ class NovelDetailViewModel(
                 metadata = metadata,
                 parentNovel = novel.url,
                 url = novel.url,
+                status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 completedAt = null,
                 progressTotal = volumeChapters.size
             )
@@ -326,6 +335,8 @@ class NovelDetailViewModel(
                 dependsOn = null,
                 priority = 10, // Higher priority for manual single chapter fetch
                 name = "Chapter: ${chapter.title}",
+                status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 completedAt = null,
                 metadata = chapterMetadata,
                 url = chapter.url,

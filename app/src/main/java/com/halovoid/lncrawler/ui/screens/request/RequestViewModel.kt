@@ -170,6 +170,7 @@ class RequestViewModel(
                 name = "Metadata: $title",
                 metadata = metadata,
                 status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 dependsOn = null,
                 url = url,
                 priority = 0,

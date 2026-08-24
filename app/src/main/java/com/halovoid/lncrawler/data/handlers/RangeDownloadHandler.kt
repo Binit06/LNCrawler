@@ -61,6 +61,8 @@ class RangeDownloadHandler(
                 dependsOn = request.id,
                 priority = request.priority,
                 name = "Chapter: ${chapter.title}",
+                status = RequestStatus.PENDING,
+                rstatus = RequestStatus.PENDING,
                 completedAt = null,
                 metadata = chapterMetadata,
                 url = chapter.url,

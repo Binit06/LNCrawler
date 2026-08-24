@@ -1,7 +1,6 @@
 package com.halovoid.lncrawler.ui.screens.request
 
 import android.content.Intent
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.components.AppBottomSheet
+import com.halovoid.lncrawler.ui.screens.novel.components.NovelSynopsisSection
 import com.halovoid.lncrawler.ui.theme.*
 
 @Composable
@@ -323,12 +323,13 @@ fun NovelPreviewContent(
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
                             .padding(bottom = 32.dp)
                     ) {
                         if (error != null) {
                              Surface(
-                                 modifier = Modifier.padding(bottom = 24.dp),
+                                 modifier = Modifier
+                                     .padding(horizontal = 24.dp)
+                                     .padding(bottom = 24.dp),
                                  color = ErrorRed.copy(alpha = 0.1f),
                                  shape = RoundedCornerShape(8.dp),
                                  border = androidx.compose.foundation.BorderStroke(1.dp, ErrorRed.copy(alpha = 0.5f))
@@ -342,48 +343,20 @@ fun NovelPreviewContent(
                              }
                         }
 
-                        Text(
-                            text = "Synopsis",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = PrimaryText
+                        NovelSynopsisSection(
+                            novel = novel,
+                            isExpanded = isSynopsisExpanded,
+                            onExpandClick = { isSynopsisExpanded = !isSynopsisExpanded }
                         )
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
-                        
-                        Text(
-                            text = novel.description ?: "No description available.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = SecondaryText,
-                            lineHeight = 24.sp,
-                            maxLines = if (isSynopsisExpanded) Int.MAX_VALUE else 5,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.animateContentSize()
-                        )
-                        
-                        val description = novel.description
-                        if (!description.isNullOrBlank() && description.length > 200) {
-                            TextButton(
-                                onClick = { isSynopsisExpanded = !isSynopsisExpanded },
-                                contentPadding = PaddingValues(0.dp),
-                                modifier = Modifier.padding(top = 4.dp)
-                            ) {
-                                Text(
-                                    text = if (isSynopsisExpanded) "Show Less" else "Read More",
-                                    color = BrandAccent,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        }
 
-                        Spacer(modifier = Modifier.height(40.dp))
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         if (novel.chapters.isNotEmpty()) {
                             Button(
                                 onClick = { onConfirm(novel) },
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
                                     .height(56.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = BrandAccent,
@@ -404,7 +377,9 @@ fun NovelPreviewContent(
                             
                             TextButton(
                                 onClick = onBack,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
                             ) {
                                 Text(
                                     "Maybe Later",
@@ -417,6 +392,7 @@ fun NovelPreviewContent(
                                 onClick = onCrawlManually,
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
                                     .height(56.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = DarkSurface,
@@ -435,7 +411,9 @@ fun NovelPreviewContent(
                             
                             TextButton(
                                 onClick = onBack,
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
                             ) {
                                 Text(
                                     "Maybe Later",
