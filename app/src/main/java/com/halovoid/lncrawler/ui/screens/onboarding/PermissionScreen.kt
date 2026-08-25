@@ -25,7 +25,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -36,6 +35,7 @@ import com.halovoid.lncrawler.ui.theme.BrandAccent
 import com.halovoid.lncrawler.ui.theme.DarkSurface
 import com.halovoid.lncrawler.ui.theme.SecondaryText
 import com.halovoid.lncrawler.ui.theme.SuccessGreen
+import com.halovoid.lncrawler.ui.theme.PrimaryText
 
 @Composable
 fun PermissionScreen(
@@ -71,48 +71,53 @@ fun PermissionScreen(
     }
 
     OnboardingStep(
-        title = "Welcome!",
-        subtitle = "Let's get things ready for the best experience while downloading your novels.",
+        title = "Permissions",
+        subtitle = "LNCrawler works best when it can notify you of updates and run smoothly in the background.",
         buttonText = "Continue",
         onNext = onNext
     ) {
-        PermissionItem(
-            icon = Icons.Default.Notifications,
-            title = "Notifications",
-            description = "Stay updated on download progress and success.",
-            isGranted = hasNotificationPermission,
-            onClick = {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            PermissionItem(
+                icon = Icons.Default.Notifications,
+                title = "Notifications",
+                description = "Stay updated on download progress.",
+                isGranted = hasNotificationPermission,
+                onClick = {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
                 }
-            }
-        )
+            )
 
-        PermissionItem(
-            icon = Icons.Default.BatteryFull,
-            title = "Background Activity",
-            description = "Allow the app to run smoothly in the background.",
-            isGranted = isIgnoringBatteryOptimizations,
-            onClick = {
-                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-                    data = Uri.parse("package:${context.packageName}")
+            PermissionItem(
+                icon = Icons.Default.BatteryFull,
+                title = "Background Activity",
+                description = "Ensure downloads continue when the app is closed.",
+                isGranted = isIgnoringBatteryOptimizations,
+                onClick = {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    context.startActivity(intent)
                 }
-                context.startActivity(intent)
-            }
-        )
+            )
 
-        PermissionItem(
-            icon = Icons.Default.SystemUpdate,
-            title = "App Updates",
-            description = "Download and install app updates directly.",
-            isGranted = canInstallPackages,
-            onClick = {
-                val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
-                    data = Uri.parse("package:${context.packageName}")
+            PermissionItem(
+                icon = Icons.Default.SystemUpdate,
+                title = "App Updates",
+                description = "Install the latest app versions directly.",
+                isGranted = canInstallPackages,
+                onClick = {
+                    val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    context.startActivity(intent)
                 }
-                context.startActivity(intent)
-            }
-        )
+            )
+        }
         
         // Re-check status when returning to app
         LaunchedEffect(Unit) {
@@ -144,16 +149,16 @@ fun PermissionItem(
     ) {
         Box(
             modifier = Modifier
-                .size(48.dp)
+                .size(40.dp)
                 .clip(CircleShape)
-                .background(if (isGranted) SuccessGreen.copy(alpha = 0.15f) else BrandAccent.copy(alpha = 0.1f)),
+                .background(if (isGranted) SuccessGreen.copy(alpha = 0.1f) else PrimaryText.copy(alpha = 0.05f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (isGranted) Icons.Default.Check else icon,
                 contentDescription = null,
-                tint = if (isGranted) SuccessGreen else BrandAccent,
-                modifier = Modifier.size(24.dp)
+                tint = if (isGranted) SuccessGreen else PrimaryText.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
             )
         }
 
@@ -162,8 +167,8 @@ fun PermissionItem(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
-                color = Color.White,
+                style = MaterialTheme.typography.titleSmall,
+                color = if (isGranted) PrimaryText.copy(alpha = 0.7f) else PrimaryText,
                 fontWeight = FontWeight.Bold
             )
             Text(
@@ -176,17 +181,17 @@ fun PermissionItem(
         
         if (!isGranted) {
             Text(
-                text = "Grant",
+                text = "Allow",
                 color = BrandAccent,
                 fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(start = 8.dp)
             )
         } else {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                tint = SuccessGreen,
+                tint = SuccessGreen.copy(alpha = 0.8f),
                 modifier = Modifier.size(20.dp).padding(start = 8.dp)
             )
         }

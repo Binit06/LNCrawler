@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FilterList
@@ -20,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -28,6 +30,7 @@ import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.components.AppBottomSheet
 import com.halovoid.lncrawler.ui.components.AppBottomSheetDivider
 import com.halovoid.lncrawler.ui.components.AppBottomSheetGroup
+import com.halovoid.lncrawler.ui.components.MutedEmptyState
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -123,9 +126,12 @@ fun LibraryScreen(
             )
 
             if (filteredNovels.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No novels found.", color = SecondaryText)
-                }
+                MutedEmptyState(
+                    title = "Your Library is Empty",
+                    description = "Manage your personal light novel collection here. You can track your reading progress and organize your favorites. This page will come alive once you add novels from the browse section.",
+                    icon = Icons.AutoMirrored.Outlined.LibraryBooks,
+                    modifier = Modifier.weight(1f)
+                )
             } else {
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(120.dp),

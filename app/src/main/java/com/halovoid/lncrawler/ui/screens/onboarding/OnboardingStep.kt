@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -83,25 +82,13 @@ fun OnboardingStep(
                 style = MaterialTheme.typography.bodyLarge,
                 color = SecondaryText,
                 textAlign = TextAlign.Center,
-                lineHeight = 24.sp
+                lineHeight = 24.sp,
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
             
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(24.dp)),
-                color = DarkSurfaceVariant,
-                tonalElevation = 2.dp
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    content = content
-                )
-            }
+            content()
         }
     }
 }

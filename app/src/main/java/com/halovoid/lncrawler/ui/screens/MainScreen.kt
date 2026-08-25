@@ -22,10 +22,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.halovoid.lncrawler.data.repository.UpdateRepository
 import com.halovoid.lncrawler.ui.navigation.NavGraph
 import com.halovoid.lncrawler.ui.navigation.Screen
 import com.halovoid.lncrawler.ui.theme.*
@@ -56,12 +58,16 @@ fun MainScreen() {
         }
     }
 
+    val isAppUpdateAvailable by UpdateRepository.getInstance(navController.context)
+        .isAppUpdateAvailable.collectAsStateWithLifecycle()
+
     Scaffold(
         bottomBar = {
             if (showNavBar) {
                 LNCrawlerNavigationBar(
                     mainTabs = mainTabs,
                     currentDestination = currentDestination,
+                    isAppUpdateAvailable = isAppUpdateAvailable,
                     onNavigate = { route ->
                         navController.navigate(route) {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -88,6 +94,7 @@ fun MainScreen() {
 private fun LNCrawlerNavigationBar(
     mainTabs: List<TabInfo>,
     currentDestination: androidx.navigation.NavDestination?,
+    isAppUpdateAvailable: Boolean,
     onNavigate: (String) -> Unit
 ) {
     NavigationBar(
@@ -98,12 +105,25 @@ private fun LNCrawlerNavigationBar(
             val isSelected = currentDestination?.hierarchy?.any { it.route == tab.screen.route } == true
             NavigationBarItem(
                 icon = { 
-                    AnimatedTabIcon(
-                        isSelected = isSelected,
-                        outlinedIcon = tab.outlinedIcon,
-                        filledIcon = tab.filledIcon,
-                        label = tab.label
-                    )
+                    BadgedBox(
+                        badge = {
+                            if (tab.label == "More" && isAppUpdateAvailable) {
+                                Badge(
+                                    containerColor = BrandAccent,
+                                    contentColor = Color.White
+                                ) {
+                                    Text("1")
+                                }
+                            }
+                        }
+                    ) {
+                        AnimatedTabIcon(
+                            isSelected = isSelected,
+                            outlinedIcon = tab.outlinedIcon,
+                            filledIcon = tab.filledIcon,
+                            label = tab.label
+                        )
+                    }
                 },
                 label = { 
                     Text(

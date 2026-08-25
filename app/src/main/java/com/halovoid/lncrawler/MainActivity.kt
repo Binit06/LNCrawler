@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.lifecycleScope
+import com.halovoid.lncrawler.data.repository.UpdateRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
 import com.halovoid.lncrawler.ui.screens.MainScreen
 import com.halovoid.lncrawler.ui.theme.LNCrawlerTheme
@@ -20,6 +21,7 @@ class MainActivity : ComponentActivity() {
         // Source loading is now handled at Application level
         lifecycleScope.launch {
             SchedulerService.startService(this@MainActivity)
+            UpdateRepository.getInstance(this@MainActivity).checkForUpdates()
         }
 
         enableEdgeToEdge()

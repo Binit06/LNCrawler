@@ -41,6 +41,8 @@ fun SourceSyncScreen(
     
     val listState = rememberLazyListState()
 
+    var showDetails by remember { mutableStateOf(false) }
+
     fun addLog(message: String) {
         logs.add(LogEntry(message = message))
     }
@@ -76,10 +78,14 @@ fun SourceSyncScreen(
         performSync()
     }
 
+    val completedSources = logs.count { it.message.contains("Complete") || it.message.contains("Success") }
+    // Assuming a rough total if we can't determine it precisely, or just show count
+    val statusText = if (isSyncing) "Preparing your novel sources..." else if (error != null) "Couldn't prepare sources" else "Sources ready"
+
     OnboardingStep(
-        title = "Syncing Crawlers",
-        subtitle = "We're downloading the latest sources so you can start crawling novels immediately.",
-        buttonText = if (error != null) "Retry Sync" else "Continue",
+        title = "Preparing Sources",
+        subtitle = "LNCrawler is downloading the latest source definitions so you can start crawling novels.",
+        buttonText = if (error != null) "Retry" else "Get Started",
         onNext = {
             if (error != null) {
                 performSync()
@@ -90,89 +96,103 @@ fun SourceSyncScreen(
         isNextEnabled = !isSyncing
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(240.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(DarkSurface)
-                    .padding(12.dp)
+                    .size(120.dp),
+                contentAlignment = Alignment.Center
             ) {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    items(logs, key = { it.id }) { logEntry ->
-                        Text(
-                            text = if (logEntry.message.startsWith("Error")) "✖ ${logEntry.message}" else "✔ ${logEntry.message}",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontFamily = FontFamily.Monospace,
-                                fontSize = 11.sp,
-                                lineHeight = 16.sp
-                            ),
-                            color = when {
-                                logEntry.message.startsWith("Error") -> MaterialTheme.colorScheme.error
-                                logEntry.message.contains("Complete") -> SuccessGreen
-                                else -> PrimaryText.copy(alpha = 0.8f)
-                            }
-                        )
-                    }
+                if (isSyncing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.fillMaxSize(),
+                        color = BrandAccent,
+                        strokeWidth = 4.dp,
+                        trackColor = BrandAccent.copy(alpha = 0.1f)
+                    )
+                } else if (error != null) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.2f),
+                        modifier = Modifier.size(80.dp)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = SuccessGreen,
+                        modifier = Modifier.size(80.dp)
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            if (isSyncing) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(
-                        color = BrandAccent,
-                        modifier = Modifier.size(36.dp),
-                        strokeWidth = 3.dp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Synchronizing...",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = BrandAccent
-                    )
-                }
-            } else if (error != null) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Sync Failed",
-                        color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    TextButton(onClick = onComplete) {
-                        Text(
-                            text = "Proceed Anyway",
-                            color = SecondaryText,
-                            style = MaterialTheme.typography.bodyMedium
-                        )
+            Text(
+                text = statusText,
+                style = MaterialTheme.typography.titleMedium,
+                color = if (error != null) MaterialTheme.colorScheme.error else PrimaryText,
+                fontWeight = FontWeight.Bold
+            )
+            
+            if (completedSources > 0 && error == null) {
+                Text(
+                    text = "$completedSources sources updated",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SecondaryText,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            TextButton(
+                onClick = { showDetails = !showDetails },
+                colors = ButtonDefaults.textButtonColors(contentColor = SecondaryText)
+            ) {
+                Text(
+                    text = if (showDetails) "Hide Details" else "Show Details",
+                    style = MaterialTheme.typography.labelLarge
+                )
+            }
+
+            if (showDetails) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(DarkSurface)
+                        .padding(12.dp)
+                ) {
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(logs, key = { it.id }) { logEntry ->
+                            Text(
+                                text = logEntry.message,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                    fontSize = 10.sp
+                                ),
+                                color = if (logEntry.message.startsWith("Error")) MaterialTheme.colorScheme.error else SecondaryText
+                            )
+                        }
                     }
                 }
-            } else {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = null,
-                        tint = SuccessGreen,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+            }
+            
+            if (error != null) {
+                TextButton(onClick = onComplete, modifier = Modifier.padding(top = 8.dp)) {
                     Text(
-                        text = "Sources up to date",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = SuccessGreen,
-                        fontWeight = FontWeight.Bold
+                        text = "Skip for now",
+                        color = SecondaryText.copy(alpha = 0.7f),
+                        style = MaterialTheme.typography.bodySmall
                     )
                 }
             }

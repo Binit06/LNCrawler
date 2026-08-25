@@ -33,6 +33,7 @@ import com.halovoid.lncrawler.ui.screens.onboarding.FolderScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel
 import androidx.compose.runtime.rememberCoroutineScope
+import com.halovoid.lncrawler.ui.screens.onboarding.WelcomeScreen
 import com.halovoid.lncrawler.ui.screens.onboarding.PermissionScreen
 import com.halovoid.lncrawler.ui.screens.onboarding.SourceSyncScreen
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerScreen
@@ -55,6 +56,7 @@ import java.net.URLEncoder
  * Defines the available navigation destinations in the application.
  */
 sealed class Screen(val route: String) {
+    object Welcome : Screen("welcome")
     object Permissions : Screen("permissions")
     object FolderSelection: Screen("folder_selection")
     object SourceSync: Screen("source_sync")
@@ -63,6 +65,7 @@ sealed class Screen(val route: String) {
     object Downloads : Screen("downloads")
     object Crawlers : Screen("crawlers")
     object Support : Screen("support")
+    object UpdateDetail : Screen("update_detail")
     object RequestDetail : Screen("request_detail/{requestId}") {
         fun createRoute(requestId: String) = "request_detail/${URLEncoder.encode(requestId, "UTF-8")}"
     }
@@ -103,6 +106,8 @@ fun NavGraph(navController: NavHostController) {
 
         startRoute = if (onboardingCompleted && folderUri != null) {
             Screen.Request.route
+        } else if (!onboardingCompleted) {
+            Screen.Welcome.route
         } else {
             Screen.FolderSelection.route
         }
@@ -124,6 +129,13 @@ fun NavGraph(navController: NavHostController) {
                 fadeOut(animationSpec = tween(200))
             }
         ) {
+            composable(Screen.Welcome.route) {
+                WelcomeScreen(
+                    onNext = {
+                        navController.navigate(Screen.FolderSelection.route)
+                    }
+                )
+            }
             composable(Screen.FolderSelection.route) {
                 val folderViewModel: FolderViewModel = viewModel(
                     factory = remember { ViewModelFactory(application) }
@@ -255,7 +267,25 @@ fun NavGraph(navController: NavHostController) {
                 val supportViewModel: SupportViewModel = viewModel(
                     factory = remember { ViewModelFactory(application) }
                 )
-                SupportScreen(viewModel = supportViewModel)
+                SupportScreen(
+                    viewModel = supportViewModel,
+                    onNavigateToUpdate = {
+                        navController.navigate(Screen.UpdateDetail.route)
+                    }
+                )
+            }
+            composable(Screen.UpdateDetail.route) { backStackEntry ->
+                val supportEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Screen.Support.route)
+                }
+                val supportViewModel: SupportViewModel = viewModel(
+                    viewModelStoreOwner = supportEntry,
+                    factory = remember { ViewModelFactory(application) }
+                )
+                com.halovoid.lncrawler.ui.screens.support.UpdateDetailScreen(
+                    viewModel = supportViewModel,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(Screen.RequestDetail.route) { backStackEntry ->
                 val encodedId = backStackEntry.arguments?.getString("requestId") ?: ""

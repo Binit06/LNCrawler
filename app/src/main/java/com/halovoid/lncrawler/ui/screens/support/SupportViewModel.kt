@@ -8,6 +8,7 @@ import com.halovoid.lncrawler.BuildConfig
 import com.halovoid.lncrawler.api.loader.AppUpdateManager
 import com.halovoid.lncrawler.api.loader.UpdateDownloader
 import com.halovoid.lncrawler.api.loader.UpdateInstaller
+import com.halovoid.lncrawler.data.repository.UpdateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,7 +17,13 @@ import kotlinx.coroutines.launch
 sealed class AppUpdateState {
     object Idle : AppUpdateState()
     object Loading : AppUpdateState()
-    data class UpdateAvailable(val tagName: String, val releaseUrl: String, val apkDownloadUrl: String?) : AppUpdateState()
+    data class UpdateAvailable(
+        val tagName: String,
+        val releaseUrl: String,
+        val apkDownloadUrl: String?,
+        val releaseNotes: String? = null,
+        val publishedAt: String? = null
+    ) : AppUpdateState()
     object Downloading : AppUpdateState()
     data class ReadyToInstall(val uri: String) : AppUpdateState()
     object Installing : AppUpdateState()
@@ -25,35 +32,41 @@ sealed class AppUpdateState {
 }
 
 class SupportViewModel(application: Application) : AndroidViewModel(application) {
-    private val appUpdateManager = AppUpdateManager()
+    private val updateRepository = UpdateRepository.getInstance(application)
     private val updateDownloader = UpdateDownloader(application)
 
     private val _updateState = MutableStateFlow<AppUpdateState>(AppUpdateState.Idle)
     val updateState: StateFlow<AppUpdateState> = _updateState.asStateFlow()
 
     init {
+        // Observe repository state
+        viewModelScope.launch {
+            updateRepository.latestAppRelease.collect { latest ->
+                if (latest != null) {
+                    val currentVersion = BuildConfig.VERSION_NAME
+                    if (AppUpdateManager.isUpdateAvailable(currentVersion, latest.tagName)) {
+                        _updateState.value = AppUpdateState.UpdateAvailable(
+                            latest.tagName,
+                            latest.releaseUrl,
+                            latest.apkDownloadUrl,
+                            latest.body,
+                            latest.publishedAt
+                        )
+                    } else {
+                        _updateState.value = AppUpdateState.UpToDate
+                    }
+                }
+            }
+        }
         checkForUpdates()
     }
 
     fun checkForUpdates() {
         viewModelScope.launch {
-            _updateState.value = AppUpdateState.Loading
-            try {
-                val latest = appUpdateManager.fetchLatestAppRelease()
-                val currentVersion = BuildConfig.VERSION_NAME
-                
-                if (AppUpdateManager.isUpdateAvailable(currentVersion, latest.tagName)) {
-                    _updateState.value = AppUpdateState.UpdateAvailable(
-                        latest.tagName, 
-                        latest.releaseUrl,
-                        latest.apkDownloadUrl
-                    )
-                } else {
-                    _updateState.value = AppUpdateState.UpToDate
-                }
-            } catch (e: Exception) {
-                _updateState.value = AppUpdateState.Error(e.message ?: "Unknown error")
+            if (_updateState.value !is AppUpdateState.UpdateAvailable) {
+                _updateState.value = AppUpdateState.Loading
             }
+            updateRepository.checkForUpdates()
         }
     }
 

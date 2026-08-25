@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.api.core.crawler.Crawler
+import com.halovoid.lncrawler.ui.components.MutedEmptyState
 import com.halovoid.lncrawler.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -182,13 +183,12 @@ fun CrawlerScreen(
             }
 
             if (crawlers.isEmpty() && syncState !is SyncState.Loading) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(48.dp), tint = DarkSurfaceVariant)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text("No crawlers available. Please sync.", color = SecondaryText)
-                    }
-                }
+                MutedEmptyState(
+                    title = "No Sources Available",
+                    description = "You don't have any crawler sources installed yet. Sync with the remote repository to fetch the latest supported light novel sources.",
+                    icon = Icons.Default.Language,
+                    modifier = Modifier.weight(1f)
+                )
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),

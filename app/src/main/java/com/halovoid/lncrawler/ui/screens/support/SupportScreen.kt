@@ -32,7 +32,8 @@ import com.halovoid.lncrawler.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SupportScreen(
-    viewModel: SupportViewModel
+    viewModel: SupportViewModel,
+    onNavigateToUpdate: () -> Unit
 ) {
     val uriHandler = LocalUriHandler.current
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
@@ -76,12 +77,8 @@ fun SupportScreen(
                     )
                     AppUpdateStatus(
                         state = updateState,
-                        onUpdateClick = { update ->
-                            if (update.apkDownloadUrl != null) {
-                                viewModel.startUpdateDownload(update.apkDownloadUrl)
-                            } else {
-                                uriHandler.openUri(update.releaseUrl)
-                            }
+                        onUpdateClick = { _ ->
+                            onNavigateToUpdate()
                         },
                         onInstallClick = { uri ->
                             viewModel.installUpdate(context, uri)
@@ -97,6 +94,21 @@ fun SupportScreen(
                     .padding(horizontal = 24.dp),
                 horizontalAlignment = Alignment.Start
             ) {
+                // Prominent Update Card
+                if (updateState is AppUpdateState.UpdateAvailable || updateState is AppUpdateState.ReadyToInstall) {
+                    UpdateProminentCard(
+                        state = updateState,
+                        onClick = {
+                            if (updateState is AppUpdateState.UpdateAvailable) {
+                                onNavigateToUpdate()
+                            } else if (updateState is AppUpdateState.ReadyToInstall) {
+                                viewModel.installUpdate(context, (updateState as AppUpdateState.ReadyToInstall).uri)
+                            }
+                        }
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
                 // 2. The Emotional Message (The "Why")
                 AboutSection()
 
@@ -233,6 +245,68 @@ fun ItemDivider() {
     )
 }
 
+
+@Composable
+fun UpdateProminentCard(
+    state: AppUpdateState,
+    onClick: () -> Unit
+) {
+    val isReady = state is AppUpdateState.ReadyToInstall
+    val tagName = if (state is AppUpdateState.UpdateAvailable) state.tagName else "New Version"
+    
+    Surface(
+        onClick = onClick,
+        color = if (isReady) SuccessGreen.copy(alpha = 0.1f) else BrandAccent.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, 
+            if (isReady) SuccessGreen.copy(alpha = 0.3f) else BrandAccent.copy(alpha = 0.3f)
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (isReady) SuccessGreen.copy(alpha = 0.2f) else BrandAccent.copy(alpha = 0.2f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isReady) Icons.Default.CheckCircle else Icons.Default.SystemUpdate,
+                    contentDescription = null,
+                    tint = if (isReady) SuccessGreen else BrandAccent,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.width(16.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isReady) "Ready to Install" else "Update Available",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryText
+                )
+                Text(
+                    text = if (isReady) "Tap to finish installation" else "New version $tagName is out",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SecondaryText
+                )
+            }
+            
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = null,
+                tint = SecondaryText.copy(alpha = 0.3f)
+            )
+        }
+    }
+}
 
 @Composable
 fun AboutSection() {

@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.halovoid.lncrawler.data.repository.UpdateRepository
 import com.halovoid.lncrawler.domain.models.SearchItem
 import com.halovoid.lncrawler.ui.components.RequestActionHandler
 import com.halovoid.lncrawler.ui.components.ScreenHeader
@@ -65,6 +66,9 @@ fun RequestScreen(
     val searchState by searchViewModel.searchState.collectAsStateWithLifecycle()
     var isCompactMode by remember { mutableStateOf(false) }
 
+    val isCrawlerUpdateAvailable by UpdateRepository.getInstance(androidx.compose.ui.platform.LocalContext.current)
+        .isCrawlerUpdateAvailable.collectAsStateWithLifecycle()
+
     val isSearching = searchState !is SearchState.Idle && selectedTab == RequestTab.SEARCH
 
     RequestActionHandler(
@@ -91,11 +95,25 @@ fun RequestScreen(
                             }
                         }
                         IconButton(onClick = onCrawlerClick) {
-                            Icon(
-                                imageVector = Icons.Default.Language,
-                                contentDescription = "Crawlers",
-                                tint = PrimaryText
-                            )
+                            BadgedBox(
+                                badge = {
+                                    if (isCrawlerUpdateAvailable) {
+                                        Badge(
+                                            containerColor = BrandAccent,
+                                            contentColor = Color.White,
+                                            modifier = Modifier.offset(x = (-1).dp, y = 0.dp)
+                                        ) {
+                                            Text("1", fontSize = 10.sp)
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Language,
+                                    contentDescription = "Crawlers",
+                                    tint = PrimaryText
+                                )
+                            }
                         }
                     }
                 )

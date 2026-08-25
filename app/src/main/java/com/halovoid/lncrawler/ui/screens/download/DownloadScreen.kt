@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.outlined.DownloadForOffline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -11,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.data.db.entities.RequestType
+import com.halovoid.lncrawler.ui.components.MutedEmptyState
 import com.halovoid.lncrawler.ui.components.RequestActionHandler
 import com.halovoid.lncrawler.ui.components.ScreenHeader
 import com.halovoid.lncrawler.ui.components.requestHistorySection
@@ -73,23 +75,32 @@ fun DownloadScreen(
                     )
                 }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    requestHistorySection(
-                        requestHistory = filteredHistory,
-                        onRequestClick = onRequestClick,
-                        onGroupClick = onGroupClick,
-                        onReplay = { viewModel.replayRequest(it) },
-                        onCancel = { viewModel.cancelRequest(it) },
-                        onContinue = { viewModel.resumeRequest(it) },
-                        onSecurityClick = onSecurityClick,
-                        cancellingRequestIds = cancellingRequestIds,
-                        activeActionIds = activeActionIds,
-                        allowAction = true
+                if (filteredHistory.isEmpty()) {
+                    MutedEmptyState(
+                        title = "No Downloads Yet",
+                        description = "Monitor and manage all your background tasks here. From fetching metadata to downloading chapters for offline reading, every request's status can be tracked in real-time.",
+                        icon = Icons.Outlined.DownloadForOffline,
+                        modifier = Modifier.weight(1f)
                     )
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        requestHistorySection(
+                            requestHistory = filteredHistory,
+                            onRequestClick = onRequestClick,
+                            onGroupClick = onGroupClick,
+                            onReplay = { viewModel.replayRequest(it) },
+                            onCancel = { viewModel.cancelRequest(it) },
+                            onContinue = { viewModel.resumeRequest(it) },
+                            onSecurityClick = onSecurityClick,
+                            cancellingRequestIds = cancellingRequestIds,
+                            activeActionIds = activeActionIds,
+                            allowAction = true
+                        )
+                    }
                 }
             }
         }

@@ -8,6 +8,7 @@ import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.api.loader.SourceLoader
 import com.halovoid.lncrawler.api.loader.VersionUtils
 import com.halovoid.lncrawler.data.repository.PreferenceRepository
+import com.halovoid.lncrawler.data.repository.UpdateRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -36,12 +37,12 @@ class CrawlerViewModel(
     private val _syncState = MutableStateFlow<SyncState>(SyncState.Idle)
     val syncState: StateFlow<SyncState> = _syncState.asStateFlow()
 
-    private val _isUpdateAvailable = MutableStateFlow(false)
-    val isUpdateAvailable: StateFlow<Boolean> = _isUpdateAvailable.asStateFlow()
+    val isUpdateAvailable: StateFlow<Boolean> = UpdateRepository.getInstance(application)
+        .isCrawlerUpdateAvailable
 
     val showSyncOption: StateFlow<Boolean> = combine(
         preferenceRepository.currentDexTag,
-        _isUpdateAvailable,
+        isUpdateAvailable,
         crawlers
     ) { currentTag, updateAvailable, crawlerList ->
         currentTag == null || updateAvailable || crawlerList.isEmpty()
@@ -58,16 +59,7 @@ class CrawlerViewModel(
 
     fun checkForUpdates() {
         viewModelScope.launch {
-            try {
-                val currentTag = preferenceRepository.currentDexTag.first() ?: return@launch
-
-                val info = sourceLoader.fetchLatestReleaseInfo()
-                latestReleaseInfo = info
-                
-                _isUpdateAvailable.value = VersionUtils.isUpdateAvailable(currentTag, info.tagName)
-            } catch (e: Exception) {
-                // Ignore update check errors silently or log them
-            }
+            UpdateRepository.getInstance(getApplication()).checkForUpdates()
         }
     }
 
@@ -77,7 +69,7 @@ class CrawlerViewModel(
             try {
                 sourceLoader.loadSources(latestReleaseInfo)
                 _syncState.value = SyncState.Success("Crawlers updated successfully")
-                _isUpdateAvailable.value = false
+                UpdateRepository.getInstance(getApplication()).setCrawlerUpdateAvailable(false)
             } catch (e: SourceLoader.IncompatibleAppException) {
                 _syncState.value = SyncState.Incompatible(e.minVersion)
             } catch (e: Exception) {

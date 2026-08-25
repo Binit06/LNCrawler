@@ -16,7 +16,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import com.halovoid.lncrawler.ui.theme.BrandAccent
 import com.halovoid.lncrawler.ui.theme.SecondaryText
 import com.halovoid.lncrawler.ui.theme.DarkSurface
+import com.halovoid.lncrawler.ui.theme.PrimaryText
 import kotlinx.coroutines.launch
 
 @Composable
@@ -59,72 +59,62 @@ fun FolderScreen(
         isNextEnabled = selectedFolder != null
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier = Modifier
-                    .size(96.dp)
+                    .size(80.dp)
                     .clip(CircleShape)
-                    .background(BrandAccent.copy(alpha = 0.15f)),
+                    .background(DarkSurface),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (selectedFolder == null) Icons.Default.CreateNewFolder else Icons.Default.Folder,
                     contentDescription = null,
-                    tint = BrandAccent,
-                    modifier = Modifier.size(44.dp)
+                    tint = BrandAccent.copy(alpha = 0.8f),
+                    modifier = Modifier.size(32.dp)
                 )
             }
             
             Spacer(modifier = Modifier.height(32.dp))
             
             if (selectedFolder != null) {
-                Surface(
-                    color = DarkSurface,
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "Selected Path",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = BrandAccent,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = friendlyPath,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = Color.White,
-                            fontWeight = FontWeight.Medium,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 8.dp)
-                        )
-                    }
+                    Text(
+                        text = "Selected Directory",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = SecondaryText,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = friendlyPath,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = PrimaryText,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
                 }
             } else {
                 Text(
                     text = "No folder selected",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = SecondaryText,
-                    modifier = Modifier.padding(vertical = 12.dp)
+                    color = SecondaryText.copy(alpha = 0.6f)
                 )
             }
             
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(48.dp))
             
-            Button(
+            TextButton(
                 onClick = { launcher.launch(null) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = BrandAccent.copy(alpha = 0.2f),
+                colors = ButtonDefaults.textButtonColors(
                     contentColor = BrandAccent
                 )
             ) {
@@ -132,8 +122,8 @@ fun FolderScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = if (selectedFolder == null) "Choose Directory" else "Change Directory",
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
