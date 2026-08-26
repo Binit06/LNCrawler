@@ -65,8 +65,29 @@ class NovelDetailViewModel(
     private val chapterRepository = ChapterRepository.getInstance(application)
     private val storageRepository = StorageRepositoryImpl.getInstance(application)
 
-    private val _novel = MutableStateFlow<Novel?>(null)
-    val novel: StateFlow<Novel?> = _novel.asStateFlow()
+    private val _novelUrl = MutableStateFlow<String?>(null)
+    private val _requestedUrls = mutableSetOf<String>()
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val novel: StateFlow<Novel?> = _novelUrl
+        .filterNotNull()
+        .flatMapLatest { url ->
+            combine(
+                novelRepository.getNovelByUrlFlow(url),
+                volumeRepository.getVolumeByNovelUrlFlow(url),
+                chapterRepository.getChaptersFlow(url)
+            ) { details, volumes, chapters ->
+                details?.copy(
+                    volumes = volumes,
+                    chapters = chapters
+                )
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
 
     private val _chapterRange = MutableStateFlow<ClosedFloatingPointRange<Float>>(1f..1f)
     val chapterRange: StateFlow<ClosedFloatingPointRange<Float>> = _chapterRange.asStateFlow()
@@ -79,6 +100,33 @@ class NovelDetailViewModel(
 
     private val _sortState = MutableStateFlow(ChapterSortState())
     val sortState: StateFlow<ChapterSortState> = _sortState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            novel.collect { currentNovel ->
+                if (currentNovel != null) {
+                    if (currentNovel.chapters.isNotEmpty()) {
+                        val currentRange = _chapterRange.value
+                        if (currentRange.start == 1f && currentRange.endInclusive == 1f) {
+                            _chapterRange.value = 1f..currentNovel.chapters.size.toFloat()
+                        }
+                    } else {
+                        val url = currentNovel.url
+                        if (!_requestedUrls.contains(url)) {
+                            val hasMetadataRequest = requestRepository.requestDao.getRequestById("${url}_metadata")?.let {
+                                it.rstatus == RequestStatus.PENDING || it.rstatus == RequestStatus.RUNNING
+                            } ?: false
+                            
+                            if (!hasMetadataRequest) {
+                                _requestedUrls.add(url)
+                                fetchNovelMetadata(currentNovel)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val rootRequests: StateFlow<List<Request>> = novel
@@ -138,19 +186,7 @@ class NovelDetailViewModel(
         )
 
     fun loadNovel(novelUrl: String) {
-        viewModelScope.launch(Dispatchers.IO) {
-            val details = novelRepository.getNovelDetails(novelUrl)
-            val volumeDetails = volumeRepository.getVolumeByNovelUrl(novelUrl)
-            val chapterDetails = chapterRepository.getChaptersByNovelUrl(novelUrl)
-            val updatedNovel = details?.copy(
-                volumes = volumeDetails,
-                chapters = chapterDetails
-            )
-            _novel.value = updatedNovel
-            if (updatedNovel != null && updatedNovel.chapters.isNotEmpty()) {
-                _chapterRange.value = 1f..updatedNovel.chapters.size.toFloat()
-            }
-        }
+        _novelUrl.value = novelUrl
     }
 
     fun updateChapterRange(range: ClosedFloatingPointRange<Float>) {

@@ -55,7 +55,7 @@ fun NovelPreviewScreen(
     }
 
     LaunchedEffect(previewUrl) {
-        if (previewUrl != null && novel == null) {
+        if (previewUrl != null) {
             viewModel.fetchNovelPreview(previewUrl!!)
         }
     }

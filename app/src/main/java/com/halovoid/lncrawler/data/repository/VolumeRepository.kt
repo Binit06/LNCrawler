@@ -8,6 +8,7 @@ import com.halovoid.lncrawler.domain.models.Volume
 import com.halovoid.lncrawler.domain.models.toDomain
 import com.halovoid.lncrawler.domain.models.toEntity
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class VolumeRepository private constructor(context: Context) {
     private val db = AppDatabase.getDatabase(context)
@@ -27,6 +28,10 @@ class VolumeRepository private constructor(context: Context) {
 
     fun getVolumeByNovelUrl(url: String): List<Volume> {
         return volumeDao.getVolumesForNovel(url).map { it -> it.toDomain() }
+    }
+
+    fun getVolumeByNovelUrlFlow(url: String): Flow<List<Volume>> {
+        return volumeDao.getVolumesForNovelFlow(url).map { list -> list.map { it.toDomain() } }
     }
 
     fun getVolumeCount(novelUrl: String): Flow<Int> =

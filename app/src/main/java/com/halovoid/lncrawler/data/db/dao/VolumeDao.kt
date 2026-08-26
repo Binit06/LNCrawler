@@ -12,6 +12,9 @@ interface VolumeDao {
     @Query("SELECT * FROM volumes WHERE novelUrl = :url")
     fun getVolumesForNovel(url: String) : List<VolumeEntity>
 
+    @Query("SELECT * FROM volumes WHERE novelUrl = :url")
+    fun getVolumesForNovelFlow(url: String) : Flow<List<VolumeEntity>>
+
     @Query("SELECT COUNT(*) FROM volumes WHERE novelUrl = :novelUrl")
     fun getVolumeCountFlow(novelUrl: String): Flow<Int>
 
