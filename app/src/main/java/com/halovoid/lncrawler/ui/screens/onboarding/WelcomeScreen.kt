@@ -4,6 +4,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
@@ -59,7 +60,7 @@ fun WelcomeScreen(
                 )
 
                 FeatureRow(
-                    icon = Icons.Default.Language,
+                    icon = Icons.Default.Extension,
                     title = "Multiple sources",
                     description = "Browse content from different crawlers in one place."
                 )

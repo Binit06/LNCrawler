@@ -10,6 +10,16 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+enum class FilterState {
+    NONE, INCLUDE, EXCLUDE;
+
+    fun next(): FilterState = when (this) {
+        NONE -> INCLUDE
+        INCLUDE -> EXCLUDE
+        EXCLUDE -> NONE
+    }
+}
+
 class GroupedRequestsViewModel(
     application: Application,
     private val requestRepository: RequestRepository
@@ -17,33 +27,54 @@ class GroupedRequestsViewModel(
 
     private val _context = MutableStateFlow<Pair<String, String>?>(null)
     
-    private val _statusFilter = MutableStateFlow<RequestStatus?>(null)
-    val statusFilter: StateFlow<RequestStatus?> = _statusFilter.asStateFlow()
+    private val _statusFilters = MutableStateFlow<Map<RequestStatus, FilterState>>(emptyMap())
+    val statusFilters: StateFlow<Map<RequestStatus, FilterState>> = _statusFilters.asStateFlow()
 
-    fun setStatusFilter(status: RequestStatus?) {
-        _statusFilter.value = status
+    fun setStatusFilter(status: RequestStatus, state: FilterState) {
+        val current = _statusFilters.value.toMutableMap()
+        if (state == FilterState.NONE) {
+            current.remove(status)
+        } else {
+            current[status] = state
+        }
+        _statusFilters.value = current
     }
 
     val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
     val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val requests: StateFlow<List<Request>> = combine(_context.filterNotNull(), _statusFilter) { context, status ->
-        context to status
-    }
-        .flatMapLatest { (context, status) ->
-            val (type, value) = context
-            val baseFlow = when (type) {
+    val allRequests: StateFlow<List<Request>> = _context.filterNotNull()
+        .flatMapLatest { (type, value) ->
+            when (type) {
                 "ALL" -> requestRepository.getRootRequests()
                 "NOVEL" -> requestRepository.getRootRequestByNovelFlow(value)
                 "DEPENDENCY" -> requestRepository.getRequestsByDependenceFlow(value)
                 else -> flowOf(emptyList())
             }
-            
-            baseFlow.map { list ->
-                if (status == null) list else list.filter { it.status == status }
-            }
         }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val requests: StateFlow<List<Request>> = combine(allRequests, _statusFilters) { list, statusMap ->
+        var filtered = list
+
+        val excludedStatuses = statusMap.filter { it.value == FilterState.EXCLUDE }.keys
+        if (excludedStatuses.isNotEmpty()) {
+            filtered = filtered.filter { it.status !in excludedStatuses }
+        }
+
+        val includedStatuses = statusMap.filter { it.value == FilterState.INCLUDE }.keys
+        if (includedStatuses.isNotEmpty()) {
+            filtered = filtered.filter { it.status in includedStatuses }
+        }
+
+        filtered
+    }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),

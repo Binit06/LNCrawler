@@ -122,7 +122,6 @@ fun RequestGroupCard(
 ) {
     val totalSuccess = requests.sumOf { it.progressSuccess }
     val totalFailed = requests.sumOf { it.progressFailed }
-    val totalCancelled = requests.sumOf { it.progressCancelled }
     val totalProgress = requests.sumOf { it.progressTotal }
     
     val latestUpdate = requests.maxOfOrNull { it.updatedAt } ?: 0L
@@ -148,7 +147,7 @@ fun RequestGroupCard(
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -186,6 +185,34 @@ fun RequestGroupCard(
                             fontSize = 10.sp
                         )
 
+                        Text(
+                            text = "·",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryText.copy(alpha = 0.4f)
+                        )
+
+                        Text(
+                            text = "$totalSuccess/$totalProgress",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryText.copy(alpha = 0.7f),
+                            fontSize = 10.sp
+                        )
+
+                        if (totalFailed > 0) {
+                            Text(
+                                text = "·",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SecondaryText.copy(alpha = 0.4f)
+                            )
+                            Text(
+                                text = "$totalFailed failed",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = ErrorRed,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
+                        }
+
                         if (latestUpdate > 0) {
                             Text(
                                 text = "·",
@@ -208,51 +235,6 @@ fun RequestGroupCard(
                     tint = SecondaryText.copy(alpha = 0.5f),
                     modifier = Modifier.size(20.dp)
                 )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Progress Section
-            val progress = if (totalProgress > 0) {
-                totalSuccess.toFloat() / totalProgress
-            } else 0f
-
-            Column {
-                ProgressIndicator(
-                    success = totalSuccess,
-                    failed = totalFailed,
-                    cancelled = totalCancelled,
-                    total = totalProgress,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "${(progress * 100).toInt()}% completed",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = if (progress == 1f) SuccessGreen.copy(alpha = 0.8f) else PrimaryText.copy(alpha = 0.6f),
-                        fontWeight = if (progress == 1f) FontWeight.Bold else FontWeight.Medium
-                    )
-                    
-                    if (totalFailed > 0) {
-                        Surface(
-                            color = ErrorRed.copy(alpha = 0.1f),
-                            shape = CircleShape
-                        ) {
-                            Text(
-                                text = "$totalFailed failed",
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = ErrorRed,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp
-                            )
-                        }
-                    }
-                }
             }
         }
     }

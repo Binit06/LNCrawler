@@ -109,7 +109,7 @@ fun RequestScreen(
                                 }
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.Language,
+                                    imageVector = Icons.Default.Extension,
                                     contentDescription = "Crawlers",
                                     tint = PrimaryText
                                 )
@@ -261,7 +261,7 @@ fun SearchTabContent(
                 Icon(
                     Icons.Default.Search,
                     contentDescription = null,
-                    tint = if (isSearching) BrandAccent else SecondaryText,
+                    tint = if (isSearching) PrimaryText else SecondaryText,
                     modifier = Modifier.size(20.dp)
                 )
 
@@ -309,7 +309,7 @@ fun SearchTabContent(
                                 Icons.Default.KeyboardArrowDown
                             },
                             contentDescription = if (searchQuery.isNotBlank()) "Search" else "Back to Idle",
-                            tint = BrandAccent
+                            tint = if (searchQuery.isNotBlank()) PrimaryText else SecondaryText
                         )
                     }
                 }
@@ -475,7 +475,7 @@ fun CompactSearchResultCard(
             
             if (item.imageUrl.isNullOrBlank()) {
                 Icon(
-                    Icons.Default.Language,
+                    Icons.Default.Book,
                     contentDescription = null,
                     tint = SecondaryText.copy(alpha = 0.2f),
                     modifier = Modifier.size(20.dp).align(Alignment.Center)
@@ -626,7 +626,7 @@ fun ManualRequestContent(
                         Icon(
                             Icons.AutoMirrored.Filled.Send,
                             contentDescription = "Submit",
-                            tint = if (urlInput.isNotBlank()) BrandAccent else SecondaryText.copy(alpha = 0.5f),
+                            tint = if (urlInput.isNotBlank()) PrimaryText else SecondaryText.copy(alpha = 0.5f),
                             modifier = Modifier.size(24.dp)
                         )
                     }
@@ -764,7 +764,7 @@ fun SearchResultCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Default.Language,
+                            Icons.Default.Book,
                             contentDescription = null,
                             tint = SecondaryText.copy(alpha = 0.2f),
                             modifier = Modifier.size(32.dp)

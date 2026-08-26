@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -186,7 +187,7 @@ fun CrawlerScreen(
                 MutedEmptyState(
                     title = "No Sources Available",
                     description = "You don't have any crawler sources installed yet. Sync with the remote repository to fetch the latest supported light novel sources.",
-                    icon = Icons.Default.Language,
+                    icon = Icons.Default.Extension,
                     modifier = Modifier.weight(1f)
                 )
             } else {
@@ -226,7 +227,7 @@ fun CrawlerItem(crawler: Crawler) {
                 shape = CircleShape
             ) {
                 Icon(
-                    imageVector = Icons.Default.Language,
+                    imageVector = Icons.Default.Extension,
                     contentDescription = null,
                     modifier = Modifier.padding(10.dp),
                     tint = SecondaryText.copy(alpha = 0.5f)
@@ -246,17 +247,25 @@ fun CrawlerItem(crawler: Crawler) {
                         overflow = TextOverflow.Ellipsis
                     )
                     Spacer(modifier = Modifier.width(8.dp))
+                    
+                    val concurrency = crawler.config.runnerConcurrency
+                    val (speedText, speedColor) = when {
+                        concurrency < 2 -> "Slow" to WarningAmber
+                        concurrency > 4 -> "Fast" to SuccessGreen
+                        else -> "Average" to SecondaryText
+                    }
+
                     // Subtle Integrated Status
                     Box(
                         modifier = Modifier
                             .size(6.dp)
-                            .background(SuccessGreen, CircleShape)
+                            .background(speedColor, CircleShape)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = "Active",
+                        text = speedText,
                         style = MaterialTheme.typography.labelSmall,
-                        color = SuccessGreen.copy(alpha = 0.8f),
+                        color = speedColor.copy(alpha = 0.8f),
                         fontSize = 10.sp
                     )
                 }

@@ -60,9 +60,7 @@ fun RequestDetailScreen(
     val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
     val chapterMetadata by viewModel.chapterMetadata.collectAsState()
     val artifactMetadata by viewModel.artifactMetadata.collectAsState()
-    val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
 
-    var showFilterMenu by remember { mutableStateOf(false) }
     var securityDialogRequest by remember { mutableStateOf<Request?>(null) }
 
     if (securityDialogRequest != null) {
@@ -128,18 +126,10 @@ fun RequestDetailScreen(
                 title = { Text("Request Details", fontWeight = FontWeight.Bold, color = PrimaryText) },
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryAccent)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryText)
                     }
                 },
-                actions = {
-                    IconButton(onClick = { showFilterMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.FilterList,
-                            contentDescription = "Filter",
-                            tint = if (statusFilter != null) BrandAccent else PrimaryAccent
-                        )
-                    }
-                },
+
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
             )
         }
@@ -247,46 +237,7 @@ fun RequestDetailScreen(
         }
     }
 
-    if (showFilterMenu) {
-        val filterOptions = listOf(
-            null to "All Status",
-            RequestStatus.SUCCESS to "Success",
-            RequestStatus.FAILED to "Failed",
-            RequestStatus.CANCELLED to "Cancelled"
-        )
 
-        AppBottomSheet(
-            onDismiss = { showFilterMenu = false },
-            title = "Filter Status"
-        ) {
-            AppBottomSheetGroup {
-                filterOptions.forEachIndexed { index, (status, label) ->
-                    ListItem(
-                        headlineContent = { 
-                            Text(
-                                label, 
-                                color = PrimaryText,
-                                fontWeight = FontWeight.Normal
-                            ) 
-                        },
-                        trailingContent = {
-                            if (statusFilter == status) {
-                                Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
-                            }
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable {
-                            viewModel.setStatusFilter(status)
-                            showFilterMenu = false
-                        }
-                    )
-                    if (index < filterOptions.lastIndex) {
-                        AppBottomSheetDivider()
-                    }
-                }
-            }
-        }
-    }
 }
 
 @Composable

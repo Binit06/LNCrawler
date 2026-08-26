@@ -140,7 +140,7 @@ private fun FilterSection(
 @Composable
 private fun TriStateDownloadCheckbox(state: DownloadFilter) {
     val active = state != DownloadFilter.ALL
-    val color = if (active) BrandAccent else SecondaryText
+    val color = if (active) PrimaryText else SecondaryText
     
     Box(
         modifier = Modifier.size(28.dp),
@@ -157,14 +157,14 @@ private fun TriStateDownloadCheckbox(state: DownloadFilter) {
             Icon(
                 imageVector = Icons.Default.Check,
                 contentDescription = null,
-                tint = Color.White,
+                tint = DarkSurface,
                 modifier = Modifier.size(18.dp)
             )
         } else if (state == DownloadFilter.NOT_DOWNLOADED) {
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = null,
-                tint = Color.White,
+                tint = DarkSurface,
                 modifier = Modifier.size(18.dp)
             )
         }

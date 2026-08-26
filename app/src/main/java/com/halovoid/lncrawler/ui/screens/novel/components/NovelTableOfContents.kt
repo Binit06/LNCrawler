@@ -104,7 +104,7 @@ fun ChapterRow(
                     Icon(
                         imageVector = Icons.Default.CheckCircle,
                         contentDescription = "Options",
-                        tint = SuccessGreen,
+                        tint = PrimaryText,
                         modifier = Modifier.size(20.dp)
                     )
                 }

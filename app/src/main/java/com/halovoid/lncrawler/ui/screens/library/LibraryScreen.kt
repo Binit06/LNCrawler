@@ -108,7 +108,11 @@ fun LibraryScreen(
                     
                     var showFilter by remember { mutableStateOf(false) }
                     IconButton(onClick = { showFilter = true }) {
-                        Icon(Icons.Default.FilterList, contentDescription = "Filter", tint = PrimaryText)
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter",
+                            tint = if (selectedDomain != "Any") BrandAccent else PrimaryText
+                        )
                     }
 
                     if (showFilter) {
