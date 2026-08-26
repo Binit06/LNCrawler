@@ -46,8 +46,11 @@ import com.halovoid.lncrawler.ui.screens.reader.ReaderScreen
 import com.halovoid.lncrawler.ui.screens.reader.ReaderViewModel
 import com.halovoid.lncrawler.ui.screens.novel.NovelActivityScreen
 import com.halovoid.lncrawler.ui.screens.novel.NovelArtifactsScreen
-import com.halovoid.lncrawler.ui.screens.support.SupportScreen
-import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
+import com.halovoid.lncrawler.ui.screens.support.MoreScreen
+import com.halovoid.lncrawler.ui.screens.support.SettingsViewModel
+import com.halovoid.lncrawler.ui.screens.support.DownloadPreferencesScreen
+import com.halovoid.lncrawler.ui.screens.support.AdvancedSettingsScreen
+import com.halovoid.lncrawler.ui.screens.support.SupportSettingsScreen
 import kotlinx.coroutines.flow.first
 import java.net.URLDecoder
 import java.net.URLEncoder
@@ -65,6 +68,9 @@ sealed class Screen(val route: String) {
     object Downloads : Screen("downloads")
     object Crawlers : Screen("crawlers")
     object Support : Screen("support")
+    object DownloadPreferences : Screen("download_preferences")
+    object AdvancedSettings : Screen("advanced_settings")
+    object SupportSettings : Screen("support_settings")
     object UpdateDetail : Screen("update_detail")
     object RequestDetail : Screen("request_detail/{requestId}") {
         fun createRoute(requestId: String) = "request_detail/${URLEncoder.encode(requestId, "UTF-8")}"
@@ -264,11 +270,20 @@ fun NavGraph(navController: NavHostController) {
                 )
             }
             composable(Screen.Support.route) {
-                val supportViewModel: SupportViewModel = viewModel(
+                val settingsViewModel: SettingsViewModel = viewModel(
                     factory = remember { ViewModelFactory(application) }
                 )
-                SupportScreen(
-                    viewModel = supportViewModel,
+                MoreScreen(
+                    viewModel = settingsViewModel,
+                    onNavigateToDownloadsPref = {
+                        navController.navigate(Screen.DownloadPreferences.route)
+                    },
+                    onNavigateToAdvanced = {
+                        navController.navigate(Screen.AdvancedSettings.route)
+                    },
+                    onNavigateToSupportSettings = {
+                        navController.navigate(Screen.SupportSettings.route)
+                    },
                     onNavigateToUpdate = {
                         navController.navigate(Screen.UpdateDetail.route)
                     }
@@ -278,12 +293,43 @@ fun NavGraph(navController: NavHostController) {
                 val supportEntry = remember(backStackEntry) {
                     navController.getBackStackEntry(Screen.Support.route)
                 }
-                val supportViewModel: SupportViewModel = viewModel(
+                val settingsViewModel: SettingsViewModel = viewModel(
                     viewModelStoreOwner = supportEntry,
                     factory = remember { ViewModelFactory(application) }
                 )
                 com.halovoid.lncrawler.ui.screens.support.UpdateDetailScreen(
-                    viewModel = supportViewModel,
+                    viewModel = settingsViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.DownloadPreferences.route) { backStackEntry ->
+                val supportEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Screen.Support.route)
+                }
+                val settingsViewModel: SettingsViewModel = viewModel(
+                    viewModelStoreOwner = supportEntry,
+                    factory = remember { ViewModelFactory(application) }
+                )
+                DownloadPreferencesScreen(
+                    viewModel = settingsViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.AdvancedSettings.route) { backStackEntry ->
+                val supportEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(Screen.Support.route)
+                }
+                val settingsViewModel: SettingsViewModel = viewModel(
+                    viewModelStoreOwner = supportEntry,
+                    factory = remember { ViewModelFactory(application) }
+                )
+                AdvancedSettingsScreen(
+                    viewModel = settingsViewModel,
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.SupportSettings.route) {
+                SupportSettingsScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

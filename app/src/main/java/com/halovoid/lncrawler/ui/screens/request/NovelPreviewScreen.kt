@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.components.AppBottomSheet
 import com.halovoid.lncrawler.ui.screens.novel.components.NovelSynopsisSection
@@ -132,18 +133,26 @@ fun SimilarityBottomSheet(
 
 @Composable
 fun SimilarNovelCard(novel: Novel) {
+    var coverModel by remember(novel.coverUrl, novel.coverHttpsUrl) {
+        mutableStateOf(novel.coverUrl ?: novel.coverHttpsUrl)
+    }
     Column(
         modifier = Modifier.width(120.dp)
     ) {
         AsyncImage(
-            model = novel.coverUrl,
+            model = coverModel,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(12.dp))
                 .background(DarkSurface),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            onError = {
+                if (coverModel != novel.coverHttpsUrl) {
+                    coverModel = novel.coverHttpsUrl
+                }
+            }
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
@@ -218,6 +227,9 @@ fun NovelPreviewContent(
                 }
             } else if (novel != null) {
                 var isSynopsisExpanded by remember { mutableStateOf(false) }
+                var coverModel by remember(novel.coverUrl, novel.coverHttpsUrl) {
+                    mutableStateOf(novel.coverUrl ?: novel.coverHttpsUrl)
+                }
 
                 Column(
                     modifier = Modifier
@@ -242,12 +254,17 @@ fun NovelPreviewContent(
                     ) {
                         // Blurred/Atmospheric backdrop wash
                         AsyncImage(
-                            model = novel.coverUrl,
+                            model = coverModel,
                             contentDescription = null,
                             modifier = Modifier
                                 .matchParentSize()
                                 .alpha(0.12f),
-                            contentScale = ContentScale.Crop
+                            contentScale = ContentScale.Crop,
+                            onError = {
+                                if (coverModel != novel.coverHttpsUrl) {
+                                    coverModel = novel.coverHttpsUrl
+                                }
+                            }
                         )
                         Box(
                             modifier = Modifier
@@ -271,14 +288,19 @@ fun NovelPreviewContent(
                         ) {
                             // Centered Cover
                             AsyncImage(
-                                model = novel.coverUrl,
+                                model = coverModel,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .width(170.dp)
                                     .aspectRatio(2f / 3f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(DarkSurface),
-                                contentScale = ContentScale.Crop
+                                contentScale = ContentScale.Crop,
+                                onError = {
+                                    if (coverModel != novel.coverHttpsUrl) {
+                                        coverModel = novel.coverHttpsUrl
+                                    }
+                                }
                             )
 
                             Spacer(modifier = Modifier.height(24.dp))

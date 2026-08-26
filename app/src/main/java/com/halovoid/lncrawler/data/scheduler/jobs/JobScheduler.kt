@@ -7,6 +7,7 @@ import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.data.handlers.utility.parsedMetadata
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.first
+import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.milliseconds
 
@@ -19,12 +20,14 @@ class JobScheduler(
     private val handlerRegistry: JobHandlerRegistry,
     private val config: SchedulerConfig = SchedulerConfig(),
     private val retryPolicy: RetryPolicy = ExponentialBackoffPolicy(),
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
+    private val preferenceRepository: PreferenceRepository? = null
 ) {
     private var pollingJob: Job? = null
     private val activeJobs = ConcurrentHashMap<String, Job>()
     private val crawlerPools = ConcurrentHashMap<String, WorkerPool>()
-    private val globalPool = WorkerPool(config.maxConcurrentJobs)
+    private var currentGlobalLimit = config.maxConcurrentJobs
+    private var globalPool = WorkerPool(currentGlobalLimit)
     private val leaseMonitor = LeaseMonitor(config.abandonedTimeoutMs)
     private var onEmptyListener: (() -> Unit)? = null
 
@@ -81,6 +84,13 @@ class JobScheduler(
     }
 
     private suspend fun schedule() {
+        val prefMaxJobs = preferenceRepository?.maxConcurrentJobs?.first() ?: config.maxConcurrentJobs
+        if (prefMaxJobs != currentGlobalLimit) {
+            currentGlobalLimit = prefMaxJobs
+            globalPool = WorkerPool(prefMaxJobs)
+            crawlerPools.clear()
+        }
+
         val graph = JobGraph.build(requestDao.getAllRequests().first())
         recoverAbandoned(graph)
         cancelChildrenOfCancelledParents(graph)
@@ -103,7 +113,7 @@ class JobScheduler(
             val pool = if (crawlerName != null) {
                 crawlerPools.getOrPut(crawlerName) {
                     val crawler = CrawlerFactory.getCrawler(crawlerName)
-                    val limit = crawler?.config?.runnerConcurrency ?: config.maxConcurrentJobs
+                    val limit = crawler?.config?.runnerConcurrency ?: currentGlobalLimit
                     WorkerPool(limit)
                 }
             } else {

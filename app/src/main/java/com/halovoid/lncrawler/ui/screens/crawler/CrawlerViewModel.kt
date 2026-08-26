@@ -59,7 +59,11 @@ class CrawlerViewModel(
 
     fun checkForUpdates() {
         viewModelScope.launch {
-            UpdateRepository.getInstance(getApplication()).checkForUpdates()
+            try {
+                UpdateRepository.getInstance(getApplication()).checkForUpdates()
+            } catch (e: Exception) {
+                android.util.Log.e("CrawlerViewModel", "Failed to check for updates: ${e.message}", e)
+            }
         }
     }
 

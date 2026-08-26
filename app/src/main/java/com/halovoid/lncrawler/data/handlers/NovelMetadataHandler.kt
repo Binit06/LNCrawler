@@ -45,7 +45,11 @@ class NovelMetadataHandler(
 
             // 3. Prepare the updated novel domain model (formats titles, assigns volumes)
             val updatedNovel = crawler.prepareNovel(novel).let {
-                if (coverUri != null) it.copy(coverUrl = coverUri.toString()) else it
+                val coverLocalUrl = if (coverUri != null) coverUri.toString() else it.coverUrl
+                it.copy(
+                    coverUrl = coverLocalUrl,
+                    coverHttpsUrl = novel.coverUrl
+                )
             }
 
             // 4. Fetch existing chapters to preserve local state (like downloaded fileLocation)

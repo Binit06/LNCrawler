@@ -19,13 +19,24 @@ class AppUpdateManager {
         val publishedAt: String? = null
     )
 
-    suspend fun fetchLatestAppRelease(): AppReleaseInfo = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(GITHUB_API_URL).build()
+    suspend fun fetchLatestAppRelease(enableBeta: Boolean = false): AppReleaseInfo = withContext(Dispatchers.IO) {
+        val url = if (enableBeta) {
+            "https://api.github.com/repos/Binit06/LNCrawler/releases"
+        } else {
+            "https://api.github.com/repos/Binit06/LNCrawler/releases/latest"
+        }
+        val request = Request.Builder().url(url).build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw Exception("Failed to fetch app release info: $response")
             
             val body = response.body?.string() ?: throw Exception("Empty response body")
-            val json = JSONObject(body)
+            val json = if (enableBeta) {
+                val array = org.json.JSONArray(body)
+                if (array.length() == 0) throw Exception("No releases found")
+                array.getJSONObject(0)
+            } else {
+                JSONObject(body)
+            }
             
             val assets = json.optJSONArray("assets")
             var apkDownloadUrl: String? = null

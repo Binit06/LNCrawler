@@ -11,6 +11,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -28,6 +32,9 @@ import com.halovoid.lncrawler.ui.theme.*
 
 @Composable
 fun NovelHeroSection(novel: Novel) {
+    var coverModel by remember(novel.coverUrl, novel.coverHttpsUrl) {
+        mutableStateOf(novel.coverUrl ?: novel.coverHttpsUrl)
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -36,12 +43,17 @@ fun NovelHeroSection(novel: Novel) {
     ) {
         // Atmospheric influence
         AsyncImage(
-            model = novel.coverUrl,
+            model = coverModel,
             contentDescription = null,
             modifier = Modifier
                 .fillMaxSize()
                 .alpha(0.12f),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            onError = {
+                if (coverModel != novel.coverHttpsUrl) {
+                    coverModel = novel.coverHttpsUrl
+                }
+            }
         )
 
         Box(
@@ -67,14 +79,19 @@ fun NovelHeroSection(novel: Novel) {
             verticalAlignment = Alignment.Bottom
         ) {
             AsyncImage(
-                model = novel.coverUrl,
+                model = coverModel,
                 contentDescription = null,
                 modifier = Modifier
                     .width(100.dp)
                     .aspectRatio(2f / 3f)
                     .clip(RoundedCornerShape(8.dp))
                     .background(DarkSurface),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                onError = {
+                    if (coverModel != novel.coverHttpsUrl) {
+                        coverModel = novel.coverHttpsUrl
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.width(20.dp))

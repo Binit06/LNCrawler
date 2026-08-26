@@ -13,7 +13,7 @@ import com.halovoid.lncrawler.ui.screens.novel.NovelDetailViewModel
 import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.onboarding.FolderViewModel
-import com.halovoid.lncrawler.ui.screens.support.SupportViewModel
+import com.halovoid.lncrawler.ui.screens.support.SettingsViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
@@ -48,8 +48,8 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             modelClass.isAssignableFrom(CrawlerViewModel::class.java) -> {
                 CrawlerViewModel(application, PreferenceRepository.getInstance(application)) as T
             }
-            modelClass.isAssignableFrom(SupportViewModel::class.java) -> {
-                SupportViewModel(application) as T
+            modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
+                SettingsViewModel(application) as T
             }
             modelClass.isAssignableFrom(GroupedRequestsViewModel::class.java) -> {
                 GroupedRequestsViewModel(application, RequestRepository.getInstance(application)) as T

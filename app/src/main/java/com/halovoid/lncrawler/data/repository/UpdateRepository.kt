@@ -25,19 +25,21 @@ class UpdateRepository private constructor(context: Context) {
     val isCrawlerUpdateAvailable: StateFlow<Boolean> = _isCrawlerUpdateAvailable.asStateFlow()
 
     suspend fun checkForUpdates() {
-        checkAppUpdate()
-        checkCrawlerUpdate()
+        val appBeta = preferenceRepository.betaModeApp.first()
+        val crawlerBeta = preferenceRepository.betaModeCrawlers.first()
+        checkAppUpdate(appBeta)
+        checkCrawlerUpdate(crawlerBeta)
     }
 
-    private suspend fun checkAppUpdate() {
-        val info = appUpdateManager.fetchLatestAppRelease()
+    private suspend fun checkAppUpdate(enableBeta: Boolean) {
+        val info = appUpdateManager.fetchLatestAppRelease(enableBeta)
         _latestAppRelease.value = info
         _isAppUpdateAvailable.value = VersionUtils.isUpdateAvailable(BuildConfig.VERSION_NAME, info.tagName)
     }
 
-    private suspend fun checkCrawlerUpdate() {
+    private suspend fun checkCrawlerUpdate(enableBeta: Boolean) {
         val currentTag = preferenceRepository.currentDexTag.first()
-        val info = sourceLoader.fetchLatestReleaseInfo()
+        val info = sourceLoader.fetchLatestReleaseInfo(enableBeta)
         _isCrawlerUpdateAvailable.value = VersionUtils.isUpdateAvailable(currentTag, info.tagName)
     }
 

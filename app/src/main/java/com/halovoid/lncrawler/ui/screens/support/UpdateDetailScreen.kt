@@ -20,6 +20,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Path
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.*
+import androidx.compose.animation.animateColorAsState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.ui.theme.*
 import java.time.ZonedDateTime
@@ -29,7 +37,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UpdateDetailScreen(
-    viewModel: SupportViewModel,
+    viewModel: SettingsViewModel,
     onBack: () -> Unit
 ) {
     val updateState by viewModel.updateState.collectAsStateWithLifecycle()
@@ -144,45 +152,83 @@ fun UpdateDetailScreen(
                                         .fillMaxWidth()
                                         .height(52.dp),
                                     shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = BrandAccent)
-                                ) {
-                                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text("Download Update", fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            is AppUpdateState.Downloading -> {
-                                Button(
-                                    onClick = {},
-                                    enabled = false,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(52.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(disabledContainerColor = DarkSurfaceVariant)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        color = BrandAccent,
-                                        strokeWidth = 2.dp
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = BrandAccent,
+                                        contentColor = Color.White
                                     )
+                                ) {
+                                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
                                     Spacer(modifier = Modifier.width(10.dp))
-                                    Text("Downloading...", color = SecondaryText)
+                                    Text("Download Update", fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
-                            is AppUpdateState.ReadyToInstall -> {
+                            is AppUpdateState.Downloading, is AppUpdateState.ReadyToInstall, is AppUpdateState.Installing -> {
                                 val context = androidx.compose.ui.platform.LocalContext.current
-                                Button(
-                                    onClick = { viewModel.installUpdate(context, state.uri) },
+                                val isReadyOrInstalling = state is AppUpdateState.ReadyToInstall || state is AppUpdateState.Installing
+                                
+                                val waveColor1 by animateColorAsState(
+                                    targetValue = if (isReadyOrInstalling) SuccessGreen.copy(alpha = 0.2f) else BrandAccent.copy(alpha = 0.2f),
+                                    animationSpec = tween(1000),
+                                    label = "waveColor1"
+                                )
+                                val waveColor2 by animateColorAsState(
+                                    targetValue = if (isReadyOrInstalling) SuccessGreen.copy(alpha = 0.4f) else BrandAccent.copy(alpha = 0.4f),
+                                    animationSpec = tween(1000),
+                                    label = "waveColor2"
+                                )
+                                
+                                val fillProgress by animateFloatAsState(
+                                    targetValue = if (isReadyOrInstalling) 0.8f else 0.5f,
+                                    animationSpec = tween(1200, easing = FastOutSlowInEasing),
+                                    label = "fillProgress"
+                                )
+                                
+                                val text = when (state) {
+                                    is AppUpdateState.Downloading -> "Downloading Update..."
+                                    is AppUpdateState.ReadyToInstall -> "Install Now"
+                                    is AppUpdateState.Installing -> "Installing..."
+                                    else -> ""
+                                }
+                                
+                                val clickableModifier = if (state is AppUpdateState.ReadyToInstall) {
+                                    Modifier.clickable { viewModel.installUpdate(context, state.uri) }
+                                } else {
+                                    Modifier
+                                }
+
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(52.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen)
+                                        .height(52.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(DarkSurfaceVariant)
+                                        .then(clickableModifier),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp))
-                                    Spacer(modifier = Modifier.width(10.dp))
-                                    Text("Install Now", fontWeight = FontWeight.Bold)
+                                    FlowingSineWave(
+                                        modifier = Modifier.fillMaxSize(),
+                                        color = waveColor1,
+                                        amplitude = 12f,
+                                        wavelength = 240f,
+                                        durationMillis = 2000,
+                                        reverse = false,
+                                        fillProgress = fillProgress
+                                    )
+                                    FlowingSineWave(
+                                        modifier = Modifier.fillMaxSize(),
+                                        color = waveColor2,
+                                        amplitude = 8f,
+                                        wavelength = 180f,
+                                        durationMillis = 1500,
+                                        reverse = true,
+                                        fillProgress = fillProgress
+                                    )
+                                    Text(
+                                        text = text,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
                                 }
                             }
                             else -> {}
@@ -279,5 +325,47 @@ fun parseBasicMarkdown(text: String): AnnotatedString {
         if (currentIndex < text.length) {
             append(text.substring(currentIndex))
         }
+    }
+}
+
+@Composable
+fun FlowingSineWave(
+    modifier: Modifier = Modifier,
+    color: Color,
+    amplitude: Float,
+    wavelength: Float,
+    durationMillis: Int,
+    reverse: Boolean,
+    fillProgress: Float = 0.5f
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "wave")
+    val phase by infiniteTransition.animateFloat(
+        initialValue = if (reverse) (2 * Math.PI).toFloat() else 0f,
+        targetValue = if (reverse) 0f else (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "phase"
+    )
+
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        val path = Path()
+
+        path.moveTo(0f, height)
+        for (x in 0..width.toInt() step 4) {
+            val relativeX = x.toFloat()
+            val y = (height * (1f - fillProgress)) + Math.sin((relativeX / wavelength * 2 * Math.PI) - phase).toFloat() * amplitude
+            path.lineTo(relativeX, y)
+        }
+        path.lineTo(width, height)
+        path.close()
+
+        drawPath(
+            path = path,
+            color = color
+        )
     }
 }

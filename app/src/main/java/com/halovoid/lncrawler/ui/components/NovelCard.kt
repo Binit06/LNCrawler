@@ -16,6 +16,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import coil.compose.AsyncImage
 import com.halovoid.lncrawler.domain.models.Novel
 import com.halovoid.lncrawler.ui.theme.*
@@ -33,12 +37,20 @@ fun NovelCard(
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
+        var coverModel by remember(novel.coverUrl, novel.coverHttpsUrl) {
+            mutableStateOf(novel.coverUrl ?: novel.coverHttpsUrl)
+        }
         Box(modifier = Modifier.fillMaxSize()) {
             AsyncImage(
-                model = novel.coverUrl,
+                model = coverModel,
                 contentDescription = novel.title,
                 modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                onError = {
+                    if (coverModel != novel.coverHttpsUrl) {
+                        coverModel = novel.coverHttpsUrl
+                    }
+                }
             )
 
             // Gradient overlay for text readability at bottom

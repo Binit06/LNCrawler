@@ -91,4 +91,10 @@ object DatabaseMigrations {
             db.execSQL("DELETE FROM requests WHERE type IN ('CHAPTER','FULL_NOVEL','VOLUME'");
         }
     }
+
+    val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE novels ADD COLUMN coverHttpsUrl TEXT DEFAULT NULL")
+        }
+    }
 }

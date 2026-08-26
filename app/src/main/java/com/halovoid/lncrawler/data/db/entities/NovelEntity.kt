@@ -12,5 +12,6 @@ data class NovelEntity(
     val description: String?,
     val crawlerName: String,
     val alternativeNames: String? = null,
-    val titleHash: Long? = null
+    val titleHash: Long? = null,
+    val coverHttpsUrl: String? = null
 )

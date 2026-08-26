@@ -41,9 +41,6 @@ class UpdateDownloader(private val context: Context) {
                         emit(DownloadStatus.Error("Download failed"))
                         isDownloading = false
                     }
-                    else -> {
-                        // Still pending or running
-                    }
                 }
             } else {
                 isDownloading = false

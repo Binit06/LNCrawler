@@ -242,22 +242,47 @@ class EpubGenerator(
             }
         }
 
-        // 0. Add Cover Image and Page
-        novel.coverUrl?.let { url ->
-            try {
-                val coverUri = url.toUri()
-                storageRepository.openInputStream(coverUri)?.use { input ->
-                    val bytes = input.readBytes()
-                    val extension = if (url.contains(".png", ignoreCase = true)) "png" else "jpg"
-                    val imageFileName = "cover.$extension"
-                    val mediaType = if (extension == "png") "image/png" else "image/jpeg"
+// 0. Add Cover Image and Page
+        val coverUrl = novel.coverUrl
+        val coverHttpsUrl = novel.coverHttpsUrl
+        var coverBytes: ByteArray? = null
+        var resolvedUrl: String? = null
 
-                    addItem(EpubItem(imageFileName, bytes, mediaType, "cover-image"))
-                    addItem(EpubItem("cover.xhtml", buildCoverPage(imageFileName).toByteArray(), "application/xhtml+xml", "cover"))
+        // Try reading from local coverUrl first
+        if (!coverUrl.isNullOrBlank()) {
+            try {
+                val coverUri = coverUrl.toUri()
+                storageRepository.openInputStream(coverUri)?.use { input ->
+                    coverBytes = input.readBytes()
+                    resolvedUrl = coverUrl
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        }
+
+        // If local cover failed/missing, fall back to coverHttpsUrl
+        if (coverBytes == null && !coverHttpsUrl.isNullOrBlank()) {
+            try {
+                val request = okhttp3.Request.Builder().url(coverHttpsUrl).build()
+                com.halovoid.lncrawler.api.core.network.NetworkClient.okHttpClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful) {
+                        coverBytes = response.body?.bytes()
+                        resolvedUrl = coverHttpsUrl
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
+        coverBytes?.let { bytes ->
+            val extension = if (resolvedUrl?.contains(".png", ignoreCase = true) == true) "png" else "jpg"
+            val imageFileName = "cover.$extension"
+            val mediaType = if (extension == "png") "image/png" else "image/jpeg"
+
+            addItem(EpubItem(imageFileName, bytes, mediaType, "cover-image"))
+            addItem(EpubItem("cover.xhtml", buildCoverPage(imageFileName).toByteArray(), "application/xhtml+xml", "cover"))
         }
 
         // 1. Add static assets

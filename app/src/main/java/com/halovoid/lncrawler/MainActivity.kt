@@ -21,7 +21,11 @@ class MainActivity : ComponentActivity() {
         // Source loading is now handled at Application level
         lifecycleScope.launch {
             SchedulerService.startService(this@MainActivity)
-            UpdateRepository.getInstance(this@MainActivity).checkForUpdates()
+            try {
+                UpdateRepository.getInstance(this@MainActivity).checkForUpdates()
+            } catch (e: Exception) {
+                android.util.Log.e("MainActivity", "Failed to check for updates on startup: ${e.message}", e)
+            }
         }
 
         enableEdgeToEdge()

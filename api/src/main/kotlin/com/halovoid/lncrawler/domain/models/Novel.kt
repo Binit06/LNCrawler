@@ -10,5 +10,6 @@ data class Novel(
     val volumes: List<Volume> = emptyList(),
     val crawlerName: String,
     val alternativeNames: String? = null,
-    val titleHash: Long? = null
+    val titleHash: Long? = null,
+    val coverHttpsUrl: String? = null
 )

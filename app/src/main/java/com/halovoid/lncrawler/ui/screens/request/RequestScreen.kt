@@ -440,6 +440,7 @@ private fun handleSearchResultClick(
                 title = item.title,
                 description = item.description,
                 coverUrl = item.imageUrl,
+                coverHttpsUrl = item.imageUrl,
                 crawlerName = item.source
             )
         )

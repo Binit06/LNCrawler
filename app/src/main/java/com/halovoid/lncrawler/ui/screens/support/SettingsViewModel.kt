@@ -2,12 +2,14 @@ package com.halovoid.lncrawler.ui.screens.support
 
 import android.app.Application
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.BuildConfig
 import com.halovoid.lncrawler.api.loader.AppUpdateManager
 import com.halovoid.lncrawler.api.loader.UpdateDownloader
 import com.halovoid.lncrawler.api.loader.UpdateInstaller
+import com.halovoid.lncrawler.data.repository.PreferenceRepository
 import com.halovoid.lncrawler.data.repository.UpdateRepository
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -29,15 +31,52 @@ sealed class AppUpdateState {
     data class Error(val message: String) : AppUpdateState()
 }
 
-class SupportViewModel(application: Application) : AndroidViewModel(application) {
+class SettingsViewModel(application: Application) : AndroidViewModel(application) {
+    private val preferenceRepository = PreferenceRepository.getInstance(application)
     private val updateRepository = UpdateRepository.getInstance(application)
     private val updateDownloader = UpdateDownloader(application)
 
+    // Update States
     private val _refreshing = MutableStateFlow(false)
     private val _downloadUri = MutableStateFlow<String?>(null)
     private val _isDownloading = MutableStateFlow(false)
     private val _isInstalling = MutableStateFlow(false)
     private val _error = MutableStateFlow<String?>(null)
+
+    // Preference Flows
+    val betaModeApp: StateFlow<Boolean> = preferenceRepository.betaModeApp.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
+    val betaModeCrawlers: StateFlow<Boolean> = preferenceRepository.betaModeCrawlers.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
+    val ignoreImages: StateFlow<Boolean> = preferenceRepository.ignoreImages.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
+    val maxConcurrentJobs: StateFlow<Int> = preferenceRepository.maxConcurrentJobs.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = 3
+    )
+
+    val exportFolderUri: StateFlow<Uri?> = preferenceRepository.exportFolderUri.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    val friendlyPath: Flow<String> = exportFolderUri.map { uri ->
+        if (uri == null) "" else com.halovoid.lncrawler.ui.screens.onboarding.UriUtils.getFriendlyPath(getApplication(), uri)
+    }
 
     private val localUpdateState: Flow<AppUpdateState?> = combine(
         _isDownloading, _downloadUri, _isInstalling, _error
@@ -114,7 +153,6 @@ class SupportViewModel(application: Application) : AndroidViewModel(application)
                             _error.value = status.message
                             _isDownloading.value = false
                         }
-                        else -> { /* Progress if needed */ }
                     }
                 }
             } catch (e: Exception) {
@@ -131,6 +169,45 @@ class SupportViewModel(application: Application) : AndroidViewModel(application)
             _isInstalling.value = true
         } catch (e: Exception) {
             _error.value = "Failed to start installation: ${e.message}"
+        }
+    }
+
+    // Setters for Settings
+    fun setBetaModeApp(enabled: Boolean) {
+        viewModelScope.launch {
+            preferenceRepository.setBetaModeApp(enabled)
+            checkForUpdates() // Re-check updates since release channel changed
+        }
+    }
+
+    fun setBetaModeCrawlers(enabled: Boolean) {
+        viewModelScope.launch {
+            preferenceRepository.setBetaModeCrawlers(enabled)
+            checkForUpdates() // Re-check updates since release channel changed
+        }
+    }
+
+    fun setIgnoreImages(enabled: Boolean) {
+        viewModelScope.launch {
+            preferenceRepository.setIgnoreImages(enabled)
+        }
+    }
+
+    fun setMaxConcurrentJobs(jobs: Int) {
+        viewModelScope.launch {
+            preferenceRepository.setMaxConcurrentJobs(jobs)
+        }
+    }
+
+    fun setExportFolder(uri: Uri) {
+        viewModelScope.launch {
+            preferenceRepository.setExportFolder(uri)
+        }
+    }
+
+    fun resetOnboarding() {
+        viewModelScope.launch {
+            preferenceRepository.setOnboardingCompleted(false)
         }
     }
 }

@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.io.FileOutputStream
 
@@ -41,7 +42,10 @@ class SourceLoader(private val context: Context) {
             onProgress("Starting source synchronization...")
             Log.i("SourceLoader", "Starting to load sources...")
 
-            val info = releaseInfo ?: fetchLatestReleaseInfo()
+            val info = releaseInfo ?: run {
+                val enableBeta = preferenceRepository.betaModeCrawlers.first()
+                fetchLatestReleaseInfo(enableBeta)
+            }
             
             onProgress("Downloading crawler DEX bundle (${info.tagName})...")
             val dexFile = downloadDex(info.downloadUrl)
@@ -139,13 +143,24 @@ class SourceLoader(private val context: Context) {
         CrawlerFactory.registerCrawlers(validCrawlers)
     }
 
-    suspend fun fetchLatestReleaseInfo(): ReleaseInfo = withContext(Dispatchers.IO) {
-        val request = Request.Builder().url(GITHUB_API_URL).build()
+    suspend fun fetchLatestReleaseInfo(enableBeta: Boolean = false): ReleaseInfo = withContext(Dispatchers.IO) {
+        val url = if (enableBeta) {
+            "https://api.github.com/repos/Binit06/LNCrawlerSources/releases"
+        } else {
+            "https://api.github.com/repos/Binit06/LNCrawlerSources/releases/latest"
+        }
+        val request = Request.Builder().url(url).build()
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw Exception("Failed to fetch release info: $response")
             
             val body = response.body?.string() ?: throw Exception("Empty response body")
-            val json = JSONObject(body)
+            val json = if (enableBeta) {
+                val array = org.json.JSONArray(body)
+                if (array.length() == 0) throw Exception("No releases found")
+                array.getJSONObject(0)
+            } else {
+                JSONObject(body)
+            }
             val tagName = json.getString("tag_name")
             val assets = json.getJSONArray("assets")
             
@@ -160,7 +175,7 @@ class SourceLoader(private val context: Context) {
             
             ReleaseInfo(
                 tagName = tagName,
-                downloadUrl = downloadUrl ?: throw Exception("classes.dex not found in latest release")
+                downloadUrl = downloadUrl ?: throw Exception("classes.dex not found in release")
             )
         }
     }

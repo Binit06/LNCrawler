@@ -151,7 +151,7 @@ class SchedulerService : Service() {
         ))
 
         // 5. Set Up Scheduler
-        scheduler = JobScheduler(requestDao, registry)
+        scheduler = JobScheduler(requestDao, registry, preferenceRepository = preferenceRepository)
         scheduler.setOnEmptyListener {
             stopSelf()
         }

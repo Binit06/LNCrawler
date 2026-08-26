@@ -17,6 +17,7 @@ class LNCrawlerApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         GlobalExceptionHandler.initialize(this, CrashActivity::class.java)
+        com.halovoid.lncrawler.api.core.network.NetworkClient.init(this)
 
         // Initialize Cloudflare Resolver
         CloudflareResolverImpl.initialize(this)
