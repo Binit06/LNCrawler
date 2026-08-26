@@ -55,7 +55,7 @@ fun NovelPreviewScreen(
     }
 
     LaunchedEffect(previewUrl) {
-        if (previewUrl != null && (novel == null || novel?.chapters?.isEmpty() == true)) {
+        if (previewUrl != null && novel == null) {
             viewModel.fetchNovelPreview(previewUrl!!)
         }
     }
@@ -351,89 +351,82 @@ fun NovelPreviewContent(
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        if (novel.chapters.isNotEmpty()) {
-                            Button(
-                                onClick = { onConfirm(novel) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .height(56.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = BrandAccent,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Icon(Icons.Filled.Add, contentDescription = null)
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "Add to Library",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                            
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            TextButton(
-                                onClick = onBack,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                            ) {
-                                Text(
-                                    "Maybe Later",
-                                    color = SecondaryText,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
-                        } else if (!isLoading) {
-                            Button(
-                                onClick = onCrawlManually,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .height(56.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = DarkSurface,
-                                    contentColor = PrimaryText
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    "Crawl Manually",
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            TextButton(
-                                onClick = onBack,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                            ) {
-                                Text(
-                                    "Maybe Later",
-                                    color = SecondaryText,
-                                    style = MaterialTheme.typography.labelLarge
-                                )
-                            }
+                        Button(
+                            onClick = { onConfirm(novel) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                                .height(56.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = BrandAccent,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Filled.Add, contentDescription = null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Add to Library",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
+                        TextButton(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 24.dp)
+                        ) {
+                            Text(
+                                "Maybe Later",
+                                color = SecondaryText,
+                                style = MaterialTheme.typography.labelLarge
+                            )
                         }
                     }
                 }
-            } else if (error != null) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                    Text(error, color = ErrorRed, textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(onClick = onBack) { Text("Go Back") }
-                }
             } else {
-                Text("No preview available", color = SecondaryText)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
+                    if (error != null) {
+                        Text(error, color = ErrorRed, textAlign = TextAlign.Center)
+                        Spacer(modifier = Modifier.height(24.dp))
+                    }
+                    
+                    Button(
+                        onClick = onCrawlManually,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = DarkSurface,
+                            contentColor = PrimaryText
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            "Crawl Manually",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    TextButton(
+                        onClick = onBack,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            "Go Back",
+                            color = SecondaryText,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
             }
         }
-
     }
 }

@@ -63,6 +63,24 @@ abstract class Crawler {
     abstract fun canHandle(url: String): Boolean
 
     /**
+     * Scrapes only the novel metadata (title, author, cover, description) from the source.
+     * @param novelUrl The URL of the novel landing page.
+     * @return A [com.halovoid.lncrawler.domain.models.Novel] object without chapters.
+     */
+    open suspend fun getNovelMetadata(novelUrl: String): Novel {
+        return getNovelDetails(novelUrl).copy(chapters = emptyList())
+    }
+
+    /**
+     * Scrapes only the chapter list for a novel.
+     * @param novelUrl The URL of the novel landing page.
+     * @return A list of [com.halovoid.lncrawler.domain.models.Chapter] objects.
+     */
+    open suspend fun getChapterList(novelUrl: String): List<com.halovoid.lncrawler.domain.models.Chapter> {
+        return getNovelDetails(novelUrl).chapters
+    }
+
+    /**
      * Scrapes the novel details (metadata and chapter list) from the source.
      * @param novelUrl The URL of the novel landing page.
      * @return A [com.halovoid.lncrawler.domain.models.Novel] object populated with metadata and chapters.

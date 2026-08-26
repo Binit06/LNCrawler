@@ -91,7 +91,7 @@ class RequestViewModel(
             try {
                 val crawler = CrawlerFactory.getCrawlerByUrl(url)
                 if (crawler != null) {
-                    val novel = crawler.getNovelDetails(url)
+                    val novel = crawler.getNovelMetadata(url)
                     _novelPreview.value = novel
                 } else {
                     _error.value = "URL not supported"
