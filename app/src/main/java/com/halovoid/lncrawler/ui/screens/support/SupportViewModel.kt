@@ -9,9 +9,7 @@ import com.halovoid.lncrawler.api.loader.AppUpdateManager
 import com.halovoid.lncrawler.api.loader.UpdateDownloader
 import com.halovoid.lncrawler.api.loader.UpdateInstaller
 import com.halovoid.lncrawler.data.repository.UpdateRepository
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
 sealed class AppUpdateState {
@@ -35,64 +33,104 @@ class SupportViewModel(application: Application) : AndroidViewModel(application)
     private val updateRepository = UpdateRepository.getInstance(application)
     private val updateDownloader = UpdateDownloader(application)
 
-    private val _updateState = MutableStateFlow<AppUpdateState>(AppUpdateState.Idle)
-    val updateState: StateFlow<AppUpdateState> = _updateState.asStateFlow()
+    private val _refreshing = MutableStateFlow(false)
+    private val _downloadUri = MutableStateFlow<String?>(null)
+    private val _isDownloading = MutableStateFlow(false)
+    private val _isInstalling = MutableStateFlow(false)
+    private val _error = MutableStateFlow<String?>(null)
 
-    init {
-        // Observe repository state
-        viewModelScope.launch {
-            updateRepository.latestAppRelease.collect { latest ->
-                if (latest != null) {
-                    val currentVersion = BuildConfig.VERSION_NAME
-                    if (AppUpdateManager.isUpdateAvailable(currentVersion, latest.tagName)) {
-                        _updateState.value = AppUpdateState.UpdateAvailable(
-                            latest.tagName,
-                            latest.releaseUrl,
-                            latest.apkDownloadUrl,
-                            latest.body,
-                            latest.publishedAt
-                        )
-                    } else {
-                        _updateState.value = AppUpdateState.UpToDate
-                    }
+    private val localUpdateState: Flow<AppUpdateState?> = combine(
+        _isDownloading, _downloadUri, _isInstalling, _error
+    ) { downloading, uri, installing, error ->
+        when {
+            error != null -> AppUpdateState.Error(error)
+            installing -> AppUpdateState.Installing
+            uri != null -> AppUpdateState.ReadyToInstall(uri)
+            downloading -> AppUpdateState.Downloading
+            else -> null
+        }
+    }
+
+    val updateState: StateFlow<AppUpdateState> = combine(
+        updateRepository.latestAppRelease,
+        _refreshing,
+        localUpdateState
+    ) { latest, refreshing, localState ->
+        localState ?: when {
+            refreshing -> AppUpdateState.Loading
+            latest != null -> {
+                val currentVersion = BuildConfig.VERSION_NAME
+                if (AppUpdateManager.isUpdateAvailable(currentVersion, latest.tagName)) {
+                    AppUpdateState.UpdateAvailable(
+                        latest.tagName,
+                        latest.releaseUrl,
+                        latest.apkDownloadUrl,
+                        latest.body,
+                        latest.publishedAt
+                    )
+                } else {
+                    AppUpdateState.UpToDate
                 }
             }
+            else -> AppUpdateState.Idle
         }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = AppUpdateState.Idle
+    )
+
+    init {
         checkForUpdates()
     }
 
     fun checkForUpdates() {
         viewModelScope.launch {
-            if (_updateState.value !is AppUpdateState.UpdateAvailable) {
-                _updateState.value = AppUpdateState.Loading
+            _refreshing.value = true
+            _error.value = null
+            try {
+                updateRepository.checkForUpdates()
+            } catch (e: Exception) {
+                _error.value = "Failed to check for updates"
+            } finally {
+                _refreshing.value = false
             }
-            updateRepository.checkForUpdates()
         }
     }
 
     fun startUpdateDownload(url: String) {
         viewModelScope.launch {
-            _updateState.value = AppUpdateState.Downloading
-            val downloadId = updateDownloader.downloadUpdate(url, "LNCrawler_update.apk")
-            updateDownloader.getDownloadStatus(downloadId).collect { status ->
-                when (status) {
-                    is UpdateDownloader.DownloadStatus.Success -> {
-                        _updateState.value = AppUpdateState.ReadyToInstall(status.uri)
-                    }
-                    is UpdateDownloader.DownloadStatus.Error -> {
-                        _updateState.value = AppUpdateState.Error(status.message)
+            _isDownloading.value = true
+            _error.value = null
+            try {
+                val downloadId = updateDownloader.downloadUpdate(url, "LNCrawler_update.apk")
+                updateDownloader.getDownloadStatus(downloadId).collect { status ->
+                    when (status) {
+                        is UpdateDownloader.DownloadStatus.Success -> {
+                            _downloadUri.value = status.uri
+                            _isDownloading.value = false
+                        }
+                        is UpdateDownloader.DownloadStatus.Error -> {
+                            _error.value = status.message
+                            _isDownloading.value = false
+                        }
+                        else -> { /* Progress if needed */ }
                     }
                 }
+            } catch (e: Exception) {
+                _error.value = "Download failed: ${e.message}"
+                _isDownloading.value = false
             }
         }
     }
 
     fun installUpdate(context: Context, uri: String) {
         try {
+            _error.value = null
             UpdateInstaller.installApk(context, uri)
-            _updateState.value = AppUpdateState.Installing
+            _isInstalling.value = true
         } catch (e: Exception) {
-            _updateState.value = AppUpdateState.Error("Failed to start installation: ${e.message}")
+            _error.value = "Failed to start installation: ${e.message}"
         }
     }
 }

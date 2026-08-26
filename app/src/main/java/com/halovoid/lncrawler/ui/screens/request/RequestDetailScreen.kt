@@ -4,17 +4,20 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -22,11 +25,11 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.core.net.toUri
+import com.halovoid.lncrawler.data.db.entities.RequestStatus
 import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.ui.ViewModelFactory
+import com.halovoid.lncrawler.ui.components.*
 import com.halovoid.lncrawler.ui.components.artifact.ArtifactCard
-import com.halovoid.lncrawler.ui.components.RequestCard
-import com.halovoid.lncrawler.ui.components.SecurityCheckDialog
 import com.halovoid.lncrawler.domain.models.Request
 import com.halovoid.lncrawler.ui.components.requestHistorySection
 import com.halovoid.lncrawler.ui.theme.*
@@ -57,7 +60,9 @@ fun RequestDetailScreen(
     val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
     val chapterMetadata by viewModel.chapterMetadata.collectAsState()
     val artifactMetadata by viewModel.artifactMetadata.collectAsState()
+    val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
 
+    var showFilterMenu by remember { mutableStateOf(false) }
     var securityDialogRequest by remember { mutableStateOf<Request?>(null) }
 
     if (securityDialogRequest != null) {
@@ -124,6 +129,15 @@ fun RequestDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = PrimaryAccent)
+                    }
+                },
+                actions = {
+                    IconButton(onClick = { showFilterMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = "Filter",
+                            tint = if (statusFilter != null) BrandAccent else PrimaryAccent
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
@@ -228,6 +242,47 @@ fun RequestDetailScreen(
                         activeActionIds = activeActionIds,
                         allowAction = true
                     )
+                }
+            }
+        }
+    }
+
+    if (showFilterMenu) {
+        val filterOptions = listOf(
+            null to "All Status",
+            RequestStatus.SUCCESS to "Success",
+            RequestStatus.FAILED to "Failed",
+            RequestStatus.CANCELLED to "Cancelled"
+        )
+
+        AppBottomSheet(
+            onDismiss = { showFilterMenu = false },
+            title = "Filter Status"
+        ) {
+            AppBottomSheetGroup {
+                filterOptions.forEachIndexed { index, (status, label) ->
+                    ListItem(
+                        headlineContent = { 
+                            Text(
+                                label, 
+                                color = PrimaryText,
+                                fontWeight = FontWeight.Normal
+                            ) 
+                        },
+                        trailingContent = {
+                            if (statusFilter == status) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = BrandAccent)
+                            }
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable {
+                            viewModel.setStatusFilter(status)
+                            showFilterMenu = false
+                        }
+                    )
+                    if (index < filterOptions.lastIndex) {
+                        AppBottomSheetDivider()
+                    }
                 }
             }
         }

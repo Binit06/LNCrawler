@@ -30,23 +30,15 @@ class UpdateRepository private constructor(context: Context) {
     }
 
     private suspend fun checkAppUpdate() {
-        try {
-            val info = appUpdateManager.fetchLatestAppRelease()
-            _latestAppRelease.value = info
-            _isAppUpdateAvailable.value = VersionUtils.isUpdateAvailable(BuildConfig.VERSION_NAME, info.tagName)
-        } catch (e: Exception) {
-            // Ignore silently
-        }
+        val info = appUpdateManager.fetchLatestAppRelease()
+        _latestAppRelease.value = info
+        _isAppUpdateAvailable.value = VersionUtils.isUpdateAvailable(BuildConfig.VERSION_NAME, info.tagName)
     }
 
     private suspend fun checkCrawlerUpdate() {
-        try {
-            val currentTag = preferenceRepository.currentDexTag.first()
-            val info = sourceLoader.fetchLatestReleaseInfo()
-            _isCrawlerUpdateAvailable.value = VersionUtils.isUpdateAvailable(currentTag, info.tagName)
-        } catch (e: Exception) {
-            // Ignore silently
-        }
+        val currentTag = preferenceRepository.currentDexTag.first()
+        val info = sourceLoader.fetchLatestReleaseInfo()
+        _isCrawlerUpdateAvailable.value = VersionUtils.isUpdateAvailable(currentTag, info.tagName)
     }
 
     fun setCrawlerUpdateAvailable(available: Boolean) {

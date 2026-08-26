@@ -407,10 +407,13 @@ fun NavGraph(navController: NavHostController) {
                 val requests by viewModel.requests.collectAsStateWithLifecycle()
                 val cancellingRequestIds by viewModel.cancellingRequestIds.collectAsStateWithLifecycle()
                 val activeActionIds by viewModel.activeActionIds.collectAsStateWithLifecycle()
+                val statusFilter by viewModel.statusFilter.collectAsStateWithLifecycle()
 
                 GroupedRequestsScreen(
                     type = type,
                     requests = requests,
+                    statusFilter = statusFilter,
+                    onFilterChange = { viewModel.setStatusFilter(it) },
                     onBack = { navController.popBackStack() },
                     onRequestClick = { requestId ->
                         navController.navigate(Screen.RequestDetail.createRoute(requestId))

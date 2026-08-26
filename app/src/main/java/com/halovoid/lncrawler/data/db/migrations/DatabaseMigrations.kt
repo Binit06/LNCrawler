@@ -88,6 +88,7 @@ object DatabaseMigrations {
     val MIGRATION_12_13 = object : Migration(12, 13) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE requests ADD COLUMN attemptCount INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("DELETE FROM requests WHERE type IN ('CHAPTER','FULL_NOVEL','VOLUME'");
         }
     }
 }

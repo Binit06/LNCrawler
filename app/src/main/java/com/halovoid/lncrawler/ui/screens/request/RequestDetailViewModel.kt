@@ -4,7 +4,8 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.halovoid.lncrawler.data.db.dao.RequestDao
+import com.halovoid.lncrawler.data.db.entities.RequestStatus
+import com.halovoid.lncrawler.data.db.entities.RequestType
 import com.halovoid.lncrawler.data.repository.ArtifactRepository
 import com.halovoid.lncrawler.data.repository.ChapterRepository
 import com.halovoid.lncrawler.data.scheduler.services.SchedulerService
@@ -33,6 +34,13 @@ class RequestDetailViewModel(
         _requestId.value = id
     }
 
+    private val _statusFilter = MutableStateFlow<RequestStatus?>(null)
+    val statusFilter: StateFlow<RequestStatus?> = _statusFilter.asStateFlow()
+
+    fun setStatusFilter(status: RequestStatus?) {
+        _statusFilter.value = status
+    }
+
     val cancellingRequestIds: StateFlow<Set<String>> = requestRepository.cancellingRequestIds
     val activeActionIds: StateFlow<Set<String>> = requestRepository.activeActionIds
 
@@ -50,10 +58,13 @@ class RequestDetailViewModel(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    val linkedRequests: StateFlow<List<Request>> = _requestId
-        .filterNotNull()
-        .flatMapLatest { id ->
-            requestRepository.getRequestsByDependenceFlow(id)
+    val linkedRequests: StateFlow<List<Request>> = combine(_requestId.filterNotNull(), _statusFilter) { id, status ->
+        id to status
+    }
+        .flatMapLatest { (id, status) ->
+            requestRepository.getRequestsByDependenceFlow(id).map { requests ->
+                if (status == null) requests else requests.filter { it.status == status }
+            }
         }
         .stateIn(
             scope = viewModelScope,

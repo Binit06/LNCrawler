@@ -3,6 +3,7 @@ package com.halovoid.lncrawler.data.scheduler.services
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -37,24 +38,22 @@ import java.util.concurrent.TimeUnit
 private data class NotificationConfig(
     val title: String,
     val content: String,
-    val icon: Int,
     val progressCurrent: Int,
     val progressTotal: Int,
     val isIndeterminate: Boolean
 )
 
 private fun RequestEntity.toNotificationConfig(): NotificationConfig {
-    val (title, icon) = when (this.type) {
-        RequestType.RANGE_DOWNLOAD -> "Downloading Chapters" to R.mipmap.ic_launcher
-        RequestType.ARTIFACT -> "Creating Artifact" to R.mipmap.ic_launcher
-        RequestType.NOVEL_METADATA -> "Refreshing Novel" to R.mipmap.ic_launcher
-        else -> "LN Crawler Task" to R.mipmap.ic_launcher
+    val title = when (this.type) {
+        RequestType.RANGE_DOWNLOAD -> "Downloading Chapters"
+        RequestType.ARTIFACT -> "Creating Artifact"
+        RequestType.NOVEL_METADATA -> "Refreshing Novel"
+        else -> "LN Crawler Task"
     }
 
     return NotificationConfig(
         title = title,
         content = this.name,
-        icon = icon,
         progressCurrent = this.progressSuccess,
         progressTotal = this.progressTotal,
         isIndeterminate = this.progressTotal <= 0
@@ -170,7 +169,7 @@ class SchedulerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START -> {
-                val initialConfig = NotificationConfig("Initializing...", "Starting scheduler", R.mipmap.ic_launcher, 0, 0, true)
+                val initialConfig = NotificationConfig("Initializing...", "Starting scheduler", 0, 0, true)
                 startForeground(NOTIFICATION_ID, createNotification(initialConfig, 0))
                 scheduler.start()
             }
@@ -223,12 +222,20 @@ class SchedulerService : Service() {
             config.content
         }
 
+        val largeIcon =
+            BitmapFactory.decodeResource(resources, R.mipmap.ic_launcher)
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(config.title)
             .setContentText(contextText)
-            .setSmallIcon(config.icon)
+            .setSmallIcon(R.mipmap.ic_launcher)
+            .setLargeIcon(largeIcon)
             .setContentIntent(pendingIntent)
-            .setProgress(config.progressTotal, config.progressCurrent, config.isIndeterminate)
+            .setProgress(
+                config.progressTotal,
+                config.progressCurrent,
+                config.isIndeterminate
+            )
             .setOngoing(true)
             .build()
     }
