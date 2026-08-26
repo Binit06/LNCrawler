@@ -44,6 +44,12 @@ class ReaderViewModel(
     private val _currentChapter = MutableStateFlow<Chapter?>(null)
     val currentChapter: StateFlow<Chapter?> = _currentChapter.asStateFlow()
 
+    private val _currentChapterNumber = MutableStateFlow(0)
+    val currentChapterNumber: StateFlow<Int> = _currentChapterNumber.asStateFlow()
+
+    private val _totalChapters = MutableStateFlow(0)
+    val totalChapters: StateFlow<Int> = _totalChapters.asStateFlow()
+
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -58,6 +64,8 @@ class ReaderViewModel(
             val startPos = chapterIndexById[initialChapterId] ?: 0
             centerPos = startPos
             _currentChapter.value = allChapters.getOrNull(startPos)
+            _currentChapterNumber.value = startPos + 1
+            _totalChapters.value = allChapters.size
             shiftWindow(startPos)
             _isLoading.value = false
         }
@@ -68,6 +76,7 @@ class ReaderViewModel(
         if (pos == centerPos) return
         centerPos = pos
         _currentChapter.value = allChapters.getOrNull(pos)
+        _currentChapterNumber.value = pos + 1
         windowJob?.cancel()
         windowJob = viewModelScope.launch(Dispatchers.IO) {
             shiftWindow(pos)

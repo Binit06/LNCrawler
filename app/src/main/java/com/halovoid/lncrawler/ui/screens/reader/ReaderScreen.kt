@@ -18,6 +18,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halovoid.lncrawler.ui.theme.*
+import android.content.Context
+import android.content.ContextWrapper
+import android.app.Activity
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.mapNotNull
 
@@ -68,6 +74,33 @@ fun ReaderScreen(
             .collect { chapterId ->
                 viewModel.onCenterChapterChanged(chapterId)
             }
+    }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    LaunchedEffect(isControlsVisible) {
+        val activity = context.findActivity()
+        val window = activity?.window
+        if (window != null) {
+            val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+            if (isControlsVisible) {
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            } else {
+                windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+                windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            val activity = context.findActivity()
+            val window = activity?.window
+            if (window != null) {
+                val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+                windowInsetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+        }
     }
 
     Scaffold(
@@ -128,6 +161,33 @@ fun ReaderScreen(
                         ChapterContent(
                             loadedChapter = loadedChapter,
                             onReload = { viewModel.reloadChapter(it) }
+                        )
+                    }
+                }
+            }
+
+            // Chapter index overlay visible only in fullscreen (controls hidden)
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !isControlsVisible,
+                enter = androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 16.dp, bottom = 16.dp)
+            ) {
+                val currentNum by viewModel.currentChapterNumber.collectAsStateWithLifecycle()
+                val totalNum by viewModel.totalChapters.collectAsStateWithLifecycle()
+                if (totalNum > 0 && currentNum > 0) {
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = "$currentNum/$totalNum",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = SecondaryText,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
@@ -231,4 +291,13 @@ fun ChapterContent(
             }
         }
     }
+}
+
+private fun Context.findActivity(): Activity? {
+    var context = this
+    while (context is ContextWrapper) {
+        if (context is Activity) return context
+        context = context.baseContext
+    }
+    return null
 }
