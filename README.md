@@ -1,9 +1,9 @@
 <div align="center">
-<img src="assets/icon.png" width="200" />
+<img src="assets/icon.png" width="100" />
 
 # LNCrawler
 
-### EBook Exporter for Android
+### Novel Reader and Exporter for Android
 
 <br />
 <div align="center">
@@ -30,12 +30,12 @@
 <div align="center">
 
 <h1><a id="screenshots"></a>Screenshots</h1>
-<img src="assets/screenshots/artifact.jpg" alt="Artifacts" width="30%" />
-<img src="assets/screenshots/novel_screen.jpg" alt="Novel Screen" width="30%" />
-<img src="assets/screenshots/request_screen.jpg" alt="Request Screen" width="30%" />
-<img src="assets/screenshots/novel_actions.jpg" alt="Novel Features" width="30%" />
-<img src="assets/screenshots/crawler_screen.jpg" alt="Linked Request Screen" width="30%" />
-<img src="assets/screenshots/request_details.jpg" alt="Linked Request Screen" width="30%" />
+<img src="assets/screenshots/library.jpg" alt="Artifacts" width="30%" />
+<img src="assets/screenshots/novel.jpg" alt="Novel Screen" width="30%" />
+<img src="assets/screenshots/reader.jpg" alt="Request Screen" width="30%" />
+<img src="assets/screenshots/search.jpg" alt="Novel Features" width="30%" />
+<img src="assets/screenshots/downloads.jpg" alt="Linked Request Screen" width="30%" />
+<img src="assets/screenshots/settings.jpg" alt="Linked Request Screen" width="30%" />
 
 </div>
 
@@ -92,10 +92,9 @@
 </td>
     <td width="50%" valign="top">
 
-#### Android
-- Build with Kotlin
-- Jetpack Compose UI
-- Local file access
+#### Search
+- Contains an in house search for directly searching novels
+- Maintained entirely by LNCrawler
 
 </td>
   </tr>
