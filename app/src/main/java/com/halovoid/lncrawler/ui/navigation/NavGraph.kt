@@ -364,9 +364,6 @@ fun NavGraph(navController: NavHostController) {
                     onBack = {
                         navController.popBackStack()
                     },
-                    onGroupClick = { type ->
-                        navController.navigate(Screen.GroupedRequests.createRoute("NOVEL", novelUrl, type.name))
-                    },
                     onActivityClick = {
                         navController.navigate(Screen.NovelActivity.createRoute(novelUrl))
                     },

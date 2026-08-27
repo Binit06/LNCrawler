@@ -14,7 +14,7 @@ import com.halovoid.lncrawler.ui.theme.*
 @Composable
 fun ArtifactExportDialog(
     onDismiss: () -> Unit,
-    onExport: (ExportFormat) -> Unit
+    onExport: (ExportFormat) -> Unit,
 ) {
     var selectedFormat by remember {
         mutableStateOf(ExportFormat.EPUB)
@@ -76,6 +76,7 @@ fun ArtifactExportDialog(
                 onClick = {
                     onExport(selectedFormat)
                 },
+                enabled = true,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = PrimaryAccent
                 )

@@ -176,7 +176,8 @@ fun RequestScreen(
                                 isSearching = isSearching,
                                 isCompactMode = isCompactMode,
                                 onNavigateToPreview = onNavigateToPreview,
-                                onNavigateToDetail = onNavigateToDetail
+                                onNavigateToDetail = onNavigateToDetail,
+                                onRequestClick = { selectedTab = RequestTab.REQUEST }
                             )
                         }
                         RequestTab.REQUEST -> {
@@ -203,7 +204,8 @@ fun SearchTabContent(
     isSearching: Boolean,
     isCompactMode: Boolean,
     onNavigateToPreview: () -> Unit,
-    onNavigateToDetail: (String, String) -> Unit
+    onNavigateToDetail: (String, String) -> Unit,
+    onRequestClick: () -> Unit
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
@@ -356,8 +358,25 @@ fun SearchTabContent(
                     }
                     is SearchState.Success -> {
                         if (state.response.results.isEmpty()) {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
                                 Text("No results found", color = SecondaryText)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Did not find your novel? Try ", color = SecondaryText, fontSize = 14.sp)
+                                    TextButton(
+                                        onClick = onRequestClick,
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Text("Requesting", color = BrandAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    }
+                                }
                             }
                         } else {
                             LazyColumn(
@@ -410,6 +429,22 @@ fun SearchTabContent(
                                                     )
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                                
+                                item {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                        horizontalArrangement = Arrangement.Center,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("Did not find your novel? Try ", color = SecondaryText, fontSize = 14.sp)
+                                        TextButton(
+                                            onClick = onRequestClick,
+                                            contentPadding = PaddingValues(0.dp)
+                                        ) {
+                                            Text("Requesting", color = BrandAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                         }
                                     }
                                 }
@@ -606,10 +641,11 @@ fun ManualRequestContent(
                                 if (libraryUrls.contains(urlInput)) {
                                     onNavigateToDetail(crawlerName, urlInput)
                                 } else {
-                                    viewModel.pushToRedis(urlInput)
-                                    viewModel.setPreviewUrl(urlInput)
-                                    viewModel.setPreviewNovel(null) // We don't have metadata yet
-                                    onNavigateToPreview()
+                                    viewModel.pushToRedis(urlInput) {
+                                        viewModel.setPreviewUrl(urlInput)
+                                        viewModel.setPreviewNovel(null) // We don't have metadata yet
+                                        onNavigateToPreview()
+                                    }
                                 }
                             }
                         }

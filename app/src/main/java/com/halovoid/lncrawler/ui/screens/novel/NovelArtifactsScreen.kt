@@ -183,20 +183,21 @@ fun NovelArtifactsScreen(
         }
 
         if (showExportDialog) {
+            val start = chapterRange.start.toInt()
+            val end = chapterRange.endInclusive.toInt()
+            val rangeChapters = chapters.filter { it.index in start..end }
+            val downloadedCount = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
+
             ArtifactExportDialog(
                 onDismiss = { showExportDialog = false },
                 onExport = { format ->
                     showExportDialog = false
-                    val start = chapterRange.start.toInt()
-                    val end = chapterRange.endInclusive.toInt()
-                    val rangeChapters = chapters.filter { it.index in start..end }
-                    val downloaded = rangeChapters.count { it.fileLocation?.startsWith("content://") == true }
-
-                    if (downloaded < rangeChapters.size) {
+                    if (downloadedCount < rangeChapters.size) {
                         pendingExportFormat = format
                         showExportWarning = true
                     } else {
                         novel?.let { viewModel.startBackgroundExport(it, format) }
+                        onBack()
                     }
                 }
             )
@@ -218,6 +219,7 @@ fun NovelArtifactsScreen(
                 onExportAnyway = {
                     showExportWarning = false
                     novel?.let { viewModel.startBackgroundExport(it, pendingExportFormat!!) }
+                    onBack()
                 },
                 onDismiss = {
                     showExportWarning = false

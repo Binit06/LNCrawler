@@ -29,8 +29,7 @@ class IndexRepository(
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
                 Log.e("RedisManager", "Failed to push $url to redis")
-                // if this fails there is no need to throw exception
-                // it's not like the app stops to function without the indexes
+                throw Exception("Server is down or under maintenance")
             }
             Log.i("RedisManager", "Pushed $url to redis")
         }

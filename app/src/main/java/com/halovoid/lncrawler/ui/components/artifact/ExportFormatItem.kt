@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.halovoid.lncrawler.ui.theme.*
 
 @Composable
@@ -34,18 +36,17 @@ fun ExportFormatItem(
                     Color.Transparent
                 }
             )
-            .clickable(onClick = onClick)
+            .clickable(enabled = true, onClick = onClick)
             .padding(horizontal = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(
-            text = format.extension,
-            color = if (selected) Color.White else PrimaryAccent,
-            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
-        )
-
-        Spacer(modifier = Modifier.weight(1f))
-
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = format.extension.uppercase(),
+                color = if (selected) Color.White else PrimaryAccent,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Medium
+            )
+        }
         Icon(
             imageVector = if (selected) {
                 Icons.Default.Check

@@ -42,7 +42,17 @@ class SearchViewModel(
                 val response = searchRepository.search(query)
                 _searchState.value = SearchState.Success(response)
             } catch (e: Exception) {
-                _searchState.value = SearchState.Error(e.message ?: "Unknown error occurred")
+                val isNetworkOrServerIssue = e is java.io.IOException || 
+                    e.message?.contains("failed", ignoreCase = true) == true ||
+                    e.message?.contains("connect", ignoreCase = true) == true ||
+                    e.message?.contains("timeout", ignoreCase = true) == true
+                
+                val userFriendlyMessage = if (isNetworkOrServerIssue) {
+                    "Server is down or under maintenance. Please try again later."
+                } else {
+                    e.message ?: "Server is down or under maintenance. Please try again later."
+                }
+                _searchState.value = SearchState.Error(userFriendlyMessage)
             }
         }
     }

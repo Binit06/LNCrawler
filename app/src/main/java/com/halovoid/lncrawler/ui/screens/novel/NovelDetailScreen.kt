@@ -2,7 +2,6 @@ package com.halovoid.lncrawler.ui.screens.novel
 
 import android.app.Application
 import android.content.Intent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -50,7 +49,6 @@ import androidx.compose.ui.text.font.FontWeight
 fun NovelDetailScreen(
     novelUrl: String,
     onRequestClick: (String) -> Unit,
-    onGroupClick: (RequestType) -> Unit,
     onChapterClick: (String, Int) -> Unit,
     onActivityClick: () -> Unit,
     onArtifactsClick: () -> Unit,
@@ -86,7 +84,6 @@ fun NovelDetailScreen(
     var descriptionExpanded by remember { mutableStateOf(value = false) }
 
     val requestHistory by viewModel.rootRequests.collectAsStateWithLifecycle()
-    val artifacts by viewModel.artifacts.collectAsStateWithLifecycle()
 
     val ongoingStatuses = remember {
         setOf(
@@ -159,7 +156,8 @@ fun NovelDetailScreen(
                         NovelActionRow(
                             activityExists = requestHistory.isNotEmpty(),
                             isActivityRunning = requestHistory.any { it.rstatus in ongoingStatuses },
-                            artifactsExist = artifacts.isNotEmpty(),
+                            artifactsExist = true,
+                            downloadEnabled = chapters.isNotEmpty(),
                             onActivityClick = onActivityClick,
                             onDownloadClick = { showDownloadDialog = true },
                             onArtifactsClick = onArtifactsClick,

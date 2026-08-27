@@ -21,6 +21,7 @@ fun NovelActionRow(
     activityExists: Boolean,
     isActivityRunning: Boolean,
     artifactsExist: Boolean,
+    downloadEnabled: Boolean = true,
     onActivityClick: () -> Unit,
     onDownloadClick: () -> Unit,
     onArtifactsClick: () -> Unit,
@@ -44,7 +45,8 @@ fun NovelActionRow(
         ActionItem(
             icon = Icons.Default.Download,
             label = "Download",
-            onClick = onDownloadClick
+            onClick = onDownloadClick,
+            enabled = downloadEnabled
         )
         ActionItem(
             icon = Icons.Default.Inventory2,
@@ -77,7 +79,7 @@ private fun ActionItem(
             modifier = Modifier
                 .size(42.dp)
                 .clip(CircleShape)
-                .clickable(enabled = true) { onClick() },
+                .clickable(enabled = enabled) { onClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(

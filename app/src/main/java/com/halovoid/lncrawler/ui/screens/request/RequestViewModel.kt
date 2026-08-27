@@ -149,9 +149,18 @@ class RequestViewModel(
     fun clearSimilarNovels() {
         _similarNovels.value = emptyList()
     }
-    fun pushToRedis(url: String) {
+    fun pushToRedis(url: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
-            indexRepository.index(url)
+            _isLoading.value = true
+            _error.value = null
+            try {
+                indexRepository.index(url)
+                onSuccess()
+            } catch (e: Exception) {
+                _error.value = "Server is down or under maintenance. Please try again later."
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
