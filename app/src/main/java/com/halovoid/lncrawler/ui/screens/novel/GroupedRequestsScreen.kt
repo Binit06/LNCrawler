@@ -145,16 +145,16 @@ fun RequestFilterSheet(
                 .padding(top = 8.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            availableStatuses.forEachIndexed { index, status ->
-                val currentState = statusFilters[status] ?: FilterState.NONE
+            availableStatuses.forEachIndexed { index, rstatus ->
+                val currentState = statusFilters[rstatus] ?: FilterState.NONE
                 ListItem(
-                    headlineContent = { Text(status.name.lowercase().replaceFirstChar { it.uppercase() }, color = PrimaryText) },
+                    headlineContent = { Text(rstatus.name.lowercase().replaceFirstChar { it.uppercase() }, color = PrimaryText) },
                     leadingContent = {
                         ThreeStateCheckbox(state = currentState)
                     },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                     modifier = Modifier.clickable {
-                        onStatusFilterChange(status, currentState.next())
+                        onStatusFilterChange(rstatus, currentState.next())
                     }
                 )
                 if (index < availableStatuses.lastIndex) {
