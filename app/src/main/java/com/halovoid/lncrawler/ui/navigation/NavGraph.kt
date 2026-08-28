@@ -41,7 +41,7 @@ import com.halovoid.lncrawler.ui.screens.crawler.CrawlerViewModel
 import kotlinx.coroutines.launch
 import com.halovoid.lncrawler.ui.screens.library.LibraryViewModel
 import com.halovoid.lncrawler.ui.screens.novel.GroupedRequestsViewModel
-import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
+import com.halovoid.lncrawler.ui.screens.search.*
 import com.halovoid.lncrawler.ui.screens.reader.ReaderScreen
 import com.halovoid.lncrawler.ui.screens.reader.ReaderViewModel
 import com.halovoid.lncrawler.ui.screens.novel.NovelActivityScreen
@@ -93,6 +93,8 @@ sealed class Screen(val route: String) {
         fun createRoute(novelUrl: String, initialChapterId: Int) = 
             "reader/${URLEncoder.encode(novelUrl, "UTF-8")}/$initialChapterId"
     }
+    object ExperimentalSearch : Screen("experimental_search")
+    object GlobalSearch : Screen("global_search")
 }
 
 /**
@@ -204,12 +206,12 @@ fun NavGraph(navController: NavHostController) {
                 val requestViewModel: RequestViewModel = viewModel(
                     factory = remember { ViewModelFactory(application) }
                 )
-                val searchViewModel: SearchViewModel = viewModel(
+                val crawlerViewModel: CrawlerViewModel = viewModel(
                     factory = remember { ViewModelFactory(application) }
                 )
                 RequestScreen(
                     viewModel = requestViewModel,
-                    searchViewModel = searchViewModel,
+                    crawlerViewModel = crawlerViewModel,
                     onNavigateToPreview = {
                         navController.navigate(Screen.NovelPreview.route)
                     },
@@ -221,8 +223,8 @@ fun NavGraph(navController: NavHostController) {
                             )
                         )
                     },
-                    onCrawlerClick = {
-                        navController.navigate(Screen.Crawlers.route)
+                    onNavigateToGlobalSearch = {
+                        navController.navigate(Screen.GlobalSearch.route)
                     },
                     searchUrl = searchUrl
                 )
@@ -325,7 +327,58 @@ fun NavGraph(navController: NavHostController) {
                 )
                 AdvancedSettingsScreen(
                     viewModel = settingsViewModel,
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onNavigateToExperimentalSearch = {
+                        navController.navigate(Screen.ExperimentalSearch.route)
+                    }
+                )
+            }
+            composable(Screen.ExperimentalSearch.route) {
+                val searchViewModel: SearchViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                val requestViewModel: RequestViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                ExperimentalSearchScreen(
+                    searchViewModel = searchViewModel,
+                    requestViewModel = requestViewModel,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToPreview = {
+                        navController.navigate(Screen.NovelPreview.route)
+                    },
+                    onNavigateToDetail = { crawlerName, novelUrl ->
+                        navController.navigate(
+                            Screen.NovelDetail.createRoute(
+                                crawlerName,
+                                novelUrl
+                            )
+                        )
+                    }
+                )
+            }
+            composable(Screen.GlobalSearch.route) {
+                val globalSearchViewModel: GlobalSearchViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                val requestViewModel: RequestViewModel = viewModel(
+                    factory = remember { ViewModelFactory(application) }
+                )
+                GlobalSearchScreen(
+                    viewModel = globalSearchViewModel,
+                    requestViewModel = requestViewModel,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToPreview = {
+                        navController.navigate(Screen.NovelPreview.route)
+                    },
+                    onNavigateToDetail = { crawlerName, novelUrl ->
+                        navController.navigate(
+                            Screen.NovelDetail.createRoute(
+                                crawlerName,
+                                novelUrl
+                            )
+                        )
+                    }
                 )
             }
             composable(Screen.SupportSettings.route) {

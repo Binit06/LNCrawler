@@ -17,6 +17,7 @@ import com.halovoid.lncrawler.ui.screens.support.SettingsViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestDetailViewModel
 import com.halovoid.lncrawler.ui.screens.request.RequestViewModel
 import com.halovoid.lncrawler.ui.screens.search.SearchViewModel
+import com.halovoid.lncrawler.ui.screens.search.GlobalSearchViewModel
 import com.halovoid.lncrawler.ui.screens.download.DownloadViewModel
 import com.halovoid.lncrawler.ui.screens.reader.ReaderViewModel
 
@@ -29,6 +30,9 @@ class ViewModelFactory(private val application: Application) : ViewModelProvider
             }
             modelClass.isAssignableFrom(SearchViewModel::class.java) -> {
                 SearchViewModel(application) as T
+            }
+            modelClass.isAssignableFrom(GlobalSearchViewModel::class.java) -> {
+                GlobalSearchViewModel(application) as T
             }
             modelClass.isAssignableFrom(RequestDetailViewModel::class.java) -> {
                 RequestDetailViewModel(application, RequestRepository.getInstance(application)) as T

@@ -94,6 +94,8 @@ abstract class Crawler {
      */
     abstract suspend fun getChapterContent(chapterUrl: String): String?
 
+    abstract suspend fun getSearchResults(query: String): List<Novel>
+
     /**
      * Fetches HTML from a URL with a standard User-Agent.
      * @param response Name of the Response.

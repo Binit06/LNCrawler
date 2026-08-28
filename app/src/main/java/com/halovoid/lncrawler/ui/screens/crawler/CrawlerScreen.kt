@@ -32,7 +32,8 @@ import com.halovoid.lncrawler.ui.theme.*
 @Composable
 fun CrawlerScreen(
     viewModel: CrawlerViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit = {},
+    showHeader: Boolean = true
 ) {
     val crawlers by viewModel.crawlers.collectAsStateWithLifecycle()
     val syncState by viewModel.syncState.collectAsStateWithLifecycle()
@@ -54,69 +55,11 @@ fun CrawlerScreen(
         }
     }
 
-    Scaffold(
-        containerColor = DarkBackground,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
+    @Composable
+    fun CrawlerContent(modifier: Modifier = Modifier) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = innerPadding.calculateBottomPadding())
+            modifier = modifier.fillMaxSize()
         ) {
-            // Compact Refined Header
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 8.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = PrimaryText
-                    )
-                }
-                
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp)
-                ) {
-                    Text(
-                        text = "Sources",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryText
-                    )
-                    if (crawlers.isNotEmpty()) {
-                        Text(
-                            text = "${crawlers.size} sources available",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = SecondaryText
-                        )
-                    }
-                }
-
-                if (syncState is SyncState.Loading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.padding(end = 12.dp).size(20.dp),
-                        color = BrandAccent,
-                        strokeWidth = 2.dp
-                    )
-                } else if (showSyncOption) {
-                    IconButton(onClick = { viewModel.syncCrawlers() }) {
-                        Icon(
-                            Icons.Default.Sync, 
-                            contentDescription = "Sync Crawlers", 
-                            tint = BrandAccent,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-            }
-
             if (syncState is SyncState.Incompatible) {
                 Surface(
                     modifier = Modifier
@@ -202,6 +145,77 @@ fun CrawlerScreen(
                 }
             }
         }
+    }
+
+    if (showHeader) {
+        Scaffold(
+            containerColor = DarkBackground,
+            snackbarHost = { SnackbarHost(snackbarHostState) }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(bottom = innerPadding.calculateBottomPadding())
+            ) {
+                // Compact Refined Header
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 8.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = PrimaryText
+                        )
+                    }
+                    
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 8.dp)
+                    ) {
+                        Text(
+                            text = "Sources",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryText
+                        )
+                        if (crawlers.isNotEmpty()) {
+                            Text(
+                                text = "${crawlers.size} sources available",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = SecondaryText
+                            )
+                        }
+                    }
+
+                    if (syncState is SyncState.Loading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.padding(end = 12.dp).size(20.dp),
+                            color = BrandAccent,
+                            strokeWidth = 2.dp
+                        )
+                    } else if (showSyncOption) {
+                        IconButton(onClick = { viewModel.syncCrawlers() }) {
+                            Icon(
+                                Icons.Default.Sync, 
+                                contentDescription = "Sync Crawlers", 
+                                tint = BrandAccent,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+
+                CrawlerContent()
+            }
+        }
+    } else {
+        CrawlerContent()
     }
 }
 
