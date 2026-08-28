@@ -46,9 +46,19 @@ import com.halovoid.lncrawler.ui.components.AppBottomSheet
 import com.halovoid.lncrawler.ui.components.AppBottomSheetDivider
 import com.halovoid.lncrawler.ui.components.AppBottomSheetGroup
 import com.halovoid.lncrawler.ui.theme.*
+import com.halovoid.lncrawler.ui.screens.search.GlobalSearchViewModel
+import com.halovoid.lncrawler.ui.screens.search.GlobalSearchState
+import com.halovoid.lncrawler.ui.screens.search.SourceSearchStatus
+import com.halovoid.lncrawler.ui.ViewModelFactory
+import android.app.Application
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.foundation.lazy.itemsIndexed
+import com.halovoid.lncrawler.domain.models.Novel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class RequestTab {
-    REQUEST, CRAWLERS
+    SEARCH, CRAWLERS
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -56,16 +66,20 @@ enum class RequestTab {
 fun RequestScreen(
     onNavigateToPreview: () -> Unit,
     onNavigateToDetail: (String, String) -> Unit,
-    onNavigateToGlobalSearch: () -> Unit,
+    onNavigateToRequest: () -> Unit,
     viewModel: RequestViewModel,
     crawlerViewModel: CrawlerViewModel,
     searchUrl: String? = null
 ) {
-    var selectedTab by remember { mutableStateOf(RequestTab.REQUEST) }
+    var selectedTab by remember { mutableStateOf(RequestTab.SEARCH) }
+    var isSearchActive by remember { mutableStateOf(false) }
     val libraryUrls by viewModel.libraryUrls.collectAsStateWithLifecycle()
 
-    val isCrawlerUpdateAvailable by UpdateRepository.getInstance(androidx.compose.ui.platform.LocalContext.current)
-        .isCrawlerUpdateAvailable.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val globalSearchViewModel: GlobalSearchViewModel = viewModel(
+        factory = remember { ViewModelFactory(context.applicationContext as Application) }
+    )
+    val isCrawlerUpdateAvailable by crawlerViewModel.isUpdateAvailable.collectAsStateWithLifecycle()
 
     RequestActionHandler(
         onResolveCloudflare = { id, url -> viewModel.resolveCloudflare(id, url) }
@@ -78,89 +92,105 @@ fun RequestScreen(
                     .fillMaxSize()
                     .padding(bottom = innerPadding.calculateBottomPadding())
             ) {
-                ScreenHeader(
-                    title = "Browse",
-                    actions = {
-                        IconButton(onClick = onNavigateToGlobalSearch) {
-                            Icon(
-                                imageVector = Icons.Default.Search,
-                                contentDescription = "Global Search",
-                                tint = PrimaryText
-                            )
-                        }
-                        if (selectedTab == RequestTab.CRAWLERS) {
-                            val syncState by crawlerViewModel.syncState.collectAsStateWithLifecycle()
-                            val showSyncOption by crawlerViewModel.showSyncOption.collectAsStateWithLifecycle()
+                AnimatedVisibility(
+                    visible = !isSearchActive,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    Column {
+                        ScreenHeader(
+                            title = "Browse",
+                            actions = {
+                                if (selectedTab == RequestTab.CRAWLERS) {
+                                    val syncState by crawlerViewModel.syncState.collectAsStateWithLifecycle()
+                                    val showSyncOption by crawlerViewModel.showSyncOption.collectAsStateWithLifecycle()
 
-                            if (syncState is SyncState.Loading) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.padding(end = 12.dp).size(20.dp),
-                                    color = BrandAccent,
-                                    strokeWidth = 2.dp
-                                )
-                            } else if (showSyncOption) {
-                                IconButton(onClick = { crawlerViewModel.syncCrawlers() }) {
-                                    Icon(
-                                        Icons.Default.Sync,
-                                        contentDescription = "Sync Crawlers",
-                                        tint = BrandAccent,
-                                        modifier = Modifier.size(22.dp)
-                                    )
+                                    if (syncState is SyncState.Loading) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.padding(end = 12.dp).size(20.dp),
+                                            color = BrandAccent,
+                                            strokeWidth = 2.dp
+                                        )
+                                    } else if (showSyncOption) {
+                                        IconButton(onClick = { crawlerViewModel.syncCrawlers() }) {
+                                            Icon(
+                                                Icons.Default.Sync,
+                                                contentDescription = "Sync Crawlers",
+                                                tint = BrandAccent,
+                                                modifier = Modifier.size(22.dp)
+                                            )
+                                        }
+                                    }
                                 }
                             }
+                        )
+
+                        TabRow(
+                            selectedTabIndex = selectedTab.ordinal,
+                            containerColor = Color.Transparent,
+                            contentColor = BrandAccent,
+                            indicator = { tabPositions ->
+                                TabRowDefaults.SecondaryIndicator(
+                                    Modifier.tabIndicatorOffset(tabPositions[selectedTab.ordinal]),
+                                    color = BrandAccent,
+                                    height = 3.dp
+                                )
+                            },
+                            divider = {},
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp)
+                                .height(48.dp)
+                        ) {
+                            Tab(
+                                selected = selectedTab == RequestTab.SEARCH,
+                                onClick = { selectedTab = RequestTab.SEARCH },
+                                text = {
+                                    Text(
+                                        "Search",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = if (selectedTab == RequestTab.SEARCH) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (selectedTab == RequestTab.SEARCH) PrimaryText else SecondaryText
+                                    )
+                                }
+                            )
+                            Tab(
+                                selected = selectedTab == RequestTab.CRAWLERS,
+                                onClick = { selectedTab = RequestTab.CRAWLERS },
+                                text = {
+                                    BadgedBox(
+                                        badge = {
+                                            if (isCrawlerUpdateAvailable) {
+                                                Badge(
+                                                    containerColor = BrandAccent,
+                                                    contentColor = Color.White
+                                                ) {
+                                                    Text("1", fontSize = 10.sp)
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Text(
+                                            "Crawlers",
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = if (selectedTab == RequestTab.CRAWLERS) FontWeight.Bold else FontWeight.Normal,
+                                            color = if (selectedTab == RequestTab.CRAWLERS) PrimaryText else SecondaryText
+                                        )
+                                    }
+                                }
+                            )
                         }
                     }
-                )
-
-                TabRow(
-                    selectedTabIndex = selectedTab.ordinal,
-                    containerColor = Color.Transparent,
-                    contentColor = BrandAccent,
-                    indicator = { tabPositions ->
-                        TabRowDefaults.SecondaryIndicator(
-                            Modifier.tabIndicatorOffset(tabPositions[selectedTab.ordinal]),
-                            color = BrandAccent,
-                            height = 3.dp
-                        )
-                    },
-                    divider = {},
-                    modifier = Modifier
-                        .padding(horizontal = 12.dp)
-                        .height(48.dp)
-                ) {
-                    Tab(
-                        selected = selectedTab == RequestTab.REQUEST,
-                        onClick = { selectedTab = RequestTab.REQUEST },
-                        text = {
-                            Text(
-                                "Request",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = if (selectedTab == RequestTab.REQUEST) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedTab == RequestTab.REQUEST) PrimaryText else SecondaryText
-                            )
-                        }
-                    )
-                    Tab(
-                        selected = selectedTab == RequestTab.CRAWLERS,
-                        onClick = { selectedTab = RequestTab.CRAWLERS },
-                        text = {
-                            Text(
-                                "Crawlers",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = if (selectedTab == RequestTab.CRAWLERS) FontWeight.Bold else FontWeight.Normal,
-                                color = if (selectedTab == RequestTab.CRAWLERS) PrimaryText else SecondaryText
-                            )
-                        }
-                    )
                 }
 
                 Box(modifier = Modifier.weight(1f)) {
                     when (selectedTab) {
-                        RequestTab.REQUEST -> {
-                            ManualRequestContent(
-                                viewModel = viewModel,
-                                searchUrl = searchUrl,
-                                libraryUrls = libraryUrls,
+                        RequestTab.SEARCH -> {
+                            RequestSearchContent(
+                                viewModel = globalSearchViewModel,
+                                requestViewModel = viewModel,
+                                isSearchActive = isSearchActive,
+                                onSearchActiveChange = { isSearchActive = it },
+                                onNavigateToRequest = onNavigateToRequest,
                                 onNavigateToPreview = onNavigateToPreview,
                                 onNavigateToDetail = onNavigateToDetail
                             )
@@ -584,5 +614,418 @@ fun FilterBottomSheet(
                 }
             }
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ManualRequestScreen(
+    viewModel: RequestViewModel,
+    searchUrl: String?,
+    onBack: () -> Unit,
+    onNavigateToPreview: () -> Unit,
+    onNavigateToDetail: (String, String) -> Unit
+) {
+    val libraryUrls by viewModel.libraryUrls.collectAsStateWithLifecycle()
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Request Novel", color = PrimaryText, fontWeight = FontWeight.Bold) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = PrimaryText
+                        )
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
+            )
+        },
+        containerColor = DarkBackground
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            ManualRequestContent(
+                viewModel = viewModel,
+                searchUrl = searchUrl,
+                libraryUrls = libraryUrls,
+                onNavigateToPreview = onNavigateToPreview,
+                onNavigateToDetail = onNavigateToDetail
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RequestSearchContent(
+    viewModel: GlobalSearchViewModel,
+    requestViewModel: RequestViewModel,
+    isSearchActive: Boolean,
+    onSearchActiveChange: (Boolean) -> Unit,
+    onNavigateToRequest: () -> Unit,
+    onNavigateToPreview: () -> Unit,
+    onNavigateToDetail: (String, String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val libraryUrls by requestViewModel.libraryUrls.collectAsStateWithLifecycle()
+    val searchState by viewModel.searchState.collectAsStateWithLifecycle()
+    var isCompactMode by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    var isFocused by remember { mutableStateOf(false) }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    val activeSearch = searchState !is GlobalSearchState.Idle || isFocused || searchQuery.isNotEmpty()
+
+    LaunchedEffect(activeSearch) {
+        onSearchActiveChange(activeSearch)
+    }
+
+    androidx.activity.compose.BackHandler(enabled = activeSearch) {
+        searchQuery = ""
+        viewModel.resetState()
+        onSearchActiveChange(false)
+        keyboardController?.hide()
+    }
+
+    val searchBarHeight by animateDpAsState(
+        targetValue = if (isSearchActive) 56.dp else 64.dp,
+        label = "SearchBarHeight"
+    )
+
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(DarkBackground)
+            .then(if (isSearchActive) Modifier.statusBarsPadding() else Modifier)
+            .padding(horizontal = 24.dp)
+    ) {
+        AnimatedVisibility(
+            visible = !isSearchActive,
+            enter = expandVertically() + fadeIn(),
+            exit = shrinkVertically() + fadeOut()
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Search all sources",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = PrimaryText
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "Search across all installed crawler plugins in real-time. This fetches results directly from the source websites.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = SecondaryText.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+            }
+        }
+
+        if (isSearchActive) {
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+
+        // Search Bar Row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(searchBarHeight)
+                    .clip(RoundedCornerShape(if (isSearchActive) 12.dp else 32.dp))
+                    .background(DarkSurface)
+                    .padding(start = 16.dp, end = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.Search,
+                    contentDescription = null,
+                    tint = if (isSearchActive) PrimaryText else SecondaryText,
+                    modifier = Modifier.size(20.dp)
+                )
+
+                TextField(
+                    value = searchQuery,
+                    onValueChange = { searchQuery = it },
+                    modifier = Modifier
+                        .weight(1f)
+                        .onFocusChanged { isFocused = it.isFocused },
+                    placeholder = { Text("Search for novels...", color = SecondaryText, fontSize = 16.sp) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.Transparent,
+                        unfocusedContainerColor = Color.Transparent,
+                        disabledContainerColor = Color.Transparent,
+                        focusedIndicatorColor = Color.Transparent,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        cursorColor = BrandAccent,
+                        focusedTextColor = PrimaryText,
+                        unfocusedTextColor = PrimaryText
+                    ),
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyLarge,
+                    trailingIcon = {
+                        if (searchQuery.isNotEmpty()) {
+                            IconButton(onClick = { searchQuery = "" }) {
+                                Icon(Icons.Default.Clear, contentDescription = "Clear", tint = SecondaryText)
+                            }
+                        }
+                    }
+                )
+
+                if (isSearchActive || searchQuery.isNotBlank()) {
+                    IconButton(
+                        onClick = {
+                            if (searchQuery.isNotBlank()) {
+                                viewModel.search(searchQuery)
+                                keyboardController?.hide()
+                            } else {
+                                viewModel.resetState()
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (searchQuery.isNotBlank()) {
+                                Icons.AutoMirrored.Filled.ArrowForward
+                            } else {
+                                Icons.Default.KeyboardArrowDown
+                            },
+                            contentDescription = if (searchQuery.isNotBlank()) "Search" else "Back to Idle",
+                            tint = if (searchQuery.isNotBlank()) PrimaryText else SecondaryText
+                        )
+                    }
+                }
+            }
+
+            if (isSearchActive && searchState is GlobalSearchState.Searching) {
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(onClick = { isCompactMode = !isCompactMode }) {
+                    Icon(
+                        imageVector = if (isCompactMode) Icons.Default.GridView else Icons.AutoMirrored.Filled.ViewList,
+                        contentDescription = if (isCompactMode) "Comfortable View" else "Compact View",
+                        tint = PrimaryText
+                    )
+                }
+            }
+        }
+
+        if (!isSearchActive) {
+            Spacer(modifier = Modifier.weight(1f))
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 32.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    tint = SecondaryText.copy(alpha = 0.4f)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "Search fetches results in real-time from active crawlers. If a novel is not found, you can submit a manual crawler request.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = SecondaryText.copy(alpha = 0.6f),
+                    lineHeight = 18.sp
+                )
+            }
+        } else {
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Box(modifier = Modifier.weight(1f)) {
+                when (val state = searchState) {
+                    is GlobalSearchState.Error -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Error: ${state.message}", color = ErrorRed, modifier = Modifier.padding(16.dp))
+                        }
+                    }
+                    is GlobalSearchState.Searching -> {
+                        val allDone = state.sourceStates.all { it.value !is SourceSearchStatus.Loading }
+                        val allEmpty = state.sourceStates.all {
+                            val status = it.value
+                            status is SourceSearchStatus.Success && status.items.isEmpty()
+                        }
+
+                        if (allDone && allEmpty) {
+                            Column(
+                                modifier = Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text("No results found", color = SecondaryText)
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text("Did not find your novel? Try ", color = SecondaryText, fontSize = 14.sp)
+                                    TextButton(
+                                        onClick = onNavigateToRequest,
+                                        contentPadding = PaddingValues(0.dp)
+                                    ) {
+                                        Text("Requesting", color = BrandAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(bottom = 32.dp),
+                                verticalArrangement = if (isCompactMode) Arrangement.spacedBy(4.dp) else Arrangement.spacedBy(24.dp)
+                            ) {
+                                state.sourceStates.forEach { (source, status) ->
+                                    val count = when (status) {
+                                        is SourceSearchStatus.Success -> status.items.size
+                                        else -> 0
+                                    }
+
+                                    item(key = "header_$source") {
+                                        SourceHeader(source = source, count = count)
+                                    }
+
+                                    when (status) {
+                                        is SourceSearchStatus.Loading -> {
+                                            item(key = "loading_$source") {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(vertical = 16.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(
+                                                        modifier = Modifier.size(24.dp),
+                                                        color = BrandAccent,
+                                                        strokeWidth = 2.dp
+                                                    )
+                                                }
+                                            }
+                                        }
+                                        is SourceSearchStatus.Error -> {
+                                            item(key = "error_$source") {
+                                                Text(
+                                                    text = "Error: ${status.message}",
+                                                    color = ErrorRed,
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    modifier = Modifier.padding(vertical = 8.dp)
+                                                )
+                                            }
+                                        }
+                                        is SourceSearchStatus.Success -> {
+                                            if (status.items.isEmpty()) {
+                                                item(key = "empty_$source") {
+                                                    Text(
+                                                        text = "No results found",
+                                                        color = SecondaryText.copy(alpha = 0.5f),
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        modifier = Modifier.padding(vertical = 8.dp)
+                                                    )
+                                                }
+                                            } else {
+                                                if (isCompactMode) {
+                                                    itemsIndexed(status.items, key = { index, item -> "${source}_${item.url}_$index" }) { index, item ->
+                                                        val isInLibrary = libraryUrls.contains(item.url)
+                                                        CompactSearchResultCard(
+                                                            item = item,
+                                                            isInLibrary = isInLibrary,
+                                                            onClick = {
+                                                                handleSearchResultClick(
+                                                                    item = item,
+                                                                    isInLibrary = isInLibrary,
+                                                                    onNavigateToDetail = onNavigateToDetail,
+                                                                    requestViewModel = requestViewModel,
+                                                                    onNavigateToPreview = onNavigateToPreview
+                                                                )
+                                                            }
+                                                        )
+                                                    }
+                                                } else {
+                                                    item(key = "row_$source") {
+                                                        LazyRow(
+                                                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                                            contentPadding = PaddingValues(bottom = 8.dp)
+                                                        ) {
+                                                            itemsIndexed(status.items, key = { index, item -> "${source}_${item.url}_$index" }) { index, item ->
+                                                                val isInLibrary = libraryUrls.contains(item.url)
+                                                                SearchResultCard(
+                                                                    item = item,
+                                                                    isInLibrary = isInLibrary,
+                                                                    onClick = {
+                                                                        handleSearchResultClick(
+                                                                            item = item,
+                                                                            isInLibrary = isInLibrary,
+                                                                            onNavigateToDetail = onNavigateToDetail,
+                                                                            requestViewModel = requestViewModel,
+                                                                            onNavigateToPreview = onNavigateToPreview
+                                                                        )
+                                                                    }
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (allDone && !allEmpty) {
+                                    item(key = "asking_request") {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(vertical = 24.dp),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Did not find your novel? Try ", color = SecondaryText, fontSize = 14.sp)
+                                            TextButton(
+                                                onClick = onNavigateToRequest,
+                                                contentPadding = PaddingValues(0.dp)
+                                            ) {
+                                                Text("Requesting", color = BrandAccent, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else -> {}
+                }
+            }
+        }
+    }
+}
+
+private fun handleSearchResultClick(
+    item: SearchItem,
+    isInLibrary: Boolean,
+    onNavigateToDetail: (String, String) -> Unit,
+    requestViewModel: RequestViewModel,
+    onNavigateToPreview: () -> Unit
+) {
+    if (isInLibrary) {
+        onNavigateToDetail(item.source, item.url)
+    } else {
+        requestViewModel.setPreviewUrl(item.url)
+        requestViewModel.setPreviewNovel(
+            Novel(
+                url = item.url,
+                title = item.title,
+                description = item.description,
+                coverUrl = item.imageUrl,
+                coverHttpsUrl = item.imageUrl,
+                crawlerName = item.source
+            )
+        )
+        onNavigateToPreview()
     }
 }

@@ -5,66 +5,90 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.halovoid.lncrawler.api.core.crawler.CrawlerFactory
 import com.halovoid.lncrawler.domain.models.SearchItem
-import com.halovoid.lncrawler.domain.models.SearchResponse
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+sealed class GlobalSearchState {
+    object Idle : GlobalSearchState()
+    data class Searching(
+        val query: String,
+        val sourceStates: Map<String, SourceSearchStatus>
+    ) : GlobalSearchState()
+    data class Error(val message: String) : GlobalSearchState()
+}
+
+sealed class SourceSearchStatus {
+    object Loading : SourceSearchStatus()
+    data class Success(val items: List<SearchItem>) : SourceSearchStatus()
+    data class Error(val message: String) : SourceSearchStatus()
+}
 
 class GlobalSearchViewModel(
     application: Application
 ) : AndroidViewModel(application) {
 
-    private val _searchState = MutableStateFlow<SearchState>(SearchState.Idle)
-    val searchState: StateFlow<SearchState> = _searchState.asStateFlow()
+    private val _searchState = MutableStateFlow<GlobalSearchState>(GlobalSearchState.Idle)
+    val searchState: StateFlow<GlobalSearchState> = _searchState.asStateFlow()
 
     fun search(query: String) {
         if (query.isBlank()) return
 
         viewModelScope.launch {
-            _searchState.value = SearchState.Loading
-            try {
-                val crawlers = CrawlerFactory.getCrawlers()
-                val deferredResults = crawlers.map { crawler ->
-                    async {
-                        try {
-                            val results = crawler.getSearchResults(query)
-                            crawler.name to results.map { novel ->
-                                SearchItem(
-                                    title = novel.title,
-                                    source = novel.crawlerName,
-                                    url = novel.url,
-                                    description = novel.description ?: "",
-                                    score = 0.0,
-                                    imageUrl = novel.coverHttpsUrl ?: novel.coverUrl
-                                )
-                            }
-                        } catch (e: Exception) {
-                            android.util.Log.e("GlobalSearchViewModel", "Error searching ${crawler.name}: ${e.message}", e)
-                            crawler.name to emptyList()
+            val crawlers = try {
+                CrawlerFactory.getCrawlers()
+            } catch (e: Exception) {
+                _searchState.value = GlobalSearchState.Error(e.message ?: "Failed to retrieve crawlers")
+                return@launch
+            }
+
+            val initialStates = crawlers.associate { it.name to SourceSearchStatus.Loading }
+            _searchState.value = GlobalSearchState.Searching(query, initialStates)
+
+            crawlers.forEach { crawler ->
+                viewModelScope.launch {
+                    try {
+                        val results = withContext(Dispatchers.IO) {
+                            crawler.getSearchResults(query)
                         }
+                        android.util.Log.d(
+                            "GlobalSearchViewModel",
+                            "Crawler '${crawler.name}' returned ${results.size} results for query '$query': ${results.map { "${it.title} (${it.url})" }}"
+                        )
+                        val searchItems = results.map { novel ->
+                            SearchItem(
+                                title = novel.title,
+                                source = novel.crawlerName,
+                                url = novel.url,
+                                description = novel.description ?: "",
+                                score = 0.0,
+                                imageUrl = novel.coverHttpsUrl ?: novel.coverUrl
+                            )
+                        }
+                        updateSourceState(crawler.name, SourceSearchStatus.Success(searchItems))
+                    } catch (e: Exception) {
+                        android.util.Log.e("GlobalSearchViewModel", "Error searching ${crawler.name}: ${e.message}", e)
+                        updateSourceState(crawler.name, SourceSearchStatus.Error(e.message ?: "Unknown error occurred"))
                     }
                 }
-
-                val allResults = deferredResults.awaitAll()
-                    .filter { it.second.isNotEmpty() }
-                    .toMap()
-
-                _searchState.value = SearchState.Success(
-                    SearchResponse(
-                        query = query,
-                        results = allResults
-                    )
-                )
-            } catch (e: Exception) {
-                _searchState.value = SearchState.Error(e.message ?: "An unexpected error occurred.")
             }
         }
     }
 
+    private fun updateSourceState(sourceName: String, status: SourceSearchStatus) {
+        val currentState = _searchState.value
+        if (currentState is GlobalSearchState.Searching) {
+            val updatedMap = currentState.sourceStates.toMutableMap().apply {
+                put(sourceName, status)
+            }
+            _searchState.value = currentState.copy(sourceStates = updatedMap)
+        }
+    }
+
     fun resetState() {
-        _searchState.value = SearchState.Idle
+        _searchState.value = GlobalSearchState.Idle
     }
 }

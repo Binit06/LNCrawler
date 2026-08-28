@@ -60,6 +60,8 @@ fun MainScreen() {
 
     val isAppUpdateAvailable by UpdateRepository.getInstance(navController.context)
         .isAppUpdateAvailable.collectAsStateWithLifecycle()
+    val isCrawlerUpdateAvailable by UpdateRepository.getInstance(navController.context)
+        .isCrawlerUpdateAvailable.collectAsStateWithLifecycle()
 
     Scaffold(
         bottomBar = {
@@ -68,6 +70,7 @@ fun MainScreen() {
                     mainTabs = mainTabs,
                     currentDestination = currentDestination,
                     isAppUpdateAvailable = isAppUpdateAvailable,
+                    isCrawlerUpdateAvailable = isCrawlerUpdateAvailable,
                     onNavigate = { route ->
                         navController.navigate(route) {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -95,6 +98,7 @@ private fun LNCrawlerNavigationBar(
     mainTabs: List<TabInfo>,
     currentDestination: androidx.navigation.NavDestination?,
     isAppUpdateAvailable: Boolean,
+    isCrawlerUpdateAvailable: Boolean,
     onNavigate: (String) -> Unit
 ) {
     NavigationBar(
@@ -108,6 +112,13 @@ private fun LNCrawlerNavigationBar(
                     BadgedBox(
                         badge = {
                             if (tab.label == "More" && isAppUpdateAvailable) {
+                                Badge(
+                                    containerColor = BrandAccent,
+                                    contentColor = Color.White
+                                ) {
+                                    Text("1")
+                                }
+                            } else if (tab.label == "Browse" && isCrawlerUpdateAvailable) {
                                 Badge(
                                     containerColor = BrandAccent,
                                     contentColor = Color.White

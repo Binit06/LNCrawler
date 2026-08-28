@@ -156,7 +156,7 @@ fun NovelDetailScreen(
                         NovelActionRow(
                             activityExists = requestHistory.isNotEmpty(),
                             isActivityRunning = requestHistory.any { it.rstatus in ongoingStatuses },
-                            artifactsExist = true,
+                            artifactsExist = chapters.isNotEmpty(),
                             downloadEnabled = chapters.isNotEmpty(),
                             onActivityClick = onActivityClick,
                             onDownloadClick = { showDownloadDialog = true },

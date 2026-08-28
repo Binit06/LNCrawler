@@ -94,7 +94,7 @@ sealed class Screen(val route: String) {
             "reader/${URLEncoder.encode(novelUrl, "UTF-8")}/$initialChapterId"
     }
     object ExperimentalSearch : Screen("experimental_search")
-    object GlobalSearch : Screen("global_search")
+    object ManualRequest : Screen("manual_request")
 }
 
 /**
@@ -177,12 +177,11 @@ fun NavGraph(navController: NavHostController) {
                 )
             }
             composable(Screen.NovelPreview.route) { backStackEntry ->
-                // Shared with Request screen
-                val requestEntry = remember(backStackEntry) {
-                    navController.getBackStackEntry(Screen.Request.route)
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(navController.graph.id)
                 }
                 val requestViewModel: RequestViewModel = viewModel(
-                    viewModelStoreOwner = requestEntry,
+                    viewModelStoreOwner = parentEntry,
                     factory = remember { ViewModelFactory(application) }
                 )
                 NovelPreviewScreen(
@@ -202,8 +201,11 @@ fun NavGraph(navController: NavHostController) {
                 )
             }
             composable(Screen.Request.route) { backStackEntry ->
-                val searchUrl = backStackEntry.savedStateHandle.get<String>("search_url")
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(navController.graph.id)
+                }
                 val requestViewModel: RequestViewModel = viewModel(
+                    viewModelStoreOwner = parentEntry,
                     factory = remember { ViewModelFactory(application) }
                 )
                 val crawlerViewModel: CrawlerViewModel = viewModel(
@@ -223,10 +225,34 @@ fun NavGraph(navController: NavHostController) {
                             )
                         )
                     },
-                    onNavigateToGlobalSearch = {
-                        navController.navigate(Screen.GlobalSearch.route)
+                    onNavigateToRequest = {
+                        navController.navigate(Screen.ManualRequest.route)
+                    }
+                )
+            }
+            composable(Screen.ManualRequest.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(navController.graph.id)
+                }
+                val requestViewModel: RequestViewModel = viewModel(
+                    viewModelStoreOwner = parentEntry,
+                    factory = remember { ViewModelFactory(application) }
+                )
+                com.halovoid.lncrawler.ui.screens.request.ManualRequestScreen(
+                    viewModel = requestViewModel,
+                    searchUrl = null,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToPreview = {
+                        navController.navigate(Screen.NovelPreview.route)
                     },
-                    searchUrl = searchUrl
+                    onNavigateToDetail = { crawlerName, novelUrl ->
+                        navController.navigate(
+                            Screen.NovelDetail.createRoute(
+                                crawlerName,
+                                novelUrl
+                            )
+                        )
+                    }
                 )
             }
             composable(Screen.Library.route) {
@@ -333,39 +359,19 @@ fun NavGraph(navController: NavHostController) {
                     }
                 )
             }
-            composable(Screen.ExperimentalSearch.route) {
+            composable(Screen.ExperimentalSearch.route) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(navController.graph.id)
+                }
                 val searchViewModel: SearchViewModel = viewModel(
                     factory = remember { ViewModelFactory(application) }
                 )
                 val requestViewModel: RequestViewModel = viewModel(
+                    viewModelStoreOwner = parentEntry,
                     factory = remember { ViewModelFactory(application) }
                 )
                 ExperimentalSearchScreen(
                     searchViewModel = searchViewModel,
-                    requestViewModel = requestViewModel,
-                    onBack = { navController.popBackStack() },
-                    onNavigateToPreview = {
-                        navController.navigate(Screen.NovelPreview.route)
-                    },
-                    onNavigateToDetail = { crawlerName, novelUrl ->
-                        navController.navigate(
-                            Screen.NovelDetail.createRoute(
-                                crawlerName,
-                                novelUrl
-                            )
-                        )
-                    }
-                )
-            }
-            composable(Screen.GlobalSearch.route) {
-                val globalSearchViewModel: GlobalSearchViewModel = viewModel(
-                    factory = remember { ViewModelFactory(application) }
-                )
-                val requestViewModel: RequestViewModel = viewModel(
-                    factory = remember { ViewModelFactory(application) }
-                )
-                GlobalSearchScreen(
-                    viewModel = globalSearchViewModel,
                     requestViewModel = requestViewModel,
                     onBack = { navController.popBackStack() },
                     onNavigateToPreview = {

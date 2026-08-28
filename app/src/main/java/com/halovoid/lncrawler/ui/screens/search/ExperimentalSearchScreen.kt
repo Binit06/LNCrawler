@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -285,7 +286,7 @@ fun ExperimentalSearchScreen(
                                             }
 
                                             if (isCompactMode) {
-                                                items(items, key = { it.url }) { item ->
+                                                itemsIndexed(items, key = { index, item -> "${source}_${item.url}_$index" }) { index, item ->
                                                     val isInLibrary = libraryUrls.contains(item.url)
                                                     CompactSearchResultCard(
                                                         item = item,
@@ -302,12 +303,12 @@ fun ExperimentalSearchScreen(
                                                     )
                                                 }
                                             } else {
-                                                item {
+                                                item(key = "row_$source") {
                                                     LazyRow(
                                                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                                                         contentPadding = PaddingValues(bottom = 8.dp)
                                                     ) {
-                                                        items(items, key = { it.url }) { item ->
+                                                        itemsIndexed(items, key = { index, item -> "${source}_${item.url}_$index" }) { index, item ->
                                                             val isInLibrary = libraryUrls.contains(item.url)
                                                             SearchResultCard(
                                                                 item = item,
